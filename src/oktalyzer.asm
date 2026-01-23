@@ -55,6 +55,7 @@ MIDI_OUT            equ      2
 
 CMD_END             equ      0
 CMD_TEXT            equ      2
+CMD_CLEAR_MAIN_MENU equ      3
 CMD_SUB_COMMAND     equ      6
 CMD_TEXT_PTR        equ      8
 CMD_CLEAR_CHARS     equ      10
@@ -228,6 +229,7 @@ init_all:
                     jsr      (close_workbench)
                     bsr      set_copper_bitplanes
                     bsr      set_pal_ntsc_vars
+                    bsr      set_chipset_aga
                     bsr      install_vbi_int
                     bsr      patch_sys_requesters_function
                     bset     #1,(CIAB)
@@ -270,6 +272,27 @@ set_pal_ntsc_vars:
 ntsc_flag:
                     dc.b     0
                     even
+
+; ===========================================================================
+set_chipset_aga:
+                    move.w   _CUSTOM+DENISEID,d0
+                    moveq    #31-1,d2
+                    and.w    #$FF,d0
+.check_chipset_loop:
+                    move.w   _CUSTOM+DENISEID,d1
+                    and.w    #$FF,d1
+                    cmp.b    d0,d1
+                    bne      .not_aga
+                    dbf      d2,.check_chipset_loop
+                    or.b     #$F0,d0
+                    cmp.b    #$F8,d0
+                    beq      .machine_is_aga
+.not_aga:
+                    rts
+.machine_is_aga:
+                    move.w   #$2C,copper_ddfstrt+2
+                    move.w   #$B4,copper_ddfstop+2
+                    rts
 
 ; ===========================================================================
 free_resources:
@@ -1636,9 +1659,9 @@ lbC01F21A:
                     move.w   (lbW01BC6E),d0
                     subq.w   #1,d0
 lbC01F23C:
-                    cmp.w    (lbW01A138),d0
+                    cmp.w    (current_viewed_pattern),d0
                     beq.b    lbC01F24E
-                    move.w   d0,(lbW01A138)
+                    move.w   d0,(current_viewed_pattern)
                     bra      lbC0202A8
 lbC01F24E:
                     rts
@@ -1649,14 +1672,14 @@ ascii_MSG6:
                     dc.b     0
                     dc.b     0
 lbC01F262:
-                    tst.w    (lbW01A138)
+                    tst.w    (current_viewed_pattern)
                     beq.b    lbC01F274
-                    subq.w   #1,(lbW01A138)
+                    subq.w   #1,(current_viewed_pattern)
                     bra      lbC0202A8
 lbC01F274:
                     rts
 lbC01F276:
-                    move.w   (lbW01A138),d0
+                    move.w   (current_viewed_pattern),d0
                     addq.w   #1,d0
                     cmp.w    (lbW01BC6E),d0
                     bne.b    lbC01F28E
@@ -1664,7 +1687,7 @@ lbC01F276:
                     beq.b    lbC01F28E
                     rts
 lbC01F28E:
-                    addq.w   #1,(lbW01A138)
+                    addq.w   #1,(current_viewed_pattern)
                     bra      lbC0202A8
 lbC01F298:
                     bsr      stop_audio_channels
@@ -2501,12 +2524,12 @@ lbC01FBE2:
 lbW01FBF0:
                     dc.w     1
 lbC01FBF2:
-                    move.w   (lbW023890),d2
+                    move.w   (current_song_position),d2
                     moveq    #12,d0
                     moveq    #1,d1
                     jsr      (lbC025E0C)
                     lea      (OK_Patterns),a0
-                    move.w   (lbW023890),d2
+                    move.w   (current_song_position),d2
                     move.b   (a0,d2.w),d2
                     moveq    #13,d0
                     moveq    #2,d1
@@ -2909,7 +2932,7 @@ number_of_rows_on_screen:
 
 ; ===========================================================================
 get_current_pattern_rows:
-                    move.w   (lbW01A138),d0
+                    move.w   (current_viewed_pattern),d0
 get_given_pattern_rows:
                     lea      (OK_PatternList),a0
                     add.w    d0,d0
@@ -2956,7 +2979,7 @@ lbC02016E:
                     move.l   a2,a1
                     move.w   d2,(a1)
                     lea      (OK_PatternList),a0
-                    move.w   (lbW01A138),d0
+                    move.w   (current_viewed_pattern),d0
                     add.w    d0,d0
                     add.w    d0,d0
                     move.l   a2,(a0,d0.w)
@@ -2989,15 +3012,15 @@ lbC0201F2:
                     move.w   #6,(OK_Speed)
                     move.w   #1,(OK_PLen)
                     st       (channels_mute_flags)
-                    clr.w    (lbW023890)
-                    clr.w    (lbW01A138)
+                    clr.w    (current_song_position)
+                    clr.w    (current_viewed_pattern)
                     clr.w    (caret_pos_x)
                     clr.w    (viewed_pattern_row)
                     moveq    #-1,d0
                     move.l   d0,(lbW01F5C4)
                     bra      lbC01F430
 lbC020232:
-                    move.w   (lbW01A138),d0
+                    move.w   (current_viewed_pattern),d0
                     add.w    d0,d0
                     add.w    d0,d0
                     lea      (OK_PatternList),a0
@@ -3054,7 +3077,7 @@ lbC0202F0:
                     move.w   d7,d0
                     mulu.w   (lbW02A75A),d0
                     adda.l   d0,a4
-                    move.w   (lbW01A138),d0
+                    move.w   (current_viewed_pattern),d0
                     ext.l    d0
                     divu.w   #10,d0
                     addi.b   #'0',d0
@@ -5533,18 +5556,18 @@ lbC022024:
 lbC022028:
                     move.w   (OK_PLen),d0
                     subq.w   #1,d0
-                    cmp.w    (lbW023890),d0
+                    cmp.w    (current_song_position),d0
                     beq      error_no_more_positions
-                    addq.w   #1,(lbW023890)
+                    addq.w   #1,(current_song_position)
                     bra      lbC01FBF2
 lbC022044:
-                    tst.w    (lbW023890)
+                    tst.w    (current_song_position)
                     beq      error_no_more_positions
-                    subq.w   #1,(lbW023890)
+                    subq.w   #1,(current_song_position)
                     bra      lbC01FBF2
 lbC022058:
                     lea      (OK_Patterns),a0
-                    move.w   (lbW023890),d0
+                    move.w   (current_song_position),d0
                     move.w   (lbW01BC6E),d1
                     subq.w   #1,d1
                     cmp.b    (a0,d0.w),d1
@@ -5553,7 +5576,7 @@ lbC022058:
                     bra      lbC01FBF2
 lbC02207C:
                     lea      (OK_Patterns),a0
-                    move.w   (lbW023890),d0
+                    move.w   (current_song_position),d0
                     tst.b    (a0,d0.w)
                     beq      error_no_more_patterns
                     subq.b   #1,(a0,d0.w)
@@ -5565,9 +5588,9 @@ lbC022098:
                     move.w   (OK_PLen),d0
                     lea      (OK_Patterns),a0
                     sf       (a0,d0.w)
-                    cmp.w    (lbW023890),d0
+                    cmp.w    (current_song_position),d0
                     bne      lbC01FBF2
-                    subq.w   #1,(lbW023890)
+                    subq.w   #1,(current_song_position)
                     bra      lbC01FBF2
 lbC0220CE:
                     cmpi.w   #128,(OK_PLen)
@@ -5578,7 +5601,7 @@ lbC0220E4:
                     cmpi.w   #128,(OK_PLen)
                     beq      error_no_more_positions
                     lea      (OK_Patterns,pc),a0
-                    adda.w   (lbW023890),a0
+                    adda.w   (current_song_position),a0
                     lea      (OK_Patterns+127,pc),a1
 lbC0220FE:
                     cmpa.l   a0,a1
@@ -5592,7 +5615,7 @@ lbC02210C:
                     cmpi.w   #1,(OK_PLen)
                     beq      error_no_more_positions
                     lea      (OK_Patterns,pc),a0
-                    adda.w   (lbW023890),a0
+                    adda.w   (current_song_position),a0
                     lea      (OK_Patterns+127,pc),a1
 lbC022126:
                     cmpa.l   a1,a0
@@ -5611,9 +5634,9 @@ lbC022144:
                     cmp.b    (a0)+,d0
                     dbeq     d1,lbC022144
                     beq      error_pattern_in_use
-                    cmp.w    (lbW01A138),d0
+                    cmp.w    (current_viewed_pattern),d0
                     bne.b    lbC022160
-                    subq.w   #1,(lbW01A138)
+                    subq.w   #1,(current_viewed_pattern)
                     bsr      lbC0202A8
 lbC022160:
                     bsr      lbC020266
@@ -5724,20 +5747,22 @@ lbC022238:
 lbC02223C:
                     moveq    #0,d0
                     bra.b    lbC022216
-lbC022240:
+
+; ===========================================================================
+cmd_play_song:
                     st       (pattern_play_flag)
-                    move.w   (lbW023890),(OK_PtPtr)
-                    bra.b    lbC022262
-lbC022252:
+                    move.w   (current_song_position),(OK_PtPtr)
+                    bra.b    go_play
+cmd_play_pattern:
                     sf       (pattern_play_flag)
-                    move.w   (lbW01A138),(OK_PtPtr)
-lbC022262:
+                    move.w   (current_viewed_pattern),(OK_PtPtr)
+go_play:
                     tst.w    (replay_type)
-                    bne.b    lbC022276
+                    bne.b    .ok_replay_type
                     tst.b    (ntsc_flag)
-                    beq.b    lbC022276
+                    beq.b    .ok_replay_type
                     bra      error_only_in_pal
-lbC022276:
+.ok_replay_type:
                     bsr      lbC01FF8C
                     move.w   (replay_type,pc),d0
                     add.w    d0,d0
@@ -5762,7 +5787,7 @@ lbC022276:
                     move.w   (OK_ActSpeed),(OK_Speed)
                     tst.b    (pattern_play_flag)
                     beq.b    lbC0222E4
-                    move.w   (OK_PtPtr),(lbW023890)
+                    move.w   (OK_PtPtr),(current_song_position)
                     bra.b    lbC02230C
 lbC0222E4:
                     cmpi.b   #2,(lbB01BC6B)
@@ -7353,7 +7378,7 @@ OK_Filter:
                     even
 OK_Dmacon:
                     dc.w     0
-lbW023890:
+current_song_position:
                     dc.w     0
 
 ; ===========================================================================
@@ -9031,7 +9056,7 @@ lbC02555C:
                     rts
 
 ; ===========================================================================
-clear_56_lines_blitter:
+clear_main_menu_blitter:
                     bsr      own_blitter
                     move.l   #$1000000,(BLTCON0,a6)
                     move.w   #0,(BLTDMOD,a6)
@@ -9797,8 +9822,8 @@ next_command:
                     beq      done_commands
                     cmpi.b   #CMD_TEXT,d0
                     beq.b    cmd_draw_text
-                    cmpi.b   #3,d0
-                    beq      lbC026066
+                    cmpi.b   #CMD_CLEAR_MAIN_MENU,d0
+                    beq      cmd_clear_main_menu
                     cmpi.b   #4,d0
                     beq      lbC02606E
                     cmpi.b   #5,d0
@@ -9843,9 +9868,11 @@ cmd_draw_text_from_pointer:
                     bra      next_command
 
 ; ===========================================================================
-lbC026066:
-                    bsr      clear_56_lines_blitter
+cmd_clear_main_menu:
+                    bsr      clear_main_menu_blitter
                     bra      next_command
+
+; ===========================================================================
 lbC02606E:
                     bsr      clear_1_line_blitter
                     moveq    #0,d0
@@ -10253,7 +10280,7 @@ clear_chars:
                     rts
 
 ; ===========================================================================
-lbC02645A:
+draw_zoomed_char:
                     movem.l  d3-d7/a2,-(sp)
                     lea      (text_font),a2
                     lsl.w    #3,d2
@@ -10261,25 +10288,25 @@ lbC02645A:
                     move.w   d0,d5
                     move.w   d1,d6
                     move.w   #7-1,d7
-lbC026470:
+.loop_y:
                     swap     d7
                     move.w   #8-1,d7
-lbC026476:
+.loop_x:
                     move.w   d5,d0
                     move.w   d6,d1
                     move.b   d3,d2
                     btst     d7,(a2)
-                    beq.b    lbC026482
+                    beq.b    .no_dot_in_char
                     move.b   d4,d2
-lbC026482:
+.no_dot_in_char:
                     bsr      draw_one_char
                     addq.w   #1,d5
-                    dbra     d7,lbC026476
+                    dbra     d7,.loop_x
                     subq.w   #8,d5
                     addq.w   #1,a2
                     swap     d7
                     addq.w   #1,d6
-                    dbra     d7,lbC026470
+                    dbra     d7,.loop_y
                     movem.l  (sp)+,d3-d7/a2
                     rts
 
@@ -15312,7 +15339,7 @@ lbC02A9E2:
                     bsr      lbC02AD72
                     bsr      lbC02AED4
                     bsr      draw_font
-                    bsr      lbC02B0BC
+                    bsr      draw_selected_char_grid
                     bra      lbC02AA28
 lbC02AA14:
                     not.b    (st_load_tracks_samples)
@@ -15856,54 +15883,54 @@ chars3_MSG:
                     dc.b     'chars3',0
                     even 
 lbC02AF0C:
-                    lea      (lbW02B158,pc),a0
+                    lea      (current_selected_char,pc),a0
                     cmpi.w   #$FF,(a0)
                     beq.b    lbC02AF1C
                     addq.w   #1,(a0)
-                    bra      lbC02B0BC
+                    bra      draw_selected_char_grid
 lbC02AF1C:
                     rts
 lbC02AF1E:
-                    lea      (lbW02B158,pc),a0
+                    lea      (current_selected_char,pc),a0
                     tst.w    (a0)
                     beq.b    lbC02AF2C
                     subq.w   #1,(a0)
-                    bra      lbC02B0BC
+                    bra      draw_selected_char_grid
 lbC02AF2C:
                     rts
 lbC02AF2E:
-                    lea      (lbW02B158,pc),a0
+                    lea      (current_selected_char,pc),a0
                     moveq    #$F,d0
                     and.w    (a0),d0
                     beq.b    lbC02AF3E
                     subq.w   #1,(a0)
-                    bra      lbC02B0BC
+                    bra      draw_selected_char_grid
 lbC02AF3E:
                     rts
 lbC02AF40:
-                    lea      (lbW02B158,pc),a0
+                    lea      (current_selected_char,pc),a0
                     moveq    #$F,d0
                     and.w    (a0),d0
                     cmpi.w   #$F,d0
                     beq.b    lbC02AF54
                     addq.w   #1,(a0)
-                    bra      lbC02B0BC
+                    bra      draw_selected_char_grid
 lbC02AF54:
                     rts
 lbC02AF56:
-                    lea      (lbW02B158,pc),a0
+                    lea      (current_selected_char,pc),a0
                     cmpi.w   #16,(a0)
                     blt.b    lbC02AF68
                     subi.w   #16,(a0)
-                    bra      lbC02B0BC
+                    bra      draw_selected_char_grid
 lbC02AF68:
                     rts
 lbC02AF6A:
-                    lea      (lbW02B158,pc),a0
+                    lea      (current_selected_char,pc),a0
                     cmpi.w   #239,(a0)
                     bgt.b    lbC02AF7C
                     addi.w   #16,(a0)
-                    bra      lbC02B0BC
+                    bra      draw_selected_char_grid
 lbC02AF7C:
                     rts
 lbC02AF7E:
@@ -15919,50 +15946,50 @@ lbC02AF7E:
                     bcc.b    lbC02AFA8
                     lsl.w    #4,d1
                     or.w     d1,d0
-                    move.w   d0,(lbW02B158)
-                    bra      lbC02B0BC
+                    move.w   d0,(current_selected_char)
+                    bra      draw_selected_char_grid
 lbC02AFA8:
                     rts
 lbC02AFAA:
                     lea      (lbB01D88E),a0
-                    move.w   (lbW02B158),d0
+                    move.w   (current_selected_char),d0
                     bsr      lbC02B16E
-                    bra      lbC02B0BC
+                    bra      draw_selected_char_grid
 lbC02AFBE:
                     lea      (lbB01D88E),a0
-                    move.w   (lbW02B158),d0
+                    move.w   (current_selected_char),d0
                     bsr      lbC02B180
-                    bra      lbC02B0BC
+                    bra      draw_selected_char_grid
 lbC02AFD2:
                     lea      (lbB01D895),a0
-                    move.w   (lbW02B158),d0
+                    move.w   (current_selected_char),d0
                     bsr      lbC02B16E
-                    bra      lbC02B0BC
+                    bra      draw_selected_char_grid
 lbC02AFE6:
                     lea      (lbB01D895),a0
-                    move.w   (lbW02B158),d0
+                    move.w   (current_selected_char),d0
                     bsr      lbC02B180
-                    bra      lbC02B0BC
+                    bra      draw_selected_char_grid
 lbC02AFFA:
                     lea      (lbB01D895),a0
-                    move.w   (lbW02B158),d0
+                    move.w   (current_selected_char),d0
                     bsr      lbC02B15C
-                    bra      lbC02B0BC
+                    bra      draw_selected_char_grid
 lbC02B00E:
                     lea      (lbB01D895),a0
-                    move.w   (lbW02B158),d0
+                    move.w   (current_selected_char),d0
                     bsr      lbC02B15C
-                    move.w   (lbW02B158),d0
+                    move.w   (current_selected_char),d0
                     bsr      lbC02B196
-                    bra      lbC02B0BC
+                    bra      draw_selected_char_grid
 lbC02B02C:
-                    move.w   (lbW02B158),d0
+                    move.w   (current_selected_char),d0
                     bsr      lbC02B196
-                    bra      lbC02B0BC
+                    bra      draw_selected_char_grid
 lbC02B03A:
                     movem.l  d2/d3,-(sp)
                     lea      (text_font,pc),a0
-                    move.w   (lbW02B158),d0
+                    move.w   (current_selected_char),d0
                     lsl.w    #3,d0
                     adda.w   d0,a0
                     moveq    #7-1,d0
@@ -15977,10 +16004,10 @@ lbC02B054:
                     move.b   d2,(a0)+
                     dbra     d0,lbC02B04E
                     movem.l  (sp)+,d2/d3
-                    bra      lbC02B0BC
+                    bra      draw_selected_char_grid
 lbC02B06C:
                     lea      (text_font,pc),a0
-                    move.w   (lbW02B158),d0
+                    move.w   (current_selected_char),d0
                     lsl.w    #3,d0
                     adda.w   d0,a0
                     lea      (7,a0),a1
@@ -15990,7 +16017,7 @@ lbC02B080:
                     move.b   -(a1),(a0)+
                     move.b   d1,(a1)
                     dbra     d0,lbC02B080
-                    bra      lbC02B0BC
+                    bra      draw_selected_char_grid
 
 ; ===========================================================================
 ; draw the complete set of chars
@@ -16016,31 +16043,33 @@ draw_font:
                     rts
 
 ; ===========================================================================
-lbC02B0BC:
-                    move.w   (lbW02B158),d0
+draw_selected_char_grid:
+                    move.w   (current_selected_char),d0
                     cmp.w    (lbW02B15A),d0
                     beq.b    lbC02B0D4
                     lea      (lbB01D88E),a0
                     bsr      lbC02B15C
 lbC02B0D4:
                     bsr      lbC02B12E
-                    bsr      lbC02B110
-                    move.w   (lbW02B158,pc),d0
+                    bsr      draw_selected_char
+                    move.w   (current_selected_char,pc),d0
                     move.w   d0,(lbW02B15A)
-                    bsr      lbC02B140
+                    bsr      invert_selected_char
                     moveq    #53,d0
                     moveq    #12,d1
-                    move.w   (lbW02B158,pc),d2
+                    move.w   (current_selected_char,pc),d2
                     move.b   #$84,d3
                     move.b   #$85,d4
-                    jsr      (lbC02645A)
+                    jsr      (draw_zoomed_char)
                     moveq    #59,d0
                     moveq    #20,d1
-                    move.w   (lbW02B158),d2
+                    move.w   (current_selected_char),d2
                     bra      lbC025E7E
-lbC02B110:
+
+; ===========================================================================
+draw_selected_char:
                     move.l   d2,-(sp)
-                    move.w   (lbW02B158,pc),d2
+                    move.w   (current_selected_char,pc),d2
                     move.w   d2,d1
                     moveq    #$F,d0
                     and.w    d1,d0
@@ -16050,15 +16079,17 @@ lbC02B110:
                     bsr      draw_one_char
                     move.l   (sp)+,d2
                     rts
+
+; ===========================================================================
 lbC02B12E:
                     lea      (lbW02B15A,pc),a0
                     move.w   (a0),d0
                     bmi.b    lbC02B13E
                     move.w   #-1,(a0)
-                    bra      lbC02B140
+                    bra      invert_selected_char
 lbC02B13E:
                     rts
-lbC02B140:
+invert_selected_char:
                     moveq    #$F,d1
                     and.w    d0,d1
                     lsr.w    #4,d0
@@ -16066,10 +16097,10 @@ lbC02B140:
                     addi.w   #62,d0
                     addi.w   #12,d1
                     jmp      (invert_one_char)
-lbW02B158:
+current_selected_char:
                     dc.w     $20
 lbW02B15A:
-                    dc.w     $FFFF
+                    dc.w     -1
 lbC02B15C:
                     lea      (text_font,pc),a1
                     lsl.w    #3,d0
@@ -16127,7 +16158,7 @@ lbC02B1B6:
                     bcc.b    lbC02B1EA
                     lea      (text_font,pc),a0
                     adda.w   d1,a0
-                    move.w   (lbW02B158,pc),d1
+                    move.w   (current_selected_char,pc),d1
                     lsl.w    #3,d1
                     adda.w   d1,a0
                     bclr     d0,(a0)
@@ -16135,69 +16166,79 @@ lbC02B1B6:
                     beq.b    lbC02B1E6
                     bset     d0,(a0)
 lbC02B1E6:
-                    bsr      lbC02B0BC
+                    bsr      draw_selected_char_grid
 lbC02B1EA:
                     movem.l  (sp)+,d2
                     rts
-lbC02B1F0:
+
+; ===========================================================================
+move_char_left:
                     lea      (text_font,pc),a0
-                    move.w   (lbW02B158,pc),d0
+                    move.w   (current_selected_char,pc),d0
                     lsl.w    #3,d0
                     adda.w   d0,a0
-                    moveq    #6,d1
-lbC02B1FE:
+                    moveq    #7-1,d1
+.loop:
                     move.b   (a0),d0
                     rol.b    #1,d0
                     move.b   d0,(a0)+
-                    dbra     d1,lbC02B1FE
-                    bra      lbC02B0BC
-lbC02B20C:
+                    dbra     d1,.loop
+                    bra      draw_selected_char_grid
+
+; ===========================================================================
+move_char_right:
                     lea      (text_font,pc),a0
-                    move.w   (lbW02B158,pc),d0
+                    move.w   (current_selected_char,pc),d0
                     lsl.w    #3,d0
                     adda.w   d0,a0
-                    moveq    #6,d1
-lbC02B21A:
+                    moveq    #7-1,d1
+.loop:
                     move.b   (a0),d0
                     ror.b    #1,d0
                     move.b   d0,(a0)+
-                    dbra     d1,lbC02B21A
-                    bra      lbC02B0BC
-lbC02B228:
+                    dbra     d1,.loop
+                    bra      draw_selected_char_grid
+
+; ===========================================================================
+move_char_up:
                     lea      (text_font,pc),a0
-                    move.w   (lbW02B158,pc),d0
+                    move.w   (current_selected_char,pc),d0
                     lsl.w    #3,d0
                     adda.w   d0,a0
                     move.b   (a0)+,d0
-                    moveq    #5,d1
-lbC02B238:
+                    moveq    #6-1,d1
+.loop:
                     move.b   (a0)+,(-2,a0)
-                    dbra     d1,lbC02B238
+                    dbra     d1,.loop
                     move.b   d0,-(a0)
-                    bra      lbC02B0BC
-lbC02B246:
+                    bra      draw_selected_char_grid
+
+; ===========================================================================
+move_char_down:
                     lea      (text_font,pc),a0
-                    move.w   (lbW02B158,pc),d0
+                    move.w   (current_selected_char,pc),d0
                     lsl.w    #3,d0
                     adda.w   d0,a0
                     lea      (6,a0),a0
                     move.b   (a0),d0
                     moveq    #6-1,d1
-lbC02B25A:
+.loop:
                     move.b   -(a0),(1,a0)
-                    dbra     d1,lbC02B25A
+                    dbra     d1,.loop
                     move.b   d0,(a0)
-                    bra      lbC02B0BC
-lbC02B268:
+                    bra      draw_selected_char_grid
+
+; ===========================================================================
+outline_char:
                     lea      (text_font,pc),a0
-                    move.w   (lbW02B158,pc),d0
+                    move.w   (current_selected_char,pc),d0
                     lsl.w    #3,d0
                     adda.w   d0,a0
                     moveq    #7-1,d0
-lbC02B276:
+.loop:
                     not.b    (a0)+
-                    dbra     d0,lbC02B276
-                    bra      lbC02B0BC
+                    dbra     d0,.loop
+                    bra      draw_selected_char_grid
 
 ; ===========================================================================
 backup_prefs:
@@ -18833,37 +18874,32 @@ free_mem_block:
 ; ===========================================================================
 clear_mem_block:
                     move.l   a0,d1
-                    beq.b    lbC02D35E
+                    beq.b    .error
                     btst     #0,d1
-                    beq      lbC02D336
+                    beq      .odd_address_start
                     subq.l   #1,d0
-                    bcs.b    lbC02D35E
+                    bcs.b    .error
                     sf       (a0)+
-lbC02D336:
+.odd_address_start:
                     move.l   d2,-(sp)
                     moveq    #0,d2
                     moveq    #32,d1
-lbC02D33C:
+.loop:
                     sub.l    d1,d0
-                    bcs.b    lbC02D352
+                    bcs.b    .done
+                REPT 8
                     move.l   d2,(a0)+
-                    move.l   d2,(a0)+
-                    move.l   d2,(a0)+
-                    move.l   d2,(a0)+
-                    move.l   d2,(a0)+
-                    move.l   d2,(a0)+
-                    move.l   d2,(a0)+
-                    move.l   d2,(a0)+
-                    bra.b    lbC02D33C
-lbC02D352:
+                ENDR
+                    bra.b    .loop
+.done:
                     add.l    d1,d0
-                    bra.b    lbC02D358
-lbC02D356:
+                    bra.b    .go
+.remaining_bytes:
                     sf       (a0)+
-lbC02D358:
-                    dbra     d0,lbC02D356
+.go:
+                    dbra     d0,.remaining_bytes
                     move.l   (sp)+,d2
-lbC02D35E:
+.error:
                     rts
 
 ; ===========================================================================
@@ -18949,7 +18985,7 @@ ascii_MSG0:
                     dc.b     CMD_SET_MAIN_SCREEN
                     dc.b     CMD_END
 main_menu_text:
-                    dc.b     3
+                    dc.b     CMD_CLEAR_MAIN_MENU
                     dc.b     CMD_TEXT,1,0,'Current Song:',0
                     dc.b     CMD_TEXT,1,1,'New  Pos..:',0
                     dc.b     CMD_TEXT,1,2,'Load Patt.:',0
@@ -19060,12 +19096,12 @@ lbB01766C:
 lbB01767E:
                     dc.l     lbB017690
                     dc.b     0,1,16,1,9,1
-                    dc.l     lbC022240
+                    dc.l     cmd_play_song
                     dc.l     0
 lbB017690:
                     dc.l     lbB0176A2
                     dc.b     0,1,16,2,9,1
-                    dc.l     lbC022252
+                    dc.l     cmd_play_pattern
                     dc.l     0
 lbB0176A2:
                     dc.l     lbB0176B4
@@ -19315,9 +19351,9 @@ lbW0179BE:
                     dc.w     2,32
                     dc.l     lbC01F42C
                     dc.w     2,5
-                    dc.l     lbC022252
+                    dc.l     cmd_play_pattern
                     dc.w     2,96
-                    dc.l     lbC022252
+                    dc.l     cmd_play_pattern
                     dc.w     4,15
                     dc.l     lbC01F10A
                     dc.w     4,14
@@ -20160,27 +20196,27 @@ lbW01933E:
 lbW019350:
                     dc.l     lbW019362
                     dc.w     1,$3B16,$101
-                    dc.l     lbC02B228
-                    dc.l     lbC02B246
+                    dc.l     move_char_up
+                    dc.l     move_char_down
 lbW019362:
                     dc.l     lbW019374
                     dc.w     1,$3A17,$101
-                    dc.l     lbC02B1F0
-                    dc.l     lbC02B20C
+                    dc.l     move_char_left
+                    dc.l     move_char_right
 lbW019374:
                     dc.l     lbW019386
                     dc.w     1,$3C17,$101
-                    dc.l     lbC02B20C
-                    dc.l     lbC02B1F0
+                    dc.l     move_char_right
+                    dc.l     move_char_left
 lbW019386:
                     dc.l     lbW019398
                     dc.w     1,$3B18,$101
-                    dc.l     lbC02B246
-                    dc.l     lbC02B228
+                    dc.l     move_char_down
+                    dc.l     move_char_up
 lbW019398:
                     dc.l     lbW0193AA
                     dc.w     $1001,$3516,$501
-                    dc.l     lbC02B268
+                    dc.l     outline_char
                     dc.l     0
 lbW0193AA:
                     dc.l     lbW0193BC
@@ -20272,13 +20308,13 @@ lbW0194C0:
                     dc.w     0
 lbW0194EA:
                     dc.w     4,15
-                    dc.l     lbC02B1F0
+                    dc.l     move_char_left
                     dc.w     4,14
-                    dc.l     lbC02B20C
+                    dc.l     move_char_right
                     dc.w     4,12
-                    dc.l     lbC02B228
+                    dc.l     move_char_up
                     dc.w     4,13
-                    dc.l     lbC02B246
+                    dc.l     move_char_down
                     dc.w     2,31
                     dc.l     lbC02A7DA
                     dc.w     0
@@ -20509,7 +20545,7 @@ lbL01A130:
                     dc.l     0
 lbL01A134:
                     dc.l     0
-lbW01A138:
+current_viewed_pattern:
                     dc.w     0
 lbL01A13A:
                     dcb.b    12,0
@@ -20616,7 +20652,7 @@ lbW01BC6E:
                     dc.w     0
 lbL01BC70:
                     dcb.l    64,0
-                    cnop     0,4
+                    cnop     0,8
 file_info_block:
                     dc.l     0
 lbL01BD74:
@@ -20678,8 +20714,11 @@ sprites_bps:
                     dc.w     SPR0PTH,0,SPR0PTL,0,SPR1PTH,0,SPR1PTL,0,SPR2PTH,0,SPR2PTL,0,SPR3PTH,0,SPR3PTL,0
                     dc.w     SPR4PTH,0,SPR4PTL,0,SPR5PTH,0,SPR5PTL,0,SPR6PTH,0,SPR6PTL,0,SPR7PTH,0,SPR7PTL,0
                     dc.w     DIWSTRT,$581,DIWSTOP,$40C1
-                    dc.w     DDFSTRT,$3C,DDFSTOP,$D4
-                    dc.w     FMODE,0,BPLCON3,$C00
+copper_ddfstrt:
+                    dc.w     DDFSTRT,$3C
+copper_ddfstop:
+                    dc.w     DDFSTOP,$D4
+                    dc.w     FMODE,%11,BPLCON3,$C20
                     ; mouse pointer colors
                     dc.w     COLOR17,$805,COLOR18,$B06,COLOR19,$E08
                     dc.w     BPLCON1,0,BPLCON2,%111111
@@ -20761,6 +20800,7 @@ OK_OuputBuff_2:
                     ds.b     82
 OK_MixBuff_2:
                     ds.b     MIX_BUFFERS_LEN_2*2
+                    cnop     0,8
 main_screen:
                     ds.b     (1080*80)
 dummy_sprite:
