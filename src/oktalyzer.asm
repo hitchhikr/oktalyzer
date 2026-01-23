@@ -2548,7 +2548,7 @@ lbC01FBF2:
                     move.w   d0,d2
                     moveq    #23,d0
                     moveq    #6,d1
-                    jsr      (lbC025E7E)
+                    jsr      (draw_2_digits_hex_number)
                     bsr      lbC01F946
                     bsr      lbC01FA10
                     bsr      lbC01FB80
@@ -4000,7 +4000,7 @@ lbC020D70:
                     exg      d1,d2
                     move.w   d1,d3
                     moveq    #$5A,d4
-                    jsr      (draw_filled_box)
+                    jsr      (draw_filled_box_with_minterms)
 lbC020D7E:
                     movem.l  (sp)+,d0-d7/a0-a6
                     rts
@@ -4030,7 +4030,7 @@ lbC020DB2:
                     move.w   d2,d3
                     move.w   d0,d2
                     moveq    #$5A,d4
-                    jsr      (draw_filled_box)
+                    jsr      (draw_filled_box_with_minterms)
 lbC020DC0:
                     movem.l  (sp)+,d0-d7/a0-a6
                     rts
@@ -8905,7 +8905,7 @@ error_only_in_pal:
 ; ===========================================================================
 lbC025132:
                     moveq    #$A,d4
-                    jmp      (draw_filled_box)
+                    jmp      (draw_filled_box_with_minterms)
 
 ; ===========================================================================
 lbW02513C:
@@ -9088,19 +9088,19 @@ disown_blitter:
                     rts
 
 ; ===========================================================================
-lbC0255EE:
+draw_filled_box:
                     lea      (main_screen),a3
                     moveq    #$5A,d4
-draw_filled_box:
+draw_filled_box_with_minterms:
                     move.w   d4,d6
                     cmp.w    d1,d3
-                    bge.b    lbC025602
+                    bge.b    .y2_greater_y1
                     exg      d1,d3
-lbC025602:
+.y2_greater_y1:
                     cmp.w    d0,d2
-                    bge.b    lbC025608
+                    bge.b    .x2_greater_x1
                     exg      d0,d2
-lbC025608:
+.x2_greater_x1:
                     sub.w    d1,d3
                     move.w   d1,d4
                     mulu.w   #SCREEN_BYTES,d4
@@ -9572,28 +9572,25 @@ lbC025C1A:
                     moveq    #-2,d2
                     DOS      Lock
                     move.l   d0,d7
-                    beq.b    lbC025C7C
+                    beq.b    .error
                     move.l   d7,d1
-                    lea      (lbL025C80),a0
+                    lea      (.file_info_block),a0
                     move.l   a0,d2
                     DOS      Examine
                     tst.l    d0
-                    beq.b    lbC025C7C
+                    beq.b    .error
                     move.l   d7,d1
                     DOS      UnLock
-                    tst.l    (lbL025C84)
-                    bpl.b    lbC025C7C
-                    move.l   (lbL025CFC),d0
+                    tst.l    (.file_info_block+fib_DirEntryType)
+                    bpl.b    .error
+                    move.l   (.file_info_block+fib_Size),d0
                     rts
-lbC025C7C:
+.error:
                     moveq    #ERROR,d0
                     rts
-lbL025C80:
-                    dc.l     0
-lbL025C84:
-                    dcb.l    30,0
-lbL025CFC:
-                    dcb.l    34,0
+                    cnop     0,8
+.file_info_block:
+                    dcb.b    fib_SIZEOF,0
 lbC025D84:
                     clr.b    (-1,a1,d0.w)
                     bra.b    lbC025D8E
@@ -9698,30 +9695,18 @@ lbL025E66:
                     dc.l     10,1,0
 lbL025E72:
                     dcb.l    3,0
-lbC025E7E:
-                    bsr.b    lbC025ECE
-                    bra.b    lbC025EB0
-lbC025E82:
-                    bsr.b    lbC025ECE
-                    bra.b    lbC025EA4
-                    bsr.b    lbC025ECE
-                    bra.b    lbC025E98
-                    bsr.b    lbC025ECE
-                    move.l   d2,d1
-                    swap     d1
-                    andi.w   #$F,d1
-                    move.b   (a1,d1.w),(a0)+
-lbC025E98:
-                    move.w   d2,d1
-                    rol.w    #4,d1
-                    andi.w   #$F,d1
-                    move.b   (a1,d1.w),(a0)+
-lbC025EA4:
+
+; ===========================================================================
+draw_2_digits_hex_number:
+                    bsr.b    prepare_hex_number_text_block
+                    bra.b    do_draw_2_digits_hex_number
+draw_3_digits_hex_number:
+                    bsr.b    prepare_hex_number_text_block
                     move.w   d2,d1
                     lsr.w    #8,d1
                     andi.w   #$F,d1
                     move.b   (a1,d1.w),(a0)+
-lbC025EB0:
+do_draw_2_digits_hex_number:
                     move.w   d2,d1
                     lsr.w    #4,d1
                     andi.w   #$F,d1
@@ -9729,46 +9714,48 @@ lbC025EB0:
                     move.w   d2,d1
                     andi.w   #$F,d1
                     move.b   (a1,d1.w),(a0)+
-                    lea      (lbL025EE2,pc),a0
+                    lea      (hex_number_text_buffer,pc),a0
                     bra      draw_text_with_coords_struct
-lbC025ECE:
-                    lea      (lbL025EE6,pc),a0
+prepare_hex_number_text_block:
+                    lea      (hex_number_text_buffer+4,pc),a0
                     lea      (alpha_numeric_table),a1
                     clr.l    (a0)
                     clr.l    -(a0)
                     move.b   d0,(a0)+
                     move.b   d1,(a0)+
                     rts
-lbL025EE2:
-                    dc.l     0
-lbL025EE6:
-                    dc.l     0
-lbC025EEA:
+hex_number_text_buffer:
+                    dcb.b    8,0
+
+; ===========================================================================
+draw_short_ascii_decimal_number:
                     movem.w  d0/d1,-(sp)
-                    lea      (lbB025F06,pc),a1
+                    lea      (.ascii_buffer,pc),a1
                     moveq    #0,d0
                     move.w   d2,d0
                     move.w   d3,d1
-                    bsr.b    make_ascii_decimal_number
-                    lea      (lbB025F06,pc),a0
+                    bsr.b    prepare_ascii_decimal_number
+                    lea      (.ascii_buffer,pc),a0
                     movem.w  (sp)+,d0/d1
                     bra      draw_text
-lbB025F06:
+.ascii_buffer:
                     dcb.b    12,0
-lbC025F12:
-                    movem.w  d0/d1,-(sp)
-                    lea      (lbL025F2C,pc),a1
-                    move.l   d2,d0
-                    move.w   d3,d1
-                    bsr.b    make_ascii_decimal_number
-                    lea      (lbL025F2C,pc),a0
-                    movem.w  (sp)+,d0/d1
-                    bra      draw_text
-lbL025F2C:
-                    dcb.l    3,0
 
 ; ===========================================================================
-make_ascii_decimal_number:
+draw_long_ascii_decimal_number:
+                    movem.w  d0/d1,-(sp)
+                    lea      (.ascii_buffer,pc),a1
+                    move.l   d2,d0
+                    move.w   d3,d1
+                    bsr.b    prepare_ascii_decimal_number
+                    lea      (.ascii_buffer,pc),a0
+                    movem.w  (sp)+,d0/d1
+                    bra      draw_text
+.ascii_buffer:
+                    dcb.b    12,0
+
+; ===========================================================================
+prepare_ascii_decimal_number:
                     movem.l  d0-d3/a0,-(sp)
                     lea      (decimal_table,pc),a0
                     moveq    #10,d3
@@ -9777,30 +9764,30 @@ make_ascii_decimal_number:
                     add.w    d3,d3
                     adda.w   d3,a0
                     sf       d3
-lbC025F4C:
+.loop:
                     move.l   (a0)+,d1
-                    beq.b    lbC025F7A
+                    beq.b    .done
                     cmp.l    d1,d0
-                    bcs.b    lbC025F6A
+                    bcs.b    .threshold
                     moveq    #-1,d2
-lbC025F56:
+.search:
                     sub.l    d1,d0
-                    dbcs     d2,lbC025F56
+                    dbcs     d2,.search
                     add.l    d1,d0
                     neg.b    d2
                     addi.b   #'0'-1,d2
                     move.b   d2,(a1)+
                     st       d3
-                    bra.b    lbC025F4C
-lbC025F6A:
+                    bra.b    .loop
+.threshold:
                     tst.b    d3
-                    beq.b    lbC025F74
+                    beq.b    .leading_zero
                     move.b   #'0',(a1)+
-                    bra.b    lbC025F4C
-lbC025F74:
+                    bra.b    .loop
+.leading_zero:
                     move.b   #' ',(a1)+
-                    bra.b    lbC025F4C
-lbC025F7A:
+                    bra.b    .loop
+.done:
                     addi.b   #'0',d0
                     move.b   d0,(a1)+
                     movem.l  (sp)+,d0-d3/a0
@@ -9922,7 +9909,7 @@ lbC0260D2:
                     move.w   d0,d3
                     moveq    #0,d0
                     move.w   #SCREEN_WIDTH-1,d2
-                    bsr      lbC0255EE
+                    bsr      draw_filled_box
                     movem.l  (sp)+,d2-d7/a2-a6
                     bra      next_command
 
@@ -10712,7 +10699,7 @@ display_messagebox:
                     move.w   #157,d2
                     moveq    #22,d3
                     moveq    #$A,d4
-                    bsr      draw_filled_box
+                    bsr      draw_filled_box_with_minterms
                     move.l   (sp)+,a0
                     move.l   (requester_screen_pos,pc),a1
                     lea      (641,a1),a1
@@ -11237,7 +11224,7 @@ lbC026F1E:
                     DOS      Examine
                     tst.l    d0
                     beq.b    lbC027016
-                    tst.l    (lbL01BD74)
+                    tst.l    (file_info_block+fib_DirEntryType)
                     bmi.b    lbC027008
 lbC026FC4:
                     move.l   (dir_lock_handle,pc),d1
@@ -11245,15 +11232,15 @@ lbC026FC4:
                     DOS      ExNext
                     tst.l    d0
                     beq.b    lbC027016
-                    tst.l    (lbL01BD74)
+                    tst.l    (file_info_block+fib_DirEntryType)
                     bmi.b    lbC026FF6
-                    lea      (lbL01BD78),a0
+                    lea      (file_info_block+fib_FileName),a0
                     bsr      lbC0271CC
                     bmi.b    lbC027016
                     bra.b    lbC026FC4
 lbC026FF6:
-                    lea      (lbL01BD78),a0
-                    move.l   (116,a0),d0
+                    lea      (file_info_block+fib_FileName),a0
+                    move.l   (fib_Size-fib_FileName,a0),d0
                     bsr      lbC0271EC
                     bmi.b    lbC027016
                     bra.b    lbC026FC4
@@ -11541,10 +11528,10 @@ lbC0272FE:
                     bsr      lbC027308
                     bra      lbC027310
 lbC027308:
-                    lea      (main_screen+10882),a0
+                    lea      (main_screen+((136*80)+2)),a0
                     bra.b    lbC02731A
 lbC027310:
-                    lea      (main_screen+10922),a0
+                    lea      (main_screen+((136*80)+42)),a0
 lbC02731A:
                     moveq    #96-1,d1
                     moveq    #0,d0
@@ -11599,7 +11586,7 @@ lbC02739A:
                     lea      (lbB027427,pc),a1
                     move.l   (6,a4),d0
                     moveq    #10,d1
-                    jsr      (make_ascii_decimal_number)
+                    jsr      (prepare_ascii_decimal_number)
                     lea      (lbB027427,pc),a2
 lbC0273BE:
                     cmpi.b   #' ',(a2)+
@@ -11917,14 +11904,14 @@ lbC02774C:
                     move.w   (lbW027FEC,pc),d2
                     add.w    (lbW027FF2,pc),d2
                     moveq    #5,d3
-                    jmp      (lbC025EEA)
+                    jmp      (draw_short_ascii_decimal_number)
 lbC027762:
                     movem.l  d2,-(sp)
                     moveq    #74,d0
                     moveq    #15,d1
                     move.w   (lbW028004,pc),d2
                     moveq    #5,d3
-                    jsr      (lbC025EEA)
+                    jsr      (draw_short_ascii_decimal_number)
                     movem.l  (sp)+,d2
                     rts
 
@@ -11948,7 +11935,7 @@ lbC0277A6:
                     moveq    #8,d1
                     move.l   (disk_size,pc),d2
                     moveq    #10,d3
-                    jmp      (lbC025F12)
+                    jmp      (draw_long_ascii_decimal_number)
 lbC0277B8:
                     cmpi.w   #3,(lbW027B30)
                     beq.b    lbC0277CC
@@ -12078,7 +12065,7 @@ lbC0279EE:
                     moveq    #8,d1
                     move.w   (lbW027B38,pc),d2
                     moveq    #2,d3
-                    jmp      (lbC025EEA)
+                    jmp      (draw_short_ascii_decimal_number)
 lbC027A0C:
                     lea      (lbB027A18,pc),a0
                     jmp      (draw_text_with_coords_struct)
@@ -12790,7 +12777,7 @@ lbC02824A:
                     move.w   d0,d3
                     moveq    #0,d0
                     move.w   #SCREEN_WIDTH-1,d2
-                    jsr      (lbC0255EE)
+                    jsr      (draw_filled_box)
                     movem.l  (sp)+,d2-d7/a2-a6
                     rts
 lbC028260:
@@ -13299,7 +13286,7 @@ lbC02898A:
                     move.w   #127,d3
 lbC0289AC:
                     movem.l  d0-d7/a0-a6,-(sp)
-                    jsr      (lbC0255EE)
+                    jsr      (draw_filled_box)
                     movem.l  (sp)+,d0-d7/a0-a6
                     movem.l  (sp)+,d2/d3
                     rts
@@ -15337,7 +15324,7 @@ lbC02A9E2:
                     bsr      lbC02ABAC
                     bsr      lbC02ACA6
                     bsr      lbC02AD72
-                    bsr      lbC02AED4
+                    bsr      update_f_keys_line_jump_values
                     bsr      draw_font
                     bsr      draw_selected_char_grid
                     bra      lbC02AA28
@@ -15422,7 +15409,7 @@ lbC02AAD6:
                     move.w   (default_pattern_length,pc),d2
                     moveq    #23,d0
                     moveq    #13,d1
-                    jmp      (lbC025E7E)
+                    jmp      (draw_2_digits_hex_number)
 lbC02AAE6:
                     lea      (samples_load_mode,pc),a0
                     cmpi.w   #2,(a0)
@@ -15642,11 +15629,11 @@ lbC02ACA6:
                     move.w   (a5)+,d2
                     moveq    #18,d0
                     moveq    #21,d1
-                    jsr      (lbC025E82)
+                    jsr      (draw_3_digits_hex_number)
                     move.w   (a5)+,d2
                     moveq    #22,d0
                     moveq    #21,d1
-                    jsr      (lbC025E82)
+                    jsr      (draw_3_digits_hex_number)
                     bra      set_colors_palette
 lbW02ACE0:
                     dc.w     0
@@ -15759,129 +15746,165 @@ lbC02AD9E:
                     movem.w  (sp)+,d6/d7
                     dbra     d7,lbC02AD9E
                     jmp      (release_after_line_drawing)
-lbC02ADDA:
+
+; ===========================================================================
+increase_f6_key_line_jump_value:
                     lea      (f6_key_line_jump_value,pc),a0
                     cmpi.w   #127,(a0)
-                    beq.b    lbC02ADEA
+                    beq.b    .max
                     addq.w   #1,(a0)
-                    bra      lbC02ADFC
-lbC02ADEA:
+                    bra      update_f6_key_line_jump_value
+.max:
                     rts
-lbC02ADEC:
+
+; ===========================================================================
+decrease_f6_key_line_jump_value:
                     lea      (f6_key_line_jump_value,pc),a0
                     tst.w    (a0)
-                    beq.b    lbC02ADFA
+                    beq.b    .min
                     subq.w   #1,(a0)
-                    bra      lbC02ADFC
-lbC02ADFA:
+                    bra      update_f6_key_line_jump_value
+.min:
                     rts
-lbC02ADFC:
+
+; ===========================================================================
+update_f6_key_line_jump_value:
                     moveq    #47,d0
                     moveq    #13,d1
                     move.w   (f6_key_line_jump_value,pc),d2
-                    jmp      (lbC025E7E)
-lbC02AE0C:
+                    jmp      (draw_2_digits_hex_number)
+
+; ===========================================================================
+increase_f7_key_line_jump_value:
                     lea      (f7_key_line_jump_value,pc),a0
                     cmpi.w   #127,(a0)
-                    beq.b    lbC02AE1C
+                    beq.b    .max
                     addq.w   #1,(a0)
-                    bra      lbC02AE2E
-lbC02AE1C:
+                    bra      update_f7_key_line_jump_value
+.max:
                     rts
-lbC02AE1E:
+
+; ===========================================================================
+decrease_f7_key_line_jump_value:
                     lea      (f7_key_line_jump_value,pc),a0
                     tst.w    (a0)
-                    beq.b    lbC02AE2C
+                    beq.b    .min
                     subq.w   #1,(a0)
-                    bra      lbC02AE2E
-lbC02AE2C:
+                    bra      update_f7_key_line_jump_value
+.min:
                     rts
-lbC02AE2E:
+
+; ===========================================================================
+update_f7_key_line_jump_value:
                     moveq    #47,d0
                     moveq    #15,d1
                     move.w   (f7_key_line_jump_value,pc),d2
-                    jmp      (lbC025E7E)
-lbC02AE3E:
+                    jmp      (draw_2_digits_hex_number)
+
+; ===========================================================================
+increase_f8_key_line_jump_value:
                     lea      (f8_key_line_jump_value,pc),a0
                     cmpi.w   #127,(a0)
-                    beq.b    lbC02AE4E
+                    beq.b    .max
                     addq.w   #1,(a0)
-                    bra      lbC02AE60
-lbC02AE4E:
+                    bra      update_f8_key_line_jump_value
+.max:
                     rts
-lbC02AE50:
+
+; ===========================================================================
+decrease_f8_key_line_jump_value:
                     lea      (f8_key_line_jump_value,pc),a0
                     tst.w    (a0)
-                    beq.b    lbC02AE5E
+                    beq.b    .min
                     subq.w   #1,(a0)
-                    bra      lbC02AE60
-lbC02AE5E:
+                    bra      update_f8_key_line_jump_value
+.min:
                     rts
-lbC02AE60:
+
+; ===========================================================================
+update_f8_key_line_jump_value:
                     moveq    #47,d0
                     moveq    #17,d1
                     move.w   (f8_key_line_jump_value,pc),d2
-                    jmp      (lbC025E7E)
-lbC02AE70:
+                    jmp      (draw_2_digits_hex_number)
+
+; ===========================================================================
+increase_f9_key_line_jump_value:
                     lea      (f9_key_line_jump_value,pc),a0
                     cmpi.w   #127,(a0)
-                    beq.b    lbC02AE80
+                    beq.b    .max
                     addq.w   #1,(a0)
-                    bra      lbC02AE92
-lbC02AE80:
+                    bra      update_f9_key_line_jump_value
+.max:
                     rts
-lbC02AE82:
+
+; ===========================================================================
+decrease_f9_key_line_jump_value:
                     lea      (f9_key_line_jump_value,pc),a0
                     tst.w    (a0)
-                    beq.b    lbC02AE90
+                    beq.b    .min
                     subq.w   #1,(a0)
-                    bra      lbC02AE92
-lbC02AE90:
+                    bra      update_f9_key_line_jump_value
+.min:
                     rts
-lbC02AE92:
+
+; ===========================================================================
+update_f9_key_line_jump_value:
                     moveq    #47,d0
                     moveq    #19,d1
                     move.w   (f9_key_line_jump_value,pc),d2
-                    jmp      (lbC025E7E)
-lbC02AEA2:
+                    jmp      (draw_2_digits_hex_number)
+
+; ===========================================================================
+increase_f10_key_line_jump_value:
                     lea      (f10_key_line_jump_value,pc),a0
                     cmpi.w   #127,(a0)
-                    beq.b    lbC02AEB2
+                    beq.b    .max
                     addq.w   #1,(a0)
-                    bra      lbC02AEC4
-lbC02AEB2:
+                    bra      update_f10_key_line_jump_value
+.max:
                     rts
-lbC02AEB4:
+
+; ===========================================================================
+decrease_f10_key_line_jump_value:
                     lea      (f10_key_line_jump_value,pc),a0
                     tst.w    (a0)
-                    beq.b    lbC02AEC2
+                    beq.b    .min
                     subq.w   #1,(a0)
-                    bra      lbC02AEC4
-lbC02AEC2:
+                    bra      update_f10_key_line_jump_value
+.min:
                     rts
-lbC02AEC4:
+
+; ===========================================================================
+update_f10_key_line_jump_value:
                     moveq    #47,d0
                     moveq    #21,d1
                     move.w   (f10_key_line_jump_value,pc),d2
-                    jmp      (lbC025E7E)
-lbC02AED4:
-                    bsr      lbC02ADFC
-                    bsr      lbC02AE2E
-                    bsr.b    lbC02AE60
-                    bsr.b    lbC02AE92
-                    bra.b    lbC02AEC4
-lbC02AEE4:
+                    jmp      (draw_2_digits_hex_number)
+
+; ===========================================================================
+update_f_keys_line_jump_values:
+                    bsr      update_f6_key_line_jump_value
+                    bsr      update_f7_key_line_jump_value
+                    bsr.b    update_f8_key_line_jump_value
+                    bsr.b    update_f9_key_line_jump_value
+                    bra.b    update_f10_key_line_jump_value
+
+; ===========================================================================
+save_font:
                     lea      (chars3_MSG,pc),a0
                     lea      (text_font,pc),a1
                     move.l   #2048,d0
                     jsr      (save_file)
-                    bmi.b    lbC02AEFC
+                    bmi.b    .error
                     rts
-lbC02AEFC:
+.error:
                     jmp      (display_dos_error)
 chars3_MSG:
                     dc.b     'chars3',0
                     even 
+
+; ===========================================================================
 lbC02AF0C:
                     lea      (current_selected_char,pc),a0
                     cmpi.w   #$FF,(a0)
@@ -15986,37 +16009,41 @@ lbC02B02C:
                     move.w   (current_selected_char),d0
                     bsr      lbC02B196
                     bra      draw_selected_char_grid
-lbC02B03A:
+
+; ===========================================================================
+mirror_char_x:
                     movem.l  d2/d3,-(sp)
                     lea      (text_font,pc),a0
                     move.w   (current_selected_char),d0
                     lsl.w    #3,d0
                     adda.w   d0,a0
                     moveq    #7-1,d0
-lbC02B04E:
+.loop_y:
                     move.b   (a0),d1
                     moveq    #0,d2
                     moveq    #8-1,d3
-lbC02B054:
+.loop_x:
                     addx.b   d1,d1
                     roxr.b   #1,d2
-                    dbra     d3,lbC02B054
+                    dbra     d3,.loop_x
                     move.b   d2,(a0)+
-                    dbra     d0,lbC02B04E
+                    dbra     d0,.loop_y
                     movem.l  (sp)+,d2/d3
                     bra      draw_selected_char_grid
-lbC02B06C:
+
+; ===========================================================================
+mirror_char_y:
                     lea      (text_font,pc),a0
                     move.w   (current_selected_char),d0
                     lsl.w    #3,d0
                     adda.w   d0,a0
                     lea      (7,a0),a1
                     moveq    #3-1,d0
-lbC02B080:
+.loop:
                     move.b   (a0),d1
                     move.b   -(a1),(a0)+
                     move.b   d1,(a1)
-                    dbra     d0,lbC02B080
+                    dbra     d0,.loop
                     bra      draw_selected_char_grid
 
 ; ===========================================================================
@@ -16064,7 +16091,7 @@ lbC02B0D4:
                     moveq    #59,d0
                     moveq    #20,d1
                     move.w   (current_selected_char),d2
-                    bra      lbC025E7E
+                    bra      draw_2_digits_hex_number
 
 ; ===========================================================================
 draw_selected_char:
@@ -17452,7 +17479,7 @@ lbC02C05C:
                     moveq    #15,d1
                     move.w   (lbW02B710,pc),d2
                     moveq    #3,d3
-                    jmp      (lbC025EEA)
+                    jmp      (draw_short_ascii_decimal_number)
 lbC02C06E:
                     tst.w    (lbW02B70E)
                     bpl.b    lbC02C07C
@@ -17572,7 +17599,7 @@ lbC02C21A:
                     sub.w    (lbW02B70E,pc),d0
                     cmpi.w   #12,d0
                     bls.b    lbC02C276
-                    lea      (main_screen+10882),a0
+                    lea      (main_screen+((136*80)+2)),a0
                     jsr      (own_blitter)
                     move.l   #$9F00000,(BLTCON0,a6)
                     moveq    #-1,d0
@@ -17646,7 +17673,7 @@ lbC02C344:
                     moveq    #8,d1
                     move.w   (lbW02C9E6),d2
                     moveq    #2,d3
-                    jsr      (lbC025EEA)
+                    jsr      (draw_short_ascii_decimal_number)
                     movem.l  (sp)+,d4-d7/a2-a5
                     lea      (OK_PatternList),a0
                     move.w   (lbW02C9E6,pc),d0
@@ -17667,7 +17694,7 @@ lbC02C398:
                     moveq    #75,d0
                     moveq    #10,d1
                     move.w   (lbW02CA22,pc),d2
-                    jsr      (lbC025E7E)
+                    jsr      (draw_2_digits_hex_number)
                     movem.l  (sp)+,d4-d7/a2-a5
                     lea      (OK_ChannelsModes),a4
                     moveq    #1,d0
@@ -20161,28 +20188,28 @@ lbW0192C0:
 lbW0192D2:
                     dc.l     lbW0192E4
                     dc.w     1,$2B0D,$601
-                    dc.l     lbC02ADDA
-                    dc.l     lbC02ADEC
+                    dc.l     increase_f6_key_line_jump_value
+                    dc.l     decrease_f6_key_line_jump_value
 lbW0192E4:
                     dc.l     lbW0192F6
                     dc.w     1,$2B0F,$601
-                    dc.l     lbC02AE0C
-                    dc.l     lbC02AE1E
+                    dc.l     increase_f7_key_line_jump_value
+                    dc.l     decrease_f7_key_line_jump_value
 lbW0192F6:
                     dc.l     lbW019308
                     dc.w     1,$2B11,$601
-                    dc.l     lbC02AE3E
-                    dc.l     lbC02AE50
+                    dc.l     increase_f8_key_line_jump_value
+                    dc.l     decrease_f8_key_line_jump_value
 lbW019308:
                     dc.l     lbW01931A
                     dc.w     1,$2B13,$601
-                    dc.l     lbC02AE70
-                    dc.l     lbC02AE82
+                    dc.l     increase_f9_key_line_jump_value
+                    dc.l     decrease_f9_key_line_jump_value
 lbW01931A:
                     dc.l     lbW01932C
                     dc.w     1,$2B15,$601
-                    dc.l     lbC02AEA2
-                    dc.l     lbC02AEB4
+                    dc.l     increase_f10_key_line_jump_value
+                    dc.l     decrease_f10_key_line_jump_value
 lbW01932C:
                     dc.l     lbW01933E
                     dc.w     $2001,$350C,$807
@@ -20239,13 +20266,13 @@ lbW0193E0:
                     dc.l     lbC02AFFA,0
 lbW0193F2:
                     dc.l     lbW019404
-                    dc.w     $1001,$351A,$801
-                    dc.l     lbC02B06C
+                    dc.b     16,1,53,26,8,1
+                    dc.l     mirror_char_x
                     dc.l     0
 lbW019404:
                     dc.l     lbW019416
-                    dc.w     $1001,$351B,$801
-                    dc.l     lbC02B03A
+                    dc.b     16,1,53,27,8,1
+                    dc.l     mirror_char_y
                     dc.l     0
 lbW019416:
                     dc.l     lbW019428
@@ -20320,7 +20347,7 @@ lbW0194EA:
                     dc.w     0
 lbW019514:
                     dc.w     2,67
-                    dc.l     lbC02AEE4
+                    dc.l     save_font
                     dc.w     0
                     dc.w     0
 effects_ed_text:
@@ -20654,11 +20681,7 @@ lbL01BC70:
                     dcb.l    64,0
                     cnop     0,8
 file_info_block:
-                    dc.l     0
-lbL01BD74:
-                    dc.l     0
-lbL01BD78:
-                    dcb.l    63,0
+                    dcb.b    fib_SIZEOF,0
 disk_info_data:
                     dcb.l    9,0
 ; ---
