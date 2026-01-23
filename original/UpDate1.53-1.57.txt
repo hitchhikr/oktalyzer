@@ -1,0 +1,192 @@
+UpDate 1.53 - 1.57 Info
+Last modified: August 1, 1993
+
+Well, no program is perfect...
+
+Generally
+=========
+
+Automatic adjustment to the NTSC standard 
+(Here I must thank Peter Weiß, who installed the PAL-NTSC switch in my A2000).
+
+Unfortunately, I was unable to rewrite playback routine 1 to the NTSC standard.
+When attempting to play a piece of music in NTSC using playback routine 1, 
+the following error message appears: "Only in PAL" (Only in PAL mode).
+
+Every now and then the entire program stopped at Karl-Heinz (TAR).
+I suspect this is related to the messaging system.
+The routines were completely changed.
+
+Starting with Kickstart version 37.175, there were problems with the InputHandler.
+This error has been fixed.
+
+There were also problems with some monitors and ECS.
+This error was corrected by using a second copper list.
+
+When starting from an interlaced screen, the playback routine became 50% out of sync.
+This error has been fixed.
+
+Oktalyzer generally had problems starting if a different ScreenMode was set under >= 2.0.
+Opening a screen also resolved these problems.
+
+The CLI window now also pays some attention to the character set of the Workbench.
+
+Finally, all known enforcer hits have been removed.
+
+Pattern editor
+==============
+
+A different scrolling system was used here, which only shifts the entire screen in the top and bottom 8 lines.
+
+Sample Editor
+=============
+
+The mouse pointer no longer appeared on newer Amigas after the sampler routine.
+This was a bug in the keyboard input and has been fixed.
+
+After using the sampler, it may happen that you cannot immediately return to the Octalyzer using Restart Octalyzer.
+Here, you simply get around it by pressing a button.
+I am currently still working on this problem.
+
+Change Period did not work when the entire sample was selected (not in ALL mode).
+This error has also been fixed.
+Incidentally, this bug already occurred in the first version of Oktalyzer!
+
+In Change-Period it is now possible to resample from note to note.
+A new algorithm was also used here to prevent distortion of the sample.
+
+Playback routine Octalyzer+Extern
+=================================
+
+The playback routine is now approximately twice as fast in 4-channel mode.
+
+With the MIDI Out mode, Oktalyzer songs can now also be output via MIDI.
+Here, samples 0-f are assigned to the corresponding MIDI channels.
+The length of the MIDI notes is proportional to the Amiga sample lengths.
+This is just a small 'hack' to enable the transfer of Oktalyzer songs to a MIDI sequencer.
+
+External playback routine
+=========================
+
+In the case of multiple initialization, the music piece continued playing from the same pattern position.
+This error has been fixed.
+
+Music tracks that contained some blank samples in between were played incorrectly.
+I was able to fix the error here as well.
+
+For the "Seka® freaks", I have created two playback routines (AbsPlay1 and AbsPlay2) which can be placed at absolute addresses 
+using the relocator program "Relox", which is located in the C directory.
+
+After relocation using "Relox", the functions of the playback routines can be called as follows:
+
+	jsr Basis+00	; OK_Init
+	jsr Basis+06	; OK_Play
+	jsr Basis+12	; OK_Stop
+	jsr Basis+18	; OK_AllocDMA
+	jsr Basis+24	; OK_FreeDMA
+	jsr Basis+30	; OK_SetVol
+	jsr Basis+36    ; OK_SetBalance
+
+Where "Basis" is the starting address of the playback routine in the CHIP STORAGE.
+
+As you may have already noticed, I have added new commands to the external playback routine.
+The allocation routines OK_AllocDMA and OK_FreeDMA can be used, for example, to play your own samples while the music is playing.
+Unfortunately, these routines only work with non-separated channels, 
+as a desynchronization of the shared channels would have unpredictable consequences.
+
+
+Name:       OK_AllocDMA
+
+Handover:   d0: Channel (0-3) to be allocated.
+
+Return:     d0:0.l : Error: Channel could not be allocated.
+            d0:1.l : Everything OK.
+
+
+Name:       OK_FreeDMA
+
+Handover:   d0: Channel (0-3) to be released.
+
+Return:     d0:0.l : Attention: Channel was already free.
+            d0:1.l : Everything OK.
+
+Warning: In the "OK_Init" routine, all channels are enabled.
+
+
+Unfortunately, I forgot the SetVol routine in the first versions.
+It is absolutely necessary to smoothly fade music in and out.
+
+
+Name:       OK_SetVol
+
+Handover:   d0: Master volume for all channels (0-$40)
+
+Warning: If the specified volume is > $40, it will be ignored.
+Warning: The internally stored value is not reset to $40 in the initialization routine "OK_Init".
+
+The two stereo channels can also be controlled separately:
+
+Name:       OK_SetBalance
+
+Handover: d0: Master volume left.
+            d1: Master volume on the right.
+
+The program Relox
+=================
+
+The Relox program was developed to assign finished Amiga programs to absolute addresses (for example, for EPROM programming).
+
+The command is simply made by entering the keyword "RELOX" in the CLI.
+
+After launching the program, you will first be asked for the source file name and the starting address.
+Once Relox has analyzed and relocated the program, it will ask for the target filename.
+
+Danger !!!  
+Enter a track number here and Relox will save the program track by track directly to the floppy disk in drive 0.
+
+
+
+Manual
+======
+
+Chapter 5 (File System) -------------------------------------------------
+
+The following keyboard commands are also available in the file system:
+
+
+ESC
+
+To exit the file system (=CANCEL).
+
+
+RETURN
+
+Used to confirm the current file system function (=OK).
+
+
+"a"
+
+Selects all files in the current directory if you are in multi-selection mode.
+
+
+"c"
+
+Deselects all files in multi-selection mode.
+
+
+Chapter 15.2 (Installation) ---------------------------------------------
+
+The source codes EXAMPLE1.s and EXAMPLE2.s are not used as examples for the calls
+(the playback routines were not yet finished when the manual went to print).
+
+=========================================================================
+
+If you find any errors, please write to the following address:
+
+Armin Sander
+Fraunhoferstr. 23f
+8000 Muenchen 5
+
+or call me: Tel.: 089/2011866
+
+=========================================================================
