@@ -6,5 +6,6 @@ and extract an asm replay routine.
 Done so far:
 
 - Fixed to work on AGA and RTG machines.
+- Fixed a few bugs.
 
 A work in progress...
