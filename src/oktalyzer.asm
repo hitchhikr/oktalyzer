@@ -4054,7 +4054,7 @@ lbC020DE4:
                     rts
 
 ; ===========================================================================
-cmd_load_song:
+load_song:
                     move.l   #do_load_song,(current_cmd_ptr)
                     rts
 do_load_song:
@@ -5751,11 +5751,11 @@ lbC02223C:
                     bra.b    lbC022216
 
 ; ===========================================================================
-cmd_play_song:
+play_song:
                     st       (pattern_play_flag)
                     move.w   (current_song_position),(OK_PtPtr)
                     bra.b    go_play
-cmd_play_pattern:
+play_pattern:
                     sf       (pattern_play_flag)
                     move.w   (current_viewed_pattern),(OK_PtPtr)
 go_play:
@@ -8339,7 +8339,7 @@ vumeters_data:
                     dc.b     %11111111,%10000001,%10000001,%10000001,%10000001,%10000001,%10000001,%11111111
 
 ; ===========================================================================
-cmd_go_to_cli_workbench:
+go_to_cli_workbench:
                     move.l   #do_go_to_cli_workbench,(current_cmd_ptr)
                     rts
 do_go_to_cli_workbench:
@@ -11975,7 +11975,7 @@ switch_clear_mode:
                     bra      lbC026B42
 
 ; ===========================================================================
-cmd_format_disk:
+format_disk:
                     jsr      (ask_are_you_sure_requester)
                     bne      .cancelled
                     move.w   (trackdisk_unit_number),d0
@@ -15254,7 +15254,7 @@ lbC02A7E6:
                     jmp      (lbC0246B8)
 
 ; ===========================================================================
-cmd_load_prefs:
+load_prefs:
                     move.l   #do_load_prefs,(current_cmd_ptr)
                     rts
 do_load_prefs:
@@ -15275,7 +15275,7 @@ load_prefs_text:
                     even
 
 ; ===========================================================================
-cmd_save_prefs:
+save_prefs:
                     move.l   #do_save_prefs,(current_cmd_ptr)
                     rts
 do_save_prefs:
@@ -19093,7 +19093,7 @@ lbB017594:
 lbB0175A6:
                     dc.l     lbB0175B8
                     dc.b     0,1,1,2,4,1
-                    dc.l     cmd_load_song
+                    dc.l     load_song
                     dc.l     0
 lbB0175B8:
                     dc.l     lbB0175CA
@@ -19113,7 +19113,7 @@ lbB0175DC:
 lbB0175EE:
                     dc.l     lbB017600
                     dc.b     0,1,1,6,4,1
-                    dc.l     cmd_go_to_cli_workbench
+                    dc.l     go_to_cli_workbench
                     dc.l     0
 lbB017600:
                     dc.l     lbB017612
@@ -19153,12 +19153,12 @@ lbB01766C:
 lbB01767E:
                     dc.l     lbB017690
                     dc.b     0,1,16,1,9,1
-                    dc.l     cmd_play_song
+                    dc.l     play_song
                     dc.l     0
 lbB017690:
                     dc.l     lbB0176A2
                     dc.b     0,1,16,2,9,1
-                    dc.l     cmd_play_pattern
+                    dc.l     play_pattern
                     dc.l     0
 lbB0176A2:
                     dc.l     lbB0176B4
@@ -19408,9 +19408,9 @@ lbW0179BE:
                     dc.w     2,32
                     dc.l     lbC01F42C
                     dc.w     2,5
-                    dc.l     cmd_play_pattern
+                    dc.l     play_pattern
                     dc.w     2,96
-                    dc.l     cmd_play_pattern
+                    dc.l     play_pattern
                     dc.w     4,15
                     dc.l     lbC01F10A
                     dc.w     4,14
@@ -19750,7 +19750,7 @@ lbW0187F0:
                     dc.l     0
 lbW018802:
                     dc.w     0,0,$1001,$360A,$603
-                    dc.l     cmd_format_disk
+                    dc.l     format_disk
                     dc.l     0
 lbW018814:
                     dc.w     10,0
@@ -20312,12 +20312,12 @@ lbW019416:
 lbW019428:
                     dc.l     lbW01943A
                     dc.w     $1001,$11A,$603
-                    dc.l     cmd_load_prefs
+                    dc.l     load_prefs
                     dc.l     0
 lbW01943A:
                     dc.l     lbW01944C
                     dc.w     $1001,$71A,$603
-                    dc.l     cmd_save_prefs
+                    dc.l     save_prefs
                     dc.l     0
 lbW01944C:
                     dc.l     lbW01945E
