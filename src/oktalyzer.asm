@@ -9524,13 +9524,15 @@ lbB025AFA:
 lbC025AFC:
                     DISK     GiveUnit
                     rts
-lbC025B0C:
-                    moveq    #1,d1
-                    bra.b    lbC025B18
-lbC025B12:
-                    moveq    #0,d1
-lbC025B18:
-                    move.l   d1,(lbL025BB4+40)
+
+; ===========================================================================
+inhibit_drive:
+                    moveq    #DOSTRUE,d1
+                    bra.b    do_inhibit_drive
+uninhibit_drive:
+                    moveq    #DOSFALSE,d1
+do_inhibit_drive:
+                    move.l   d1,(.packet+dp_Arg1)
                     lea      (.drives_list,pc),a0
                     move.l   a0,d1
                     mulu.w   #5,d0
@@ -9539,24 +9541,22 @@ lbC025B18:
                     tst.l    d0
                     ble.b    .error
                     move.l   d0,-(sp)
-                    lea      (lbW025BF8,pc),a0
+                    lea      (.reply_port,pc),a0
                     bsr      install_port
                     move.l   (sp)+,a0
-                    ; i'm not sure what's going here
-                    lea      (lbL025BB4,pc),a1
+                    lea      (.packet,pc),a1
                     lea      (MN_SIZE,a1),a2
                     move.l   a2,(LN_NAME,a1)
-                    move.l   a1,(MN_SIZE+0,a1)
-                    ; reply port ?
-                    move.l   #lbW025BF8,(MN_SIZE+4,a1)
-                    moveq    #31,d0
-                    move.l   d0,(MN_SIZE+8,a1)
+                    move.l   a1,(MN_SIZE+dp_Link,a1)
+                    move.l   #.reply_port,(MN_SIZE+dp_Port,a1)
+                    moveq    #ACTION_INHIBIT,d0
+                    move.l   d0,(MN_SIZE+dp_Type,a1)
                     EXEC     PutMsg
-                    lea      (lbW025BF8,pc),a0
+                    lea      (.reply_port,pc),a0
                     EXEC     WaitPort
-                    lea      (lbL025BB4,pc),a1
+                    lea      (.packet,pc),a1
                     EXEC     Remove
-                    lea      (lbW025BF8,pc),a0
+                    lea      (.reply_port,pc),a0
                     bra      remove_port
 .error:
                     rts
@@ -9565,10 +9565,14 @@ lbC025B18:
                     dc.b     'df1:',0
                     dc.b     'df2:',0
                     dc.b     'df3:',0
-lbL025BB4:
-                    dcb.b    68,0
-lbW025BF8:
+                    ; (must be aligned)
+                    cnop     0,8
+.packet:
+                    dcb.b    sp_SIZEOF,0
+.reply_port:
                     dcb.b    MP_SIZE,0
+
+; ===========================================================================
 lbC025C1A:
                     move.l   a0,d1
                     moveq    #-2,d2
@@ -9590,6 +9594,7 @@ lbC025C1A:
 .error:
                     moveq    #ERROR,d0
                     rts
+                    ; (must be aligned)
                     cnop     0,8
 .file_info_block:
                     dcb.b    fib_SIZEOF,0
@@ -11974,7 +11979,7 @@ cmd_format_disk:
                     jsr      (ask_are_you_sure_requester)
                     bne      .cancelled
                     move.w   (trackdisk_unit_number),d0
-                    jsr      (lbC025B0C)
+                    jsr      (inhibit_drive)
                     lea      (trackdisk_message_port,pc),a0
                     jsr      (install_port)
                     lea      (trackdisk_name),a0
@@ -12064,9 +12069,9 @@ cmd_format_disk:
 .remove_trackdisk_port:
                     lea      (trackdisk_message_port,pc),a0
                     jsr      (remove_port)
-.cancelled:
                     move.w   (trackdisk_unit_number),d0
-                    jsr      (lbC025B12)
+                    jsr      (uninhibit_drive)
+.cancelled:
                     bra      erase_trackdisk_status
 trackdisk_message_port:
                     dcb.b    MP_SIZE,0
@@ -19730,7 +19735,7 @@ lbW0187BA:
                     dc.l     0
 lbW0187CC:
                     dc.l     lbW0187DE
-                    dc.w     1,$2A0A,$B01
+                    dc.b     0,1,42,10,11,1
                     dc.l     increase_trackdisk_unit_number
                     dc.l     decrease_trackdisk_unit_number
 lbW0187DE:
@@ -20702,6 +20707,7 @@ lbW01BC6E:
                     dc.w     0
 lbL01BC70:
                     dcb.l    64,0
+                    ; (must be aligned)
                     cnop     0,8
 file_info_block:
                     dcb.b    fib_SIZEOF,0
@@ -20846,6 +20852,7 @@ OK_OuputBuff_2:
                     ds.b     82
 OK_MixBuff_2:
                     ds.b     MIX_BUFFERS_LEN_2*2
+                    ; (must be aligned for AGA)
                     cnop     0,8
 main_screen:
                     ds.b     (1080*80)
