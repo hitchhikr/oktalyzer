@@ -19,6 +19,7 @@
                     include  "resources/disk.i"
                     include  "workbench/startup.i"
                     include  "devices/trackdisk.i"
+                    include  "devices/bootblock.i"
                     include  "lvo/exec_lib.i"
                     include  "lvo/dos_lib.i"
                     include  "lvo/graphics_lib.i"
@@ -34,6 +35,7 @@ SCREEN_WIDTH        equ      640
 SCREEN_BYTES        equ      (SCREEN_WIDTH/8)
 
 PREFS_FILE_LEN      equ      2102
+TRACK_LEN           equ      (22*512)
 
 OK                  equ      0
 ERROR               equ      -1
@@ -8427,11 +8429,11 @@ display_trackdisk_error:
                     move.l   (pattern_bitplane_offset),d0
                     beq.b    .no_error
                     moveq    #0,d0
-                    move.b   (lbB01B2DB),d0
+                    move.b   (trackdisk_device+IO_ERROR),d0
                     move.w   d0,-(sp)
-                    lea      (lbB01B2BC),a1
-                    move.w   #9,(28,a1)
-                    clr.l    (36,a1)
+                    lea      (trackdisk_device),a1
+                    move.w   #TD_MOTOR,(IO_COMMAND,a1)
+                    clr.l    (IO_LENGTH,a1)
                     EXEC     DoIO
                     move.w   (sp)+,d0
                     lea      (trackdisk_errors_text-19,pc),a0
@@ -8951,8 +8953,8 @@ caret_pos_x:
                     dc.w     0
 viewed_pattern_row:
                     dc.w     0
-trackdiskdevi_MSG:
-                    dc.b     'trackdisk.device',0
+trackdisk_name:
+                    TD_NAME
                     even
 
 ; ===========================================================================
@@ -9476,7 +9478,7 @@ lbC0259DC:
                     move.l   #lbB025A80,(lbL025AB2)
                     move.b   #5,(lbB025AAC)
                     lea      (lbB025A80,pc),a0
-                    bsr      lbC026850
+                    bsr      install_port
                     moveq    #-1,d0
                     EXEC     AllocSignal
                     move.b   d0,(lbB025A8F)
@@ -9503,7 +9505,7 @@ lbC025A5A:
                     move.b   (lbB025AFA,pc),d0
                     EXEC     FreeSignal
                     lea      (lbB025A80,pc),a0
-                    bsr      lbC0268AA
+                    bsr      remove_port
                     movem.l  (sp)+,d7
                     rts
                     dcb.b    2,0
@@ -9528,45 +9530,45 @@ lbC025B0C:
 lbC025B12:
                     moveq    #0,d1
 lbC025B18:
-                    move.l   d1,(lbL025BDC)
-                    lea      (df0_MSG,pc),a0
+                    move.l   d1,(lbL025BB4+40)
+                    lea      (.drives_list,pc),a0
                     move.l   a0,d1
                     mulu.w   #5,d0
                     add.l    d0,d1
                     DOS      DeviceProc
                     tst.l    d0
-                    ble.b    lbC025B9A
+                    ble.b    .error
                     move.l   d0,-(sp)
                     lea      (lbW025BF8,pc),a0
-                    bsr      lbC026850
+                    bsr      install_port
                     move.l   (sp)+,a0
+                    ; i'm not sure what's going here
                     lea      (lbL025BB4,pc),a1
-                    lea      (20,a1),a2
-                    move.l   a2,(10,a1)
-                    move.l   a1,(20,a1)
-                    move.l   #lbW025BF8,(24,a1)
+                    lea      (MN_SIZE,a1),a2
+                    move.l   a2,(LN_NAME,a1)
+                    move.l   a1,(MN_SIZE+0,a1)
+                    ; reply port ?
+                    move.l   #lbW025BF8,(MN_SIZE+4,a1)
                     moveq    #31,d0
-                    move.l   d0,(28,a1)
+                    move.l   d0,(MN_SIZE+8,a1)
                     EXEC     PutMsg
                     lea      (lbW025BF8,pc),a0
                     EXEC     WaitPort
                     lea      (lbL025BB4,pc),a1
                     EXEC     Remove
                     lea      (lbW025BF8,pc),a0
-                    bra      lbC0268AA
-lbC025B9A:
+                    bra      remove_port
+.error:
                     rts
-df0_MSG:
+.drives_list:
                     dc.b     'df0:',0
                     dc.b     'df1:',0
                     dc.b     'df2:',0
                     dc.b     'df3:',0
 lbL025BB4:
-                    dcb.l    10,0
-lbL025BDC:
-                    dcb.l    7,0
+                    dcb.b    68,0
 lbW025BF8:
-                    dcb.w    17,0
+                    dcb.b    MP_SIZE,0
 lbC025C1A:
                     move.l   a0,d1
                     moveq    #-2,d2
@@ -10641,31 +10643,33 @@ invert_one_char:
                     rts
 
 ; ===========================================================================
-lbC026850:
+install_port:
                     move.l   a0,a1
-                    moveq    #34-1,d0
-lbC026854:
+                    moveq    #MP_SIZE-1,d0
+.clear:
                     sf       (a0)+
-                    dbra     d0,lbC026854
-                    move.b   #4,(8,a1)
-                    move.l   #OKPort_MSG,(10,a1)
+                    dbra     d0,.clear
+                    move.b   #NT_MSGPORT,(LN_TYPE,a1)
+                    move.l   #port_name,(LN_NAME,a1)
                     move.l   a1,-(sp)
                     sub.l    a1,a1
                     EXEC     FindTask
                     move.l   (sp)+,a1
-                    move.l   d0,(16,a1)
-                    lea      (20,a1),a0
+                    move.l   d0,(MP_SIGTASK,a1)
+                    lea      (MP_MSGLIST,a1),a0
                     move.l   a0,(a0)
                     addq.l   #4,(a0)
-                    clr.l    (4,a0)
-                    move.l   a0,(8,a0)
-                    move.b   #5,(32,a1)
+                    clr.l    (LH_TAIL,a0)
+                    move.l   a0,(LH_TAILPRED,a0)
+                    move.b   #NT_MESSAGE,(MP_MSGLIST+LH_TYPE,a1)
                     EXEC     AddPort
                     rts
-OKPort_MSG:
+port_name:
                     dc.b     'OKPort',0
                     even
-lbC0268AA:
+
+; ===========================================================================
+remove_port:
                     move.l   a0,a1
                     EXEC     RemPort
                     rts
@@ -10870,14 +10874,14 @@ lbW026B22:
 lbC026B42:
                     bsr      lbC027724
                     bsr      lbC027738
-                    move.w   (lbW027B30,pc),d0
+                    move.w   (trackdisk_unit_number,pc),d0
                     lsl.w    #2,d0
                     lea      (DF0_MSG,pc,d0.w),a0
                     moveq    #50,d0
                     moveq    #10,d1
                     jsr      (draw_text)
                     lea      (Off_MSG,pc),a0
-                    tst.b    (lbB027B32)
+                    tst.b    (verify_mode_flag)
                     beq.b    lbC026B6E
                     lea      (On_MSG,pc),a0
 lbC026B6E:
@@ -10885,7 +10889,7 @@ lbC026B6E:
                     moveq    #11,d1
                     jsr      (draw_text)
                     lea      (Off_MSG,pc),a0
-                    tst.b    (lbB027B33)
+                    tst.b    (clear_mode_flag)
                     beq.b    lbC026B88
                     lea      (On_MSG,pc),a0
 lbC026B88:
@@ -11198,7 +11202,7 @@ lbC026F1E:
                     bsr      lbC027102
                     bsr      lbC02774C
                     bsr      lbC027762
-                    bsr      lbC0277A6
+                    bsr      display_disk_size
                     move.l   #curent_dir_name,d1
                     moveq    #-2,d2
                     DOS      Lock
@@ -11210,7 +11214,7 @@ lbC026F1E:
                     tst.l    d0
                     beq      lbC027010
                     bsr      get_disk_size
-                    bsr      lbC0277A6
+                    bsr      display_disk_size
                     move.b   (lbB027074,pc),d0
                     bsr      lbC027B40
                     beq      lbC027016
@@ -11260,7 +11264,7 @@ lbC027016:
 lbC02702C:
                     jsr      (error_no_memory)
                     bsr      lbC026E5A
-                    bsr      lbC0277A6
+                    bsr      display_disk_size
 lbC02703A:
                     lea      (dir_lock_handle,pc),a0
                     move.l   (a0),d1
@@ -11930,149 +11934,161 @@ get_disk_size:
                     rts
 
 ; ===========================================================================
-lbC0277A6:
+display_disk_size:
                     moveq    #29,d0
                     moveq    #8,d1
                     move.l   (disk_size,pc),d2
                     moveq    #10,d3
                     jmp      (draw_long_ascii_decimal_number)
-lbC0277B8:
-                    cmpi.w   #3,(lbW027B30)
-                    beq.b    lbC0277CC
-                    addq.w   #1,(lbW027B30)
+
+; ===========================================================================
+increase_trackdisk_unit_number:
+                    cmpi.w   #3,(trackdisk_unit_number)
+                    beq.b    .max
+                    addq.w   #1,(trackdisk_unit_number)
                     bra      lbC026B42
-lbC0277CC:
+.max:
                     rts
-lbC0277CE:
-                    tst.w    (lbW027B30)
-                    beq.b    lbC0277E0
-                    subq.w   #1,(lbW027B30)
+
+; ===========================================================================
+decrease_trackdisk_unit_number:
+                    tst.w    (trackdisk_unit_number)
+                    beq.b    .min
+                    subq.w   #1,(trackdisk_unit_number)
                     bra      lbC026B42
-lbC0277E0:
+.min:
                     rts
-lbC0277E2:
-                    not.b    (lbB027B32)
+
+; ===========================================================================
+switch_verify_mode:
+                    not.b    (verify_mode_flag)
                     bra      lbC026B42
-lbC0277EC:
-                    not.b    (lbB027B33)
+
+; ===========================================================================
+switch_clear_mode:
+                    not.b    (clear_mode_flag)
                     bra      lbC026B42
-lbC0277F6:
+
+; ===========================================================================
+cmd_format_disk:
                     jsr      (ask_are_you_sure_requester)
-                    bne      lbC0279BA
-                    move.w   (lbW027B30),d0
+                    bne      .cancelled
+                    move.w   (trackdisk_unit_number),d0
                     jsr      (lbC025B0C)
-                    lea      (lbL0279CC,pc),a0
-                    jsr      (lbC026850)
-                    lea      (trackdiskdevi_MSG),a0
-                    lea      (lbB01B2BC),a1
+                    lea      (trackdisk_message_port,pc),a0
+                    jsr      (install_port)
+                    lea      (trackdisk_name),a0
+                    lea      (trackdisk_device),a1
                     moveq    #0,d0
-                    move.w   (lbW027B30,pc),d0
+                    move.w   (trackdisk_unit_number,pc),d0
                     moveq    #0,d1
                     EXEC     OpenDevice
                     tst.l    d0
-                    beq      lbC027846
+                    beq      .no_device_error
                     jsr      (error_cant_open_device)
-                    bra      lbC0279B0
-lbC027846:
-                    lea      (lbB01B2BC),a1
-                    move.l   #lbL0279CC,($E,a1)
-                    move.l   #11264,d0
+                    bra      .remove_trackdisk_port
+.no_device_error:
+                    lea      (trackdisk_device),a1
+                    move.l   #trackdisk_message_port,(MN_REPLYPORT,a1)
+                    move.l   #TRACK_LEN,d0
                     move.l   #$10002,d1
                     EXEC     AllocMem
-                    move.l   d0,(lbL027B34)
-                    bne.b    lbC02787E
+                    move.l   d0,(track_buffer)
+                    bne.b    .no_memory_error
                     jsr      (error_no_memory)
-                    bra      lbC027982
-lbC02787E:
-                    clr.w    (lbW027B38)
-lbC027884:
-                    move.w   #3,(lbW027B3E)
-lbC02788C:
-                    bsr      lbC027A1E
+                    bra      .close_trackdisk_device
+.no_memory_error:
+                    clr.w    (current_formatted_track)
+.loop:
+                    move.w   #3,(verify_counter)
+.reformat_track:
+                    bsr      prepare_track_buffer
                     moveq    #'F',d0
-                    bsr      lbC0279EE
-                    lea      (lbB01B2BC),a1
-                    move.w   #11,($1C,a1)
-                    move.l   (lbL027B34,pc),($28,a1)
-                    move.l   #11264,($24,a1)
-                    move.w   (lbW027B38,pc),d0
-                    mulu.w   #11264,d0
-                    move.l   d0,($2C,a1)
+                    bsr      draw_trackdisk_status
+                    lea      (trackdisk_device),a1
+                    move.w   #TD_FORMAT,(IO_COMMAND,a1)
+                    move.l   (track_buffer,pc),(IO_DATA,a1)
+                    move.l   #TRACK_LEN,(IO_LENGTH,a1)
+                    move.w   (current_formatted_track,pc),d0
+                    mulu.w   #TRACK_LEN,d0
+                    move.l   d0,(IO_OFFSET,a1)
                     EXEC     DoIO
-                    tst.b    (lbB01B2DB)
-                    beq.b    lbC0278DA
+                    tst.b    (trackdisk_device+IO_ERROR)
+                    beq.b    .no_format_error
                     jsr      (display_trackdisk_error)
-                    bra      lbC02796C
-lbC0278DA:
-                    tst.b    (lbB027B32)
-                    beq.b    lbC02793C
+                    bra      .done
+.no_format_error:
+                    tst.b    (verify_mode_flag)
+                    beq.b    .no_verify
                     moveq    #'V',d0
-                    bsr      lbC0279EE
-                    lea      (lbB01B2BC),a1
-                    move.w   #2,($1C,a1)
-                    move.l   (lbL027B34,pc),($28,a1)
-                    move.l   #11264,($24,a1)
-                    move.w   (lbW027B38,pc),d0
-                    mulu.w   #11264,d0
-                    move.l   d0,($2C,a1)
+                    bsr      draw_trackdisk_status
+                    lea      (trackdisk_device),a1
+                    move.w   #CMD_READ,(IO_COMMAND,a1)
+                    move.l   (track_buffer,pc),(IO_DATA,a1)
+                    move.l   #TRACK_LEN,(IO_LENGTH,a1)
+                    move.w   (current_formatted_track,pc),d0
+                    mulu.w   #TRACK_LEN,d0
+                    move.l   d0,(IO_OFFSET,a1)
                     EXEC     DoIO
-                    tst.b    (lbB01B2DB)
-                    beq.b    lbC02793C
-                    subq.w   #1,(lbW027B3E)
-                    bne      lbC02788C
+                    tst.b    (trackdisk_device+IO_ERROR)
+                    beq.b    .no_verify
+                    subq.w   #1,(verify_counter)
+                    bne      .reformat_track
                     jsr      (display_trackdisk_error)
                     jsr      (error_verify_error)
-                    bra      lbC02796C
-lbC02793C:
-                    tst.b    (lbB027B33)
-                    beq.b    lbC02795A
-                    cmpi.w   #40,(lbW027B38)
-                    beq.b    lbC02796C
-                    move.w   #40,(lbW027B38)
-                    bra      lbC027884
-lbC02795A:
-                    addq.w   #1,(lbW027B38)
-                    cmpi.w   #80,(lbW027B38)
-                    bne      lbC027884
-lbC02796C:
-                    move.l   (lbL027B34,pc),a1
-                    move.l   #11264,d0
+                    bra      .done
+.no_verify:
+                    tst.b    (clear_mode_flag)
+                    beq.b    .next_track
+                    ; stop at track 40 if fast formatting is selected
+                    cmpi.w   #40,(current_formatted_track)
+                    beq.b    .done
+                    ; go to track 40 after bootblock if fast formatting is selected
+                    move.w   #40,(current_formatted_track)
+                    bra      .loop
+.next_track:
+                    addq.w   #1,(current_formatted_track)
+                    cmpi.w   #80,(current_formatted_track)
+                    bne      .loop
+.done:
+                    move.l   (track_buffer,pc),a1
+                    move.l   #TRACK_LEN,d0
                     EXEC     FreeMem
-lbC027982:
-                    lea      (lbB01B2BC),a1
-                    move.w   #9,($1C,a1)
-                    clr.l    ($24,a1)
+.close_trackdisk_device:
+                    lea      (trackdisk_device),a1
+                    move.w   #TD_MOTOR,(IO_COMMAND,a1)
+                    clr.l    (IO_LENGTH,a1)
                     EXEC     DoIO
-                    lea      (lbB01B2BC),a1
+                    lea      (trackdisk_device),a1
                     EXEC     CloseDevice
-lbC0279B0:
-                    lea      (lbL0279CC,pc),a0
-                    jsr      (lbC0268AA)
-lbC0279BA:
-                    move.w   (lbW027B30),d0
+.remove_trackdisk_port:
+                    lea      (trackdisk_message_port,pc),a0
+                    jsr      (remove_port)
+.cancelled:
+                    move.w   (trackdisk_unit_number),d0
                     jsr      (lbC025B12)
-                    bra      lbC027A0C
-                    dc.w     0
-lbL0279CC:
-                    dcb.l    8,0
-                    dc.w     0
-lbC0279EE:
+                    bra      erase_trackdisk_status
+trackdisk_message_port:
+                    dcb.b    MP_SIZE,0
+draw_trackdisk_status:
                     move.b   d0,d2
                     moveq    #58,d0
                     moveq    #8,d1
                     jsr      (draw_one_char)
                     moveq    #59,d0
                     moveq    #8,d1
-                    move.w   (lbW027B38,pc),d2
+                    move.w   (current_formatted_track,pc),d2
                     moveq    #2,d3
                     jmp      (draw_short_ascii_decimal_number)
-lbC027A0C:
-                    lea      (lbB027A18,pc),a0
+erase_trackdisk_status:
+                    lea      (.empty_status_text,pc),a0
                     jmp      (draw_text_with_coords_struct)
-lbB027A18:
+.empty_status_text:
                     dc.b     58,8,'   ',0
-lbC027A1E:
-                    move.l   (lbL027B34,pc),a1
+
+; ===========================================================================
+prepare_track_buffer:
+                    move.l   (track_buffer,pc),a1
                     lea      (1024,a1),a1
                     moveq    #0,d0
                     moveq    #0,d1
@@ -12083,36 +12099,40 @@ lbC027A1E:
                     moveq    #0,d6
                     move.l   d0,a0
                     moveq    #8-1,d7
-lbC027A38:
+.loop:
                     movem.l  d0-d6/a0,-(a1)
                     movem.l  d0-d6/a0,-(a1)
                     movem.l  d0-d6/a0,-(a1)
                     movem.l  d0-d6/a0,-(a1)
-                    dbra     d7,lbC027A38
-                    move.w   (lbW027B38,pc),d0
-                    beq.b    lbC027A5A
+                    dbra     d7,.loop
+                    move.w   (current_formatted_track,pc),d0
+                    beq.b    copy_bootblock_to_track_buffer
                     cmpi.w   #40,d0
-                    beq.b    lbC027A6E
+                    beq.b    copy_rootblock_to_track_buffer
                     rts
-lbC027A5A:
+
+; ===========================================================================
+copy_bootblock_to_track_buffer:
                     lea      (bootblock_data,pc),a0
-                    move.l   (lbL027B34,pc),a1
-                    move.w   #50-1,d0
-lbC027A66:
+                    move.l   (track_buffer,pc),a1
+                    move.w   #(ebootblock_data-bootblock_data)-1,d0
+.loop:
                     move.b   (a0)+,(a1)+
-                    dbra     d0,lbC027A66
+                    dbra     d0,.loop
                     rts
-lbC027A6E:
-                    move.l   (lbL027B34,pc),a0
+
+; ===========================================================================
+copy_rootblock_to_track_buffer:
+                    move.l   (track_buffer,pc),a0
                     move.b   #2,(3,a0)
-                    move.b   #$48,($F,a0)
+                    move.b   #$48,(15,a0)
                     moveq    #-1,d0
-                    move.l   d0,($138,a0)
-                    move.w   #$371,($13E,a0)
-                    move.l   #$5456D70,($1B0,a0)
-                    move.w   #$7479,($1B4,a0)
-                    move.b   #1,($1FF,a0)
-                    lea      ($200,a0),a1
+                    move.l   d0,(312,a0)
+                    move.w   #$371,(318,a0)
+                    move.l   #(5<<24)|'Emp',(432,a0)
+                    move.w   #'ty',(436,a0)
+                    move.b   #1,(511,a0)
+                    lea      (512,a0),a1
                     move.l   #$C000C037,(a1)+
                     moveq    #-1,d1
                     moveq    #55-1,d0
@@ -12120,53 +12140,58 @@ lbC027AAC:
                     move.l   d1,(a1)+
                     dbra     d0,lbC027AAC
                     moveq    #$3F,d0
-                    move.b   d0,($272,a0)
-                    move.b   d0,($2DC,a0)
+                    move.b   d0,(626,a0)
+                    move.b   d0,(732,a0)
                     move.l   a0,-(sp)
                     lea      (420,a0),a0
                     move.l   a0,d1
                     DOS      DateStamp
                     move.l   (sp)+,a0
-                    move.l   ($1A4,a0),($1E4,a0)
-                    move.l   ($1A8,a0),($1E8,a0)
-                    move.l   ($1AC,a0),($1EC,a0)
-                    clr.l    ($14,a0)
+                    move.l   (420,a0),(484,a0)
+                    move.l   (424,a0),(488,a0)
+                    move.l   (428,a0),(492,a0)
+                    clr.l    (20,a0)
                     moveq    #0,d1
                     moveq    #128-1,d0
 lbC027AEE:
                     sub.l    (a0)+,d1
                     dbra     d0,lbC027AEE
-                    move.l   (lbL027B34,pc),a0
-                    move.l   d1,($14,a0)
+                    move.l   (track_buffer,pc),a0
+                    move.l   d1,(20,a0)
                     rts
+
+; ===========================================================================
 bootblock_data:
-                    dc.b     'DOS',0
-                    dc.l     $C0200F19,$370
-                    lea      (doslibrary_MSG2,pc),a1
+                    BBID_DOS
+                    dc.l     $C0200F19,880
+                    lea      (.dos_name,pc),a1
                     jsr      (_LVOFindResident,a6)
                     tst.l    d0
-                    beq.b    lbC027B20
+                    beq.b    .error
                     move.l   d0,a0
                     move.l   (22,a0),a0
                     moveq    #OK,d0
-lbC027B1E:
+.exit:
                     rts
-lbC027B20:
+.error:
                     moveq    #ERROR,d0
-                    bra.b    lbC027B1E
-doslibrary_MSG2:
-                    dc.b     'dos.library',0
-lbW027B30:
+                    bra.b    .exit
+.dos_name:
+                    DOSNAME
+ebootblock_data:
+
+; ===========================================================================
+trackdisk_unit_number:
                     dc.w     0
-lbB027B32:
+verify_mode_flag:
                     dc.b     -1
-lbB027B33:
+clear_mode_flag:
                     dc.b     0
-lbL027B34:
+track_buffer:
                     dc.l     0
-lbW027B38:
+current_formatted_track:
                     dcb.w    3,0
-lbW027B3E:
+verify_counter:
                     dc.w     0
 lbC027B40:
                     tst.b    d0
@@ -19706,21 +19731,21 @@ lbW0187BA:
 lbW0187CC:
                     dc.l     lbW0187DE
                     dc.w     1,$2A0A,$B01
-                    dc.l     lbC0277B8
-                    dc.l     lbC0277CE
+                    dc.l     increase_trackdisk_unit_number
+                    dc.l     decrease_trackdisk_unit_number
 lbW0187DE:
                     dc.l     lbW0187F0
                     dc.w     $1001,$2A0B,$B01
-                    dc.l     lbC0277E2
+                    dc.l     switch_verify_mode
                     dc.l     0
 lbW0187F0:
                     dc.l     lbW018802
                     dc.w     $1001,$2A0C,$B01
-                    dc.l     lbC0277EC
+                    dc.l     switch_clear_mode
                     dc.l     0
 lbW018802:
                     dc.w     0,0,$1001,$360A,$603
-                    dc.l     lbC0277F6
+                    dc.l     cmd_format_disk
                     dc.l     0
 lbW018814:
                     dc.w     10,0
@@ -20615,10 +20640,8 @@ lbB01B2B9:
                     dc.b     0
 lbW01B2BA:
                     dc.w     0
-lbB01B2BC:
-                    dcb.b    31,0
-lbB01B2DB:
-                    dcb.b    49,0
+trackdisk_device:
+                    dcb.b    IOTD_SIZE,0
 lbL01B30C:
                     dcb.l    256,0
 lbW01B70C:
