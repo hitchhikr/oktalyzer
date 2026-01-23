@@ -18,6 +18,7 @@
                     include  "intuition/screens.i"
                     include  "resources/disk.i"
                     include  "workbench/startup.i"
+                    include  "devices/trackdisk.i"
                     include  "lvo/exec_lib.i"
                     include  "lvo/dos_lib.i"
                     include  "lvo/graphics_lib.i"
@@ -60,6 +61,45 @@ CMD_CLEAR_CHARS     equ      10
 CMD_SET_SUB_SCREEN  equ      11
 CMD_SET_MAIN_SCREEN equ      12
 CMD_MOVE_TO_LINE    equ      13
+
+ERROR_NO_MEM        equ      0
+ERROR_WHAT_BLOCK    equ      ERROR_NO_MEM+1
+ERROR_WHAT_POS      equ      ERROR_WHAT_BLOCK+1
+ERROR_SMP_TOO_LONG  equ      ERROR_WHAT_POS+1
+ERROR_WHAT_SMP      equ      ERROR_SMP_TOO_LONG+1
+ERROR_SMP_CLEARED   equ      ERROR_WHAT_SMP+1
+ERROR_NO_MORE_PATT  equ      ERROR_SMP_CLEARED+1
+ERROR_NO_MORE_POS   equ      ERROR_NO_MORE_PATT+1
+ERROR_PATT_IN_USE   equ      ERROR_NO_MORE_POS+1
+ERROR_COPY_BUF_FREE equ      ERROR_PATT_IN_USE+1
+ERROR_NO_MORE_SMP   equ      ERROR_COPY_BUF_FREE+1
+ERROR_ONLY_4B_MODE  equ      ERROR_NO_MORE_SMP+1
+ERROR_LEFT_ONE_BIT  equ      ERROR_ONLY_4B_MODE+1
+ERROR_BLOCK_COPIED  equ      ERROR_LEFT_ONE_BIT+1
+ERROR_SMP_CLIPPED   equ      ERROR_BLOCK_COPIED+1
+ERROR_SMP_TOO_SHORT equ      ERROR_SMP_CLIPPED+1
+ERROR_IFF_ERROR     equ      ERROR_SMP_TOO_SHORT+1
+ERROR_SAME_SMP      equ      ERROR_IFF_ERROR+1
+ERROR_DIFF_MODES    equ      ERROR_SAME_SMP+1
+ERROR_Z_NOT_FOUND   equ      ERROR_DIFF_MODES+1
+ERROR_CANT_INST     equ      ERROR_Z_NOT_FOUND+1
+ERROR_ALREADY_INST  equ      ERROR_CANT_INST+1
+ERROR_NO_OKDIR      equ      ERROR_ALREADY_INST+1
+ERROR_OPEN_DEVICE   equ      ERROR_NO_OKDIR+1
+ERROR_VERIFY        equ      ERROR_OPEN_DEVICE+1
+ERROR_WHAT_SMPS     equ      ERROR_VERIFY+1
+ERROR_CANT_CONVERT  equ      ERROR_WHAT_SMPS+1
+ERROR_OK_STRUCT     equ      ERROR_CANT_CONVERT+1
+ERROR_ST_STRUCT     equ      ERROR_OK_STRUCT+1
+ERROR_WHAT_FILE     equ      ERROR_ST_STRUCT+1
+ERROR_NOT_DIR       equ      ERROR_WHAT_FILE+1
+ERROR_ENDOF_ENTRIES equ      ERROR_NOT_DIR+1
+ERROR_NOTHING_SEL   equ      ERROR_ENDOF_ENTRIES+1
+ERROR_MULTI_SEL     equ      ERROR_NOTHING_SEL+1
+ERROR_COPYBUF_EMPTY equ      ERROR_MULTI_SEL+1
+ERROR_NO_ENTRIES    equ      ERROR_COPYBUF_EMPTY+1
+ERROR_EF_STRUCT     equ      ERROR_NO_ENTRIES+1
+ERROR_ONLY_IN_PAL   equ      ERROR_EF_STRUCT+1
 
 ; ===========================================================================
 EXEC                MACRO
@@ -251,7 +291,7 @@ main_loop:
                     jsr      (process_command)
 .loop:
                     lea      (lbW017396),a0
-                    bsr      lbC02086A
+                    bsr      process_commands_sequence
                     bsr      lbC01FBF2
                     bsr      lbC0202A8
                     bsr      display_pattern_caret
@@ -431,6 +471,7 @@ vbi_int_code:
                     lea      (lbW01E378,pc),a0
                     moveq    #9,d0
                     bsr      lbC01E32A
+                    ; must be 0 as some flag is tested right after that
                     moveq    #0,d0
                     movem.l  (sp)+,d0-d3/a0/a1
                     rts
@@ -445,7 +486,7 @@ lbC01E32A:
                     bne.b    lbC01E368
                     move.w   (mouse_repeat_speed),(a0)
                     EXEC     Enable
-                    movem.w  (lbL02081C,pc),d1/d2
+                    movem.w  (mouse_pointer_coords,pc),d1/d2
                     lsr.w    #1,d2
                     moveq    #0,d3
                     bra      lbC0205C4
@@ -508,7 +549,7 @@ lbC01E3D6:
 lbC01E3EE:
                     movem.l  d2/d3,-(sp)
                     move.w   d1,d3
-                    movem.w  (lbL02081C),d1/d2
+                    movem.w  (mouse_pointer_coords),d1/d2
                     lsr.w    #1,d2
                     cmpi.w   #104,d0
                     bne.b    lbC01E41C
@@ -741,7 +782,7 @@ set_copper_bitplanes:
 set_full_screen_copperlist_ntsc:
                     EXEC     Disable
                     move.w   #DMAF_COPPER,(_CUSTOM|DMACON)
-                    addq.b   #1,(lbB01E9DA)
+                    addq.b   #1,(dma_copper_spinlock)
                     tst.b    (ntsc_flag)
                     beq      .no_ntsc
                     lea      (full_screen_copperlist_flag,pc),a0
@@ -752,7 +793,7 @@ set_full_screen_copperlist_ntsc:
                     move.w   #11,(lbW026954)
                     move.w   #56,(lbW01E8E8)
 .no_ntsc:
-                    subq.b   #1,(lbB01E9DA)
+                    subq.b   #1,(dma_copper_spinlock)
                     bgt.b    lbC01E7E8
                     move.w   #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
 lbC01E7E8:
@@ -763,11 +804,11 @@ lbC01E7E8:
 construct_full_screen_copperlist_ntsc:
                     EXEC     Disable
                     move.w   #DMAF_COPPER,(_CUSTOM|DMACON)
-                    addq.b   #1,(lbB01E9DA)
+                    addq.b   #1,(dma_copper_spinlock)
                     move.b   #$2C,(copper_start_line)
                     lea      (fullscreen_copperlist_ntsc_struct),a0
                     bsr      construct_copperlist
-                    subq.b   #1,(lbB01E9DA)
+                    subq.b   #1,(dma_copper_spinlock)
                     bgt.b    lbC01E832
                     move.w   #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
 lbC01E832:
@@ -778,7 +819,7 @@ lbC01E832:
 restore_full_screen_copperlist_ntsc:
                     EXEC     Disable
                     move.w   #DMAF_COPPER,(_CUSTOM|DMACON)
-                    addq.b   #1,(lbB01E9DA)
+                    addq.b   #1,(dma_copper_spinlock)
                     tst.b    (ntsc_flag)
                     beq.b    .no_ntsc
                     lea      (full_screen_copperlist_flag,pc),a0
@@ -789,7 +830,7 @@ restore_full_screen_copperlist_ntsc:
                     move.w   #7,(lbW026954)
                     clr.w    (lbW01E8E8)
 .no_ntsc:
-                    subq.b   #1,(lbB01E9DA)
+                    subq.b   #1,(dma_copper_spinlock)
                     bgt.b    lbC01E88E
                     move.w   #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
 lbC01E88E:
@@ -800,11 +841,11 @@ lbC01E88E:
 construct_main_copperlist:
                     EXEC     Disable
                     move.w   #DMAF_COPPER,(_CUSTOM|DMACON)
-                    addq.b   #1,(lbB01E9DA)
+                    addq.b   #1,(dma_copper_spinlock)
                     move.b   #$64,(copper_start_line)
                     lea      (main_copperlist_struct),a0
                     bsr      construct_copperlist
-                    subq.b   #1,(lbB01E9DA)
+                    subq.b   #1,(dma_copper_spinlock)
                     bgt.b    lbC01E8D8
                     move.w   #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
 lbC01E8D8:
@@ -822,7 +863,7 @@ construct_copperlist:
                     move.l   a0,a2
                     EXEC     Disable
                     move.w   #DMAF_COPPER,(_CUSTOM|DMACON)
-                    addq.b   #1,(lbB01E9DA)
+                    addq.b   #1,(dma_copper_spinlock)
                     ; first copperlist
                     move.l   (a2)+,a3
 .loop:
@@ -857,7 +898,7 @@ construct_copperlist:
 .done:
                     move.l   a3,a0
                     move.l   a0,(_CUSTOM|COP1LCH)
-                    subq.b   #1,(lbB01E9DA)
+                    subq.b   #1,(dma_copper_spinlock)
                     bgt.b    lbC01E976
                     move.w   #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
 lbC01E976:
@@ -884,7 +925,7 @@ install_our_copperlist:
                     move.l   d0,(screen_mem_block)
                     movem.l  (sp)+,d0/d1/a0/a1
                     rts
-lbB01E9DA:
+dma_copper_spinlock:
                     dc.b     0
                     even
 
@@ -903,7 +944,7 @@ lbC01E9DC:
                     bsr      lbC01F200
                     bsr      lbC01F1D8
                     lsr.w    #3,d3
-                    lea      (lbB01B147),a0
+                    lea      (caret_current_positions+1),a0
                     moveq    #-1,d0
 lbC01EA0C:
                     addq.w   #1,d0
@@ -966,7 +1007,7 @@ lbC01EA70:
                     moveq    #0,d1
                     move.w   (caret_pos_x,pc),d1
                     divu.w   #5,d1
-                    lea      (lbB01B146),a0
+                    lea      (caret_current_positions),a0
                     move.w   (caret_pos_x,pc),d2
                     adda.w   d2,a0
                     moveq    #0,d5
@@ -1814,7 +1855,7 @@ lbC01F4CA:
                     movem.w  d2/d3,(lbW01F504)
                     move.w   d1,(lbW01F46A)
                     move.w   d3,(lbW01F46C)
-                    lea      (lbB01B146),a0
+                    lea      (caret_current_positions),a0
                     move.b   (a0,d0.w),d0
                     move.b   (a0,d2.w),d2
                     movem.w  d0-d3,(lbB01B29E)
@@ -1841,15 +1882,15 @@ lbC01F51C:
                     moveq    #-1,d0
                     cmp.l    (lbW01F500,pc),d0
                     bne.b    lbC01F52A
-                    bra      lbC025054
+                    bra      error_what_block
 lbC01F52A:
                     bsr.b    lbC01F54E
-                    bra      lbC02509C
+                    bra      error_block_copied
 lbC01F532:
                     moveq    #-1,d0
                     cmp.l    (lbW01F500,pc),d0
                     bne.b    lbC01F540
-                    bra      lbC025054
+                    bra      error_what_block
 lbC01F540:
                     bsr.b    lbC01F54E
                     lea      (lbC01F54A,pc),a0
@@ -1860,7 +1901,7 @@ lbC01F54A:
 lbC01F54E:
                     moveq    #-1,d0
                     cmp.l    (lbW01F500,pc),d0
-                    beq      lbC025054
+                    beq      error_what_block
                     bsr      get_current_pattern_rows
                     move.l   a0,a5
                     lea      (lbL01A146),a3
@@ -1920,7 +1961,7 @@ lbC01F5E2:
 lbC01F5E4:
                     moveq    #-1,d0
                     cmp.l    (lbW01F5C4,pc),d0
-                    beq      lbC025054
+                    beq      error_what_block
                     move.l   a0,a4
                     bsr      get_current_pattern_rows
                     move.w   d0,d3
@@ -1932,7 +1973,7 @@ lbC01F5E4:
                     beq.b    lbC01F622
                     moveq    #-1,d0
                     cmp.l    (lbW01F500,pc),d0
-                    beq      lbC025054
+                    beq      error_what_block
                     move.w   (lbW01F500,pc),d4
                     move.w   (lbW01F502,pc),d5
                     bra.b    lbC01F62A
@@ -1986,7 +2027,7 @@ lbW01F692:
 lbC01F694:
                     moveq    #-1,d0
                     cmp.l    (lbW01F500,pc),d0
-                    beq      lbC025054
+                    beq      error_what_block
                     move.l   a0,a3
                     bsr      get_current_pattern_rows
                     move.l   a0,a5
@@ -2027,7 +2068,7 @@ lbC01F6FA:
 lbC01F702:
                     moveq    #-1,d0
                     cmp.l    (lbW01F500,pc),d0
-                    beq      lbC025054
+                    beq      error_what_block
                     move.l   a0,a3
                     bsr      get_current_pattern_rows
                     move.l   a0,a5
@@ -2159,7 +2200,7 @@ lbC01F844:
 lbC01F846:
                     moveq    #-1,d0
                     cmp.l    (lbW01F500,pc),d0
-                    beq      lbC025054
+                    beq      error_what_block
                     lea      (DeleteSample_MSG,pc),a0
                     bsr      lbC024876
                     bmi.b    lbC01F868
@@ -2184,7 +2225,7 @@ DeleteSample_MSG:
 lbC01F88E:
                     moveq    #-1,d0
                     cmp.l    (lbW01F500,pc),d0
-                    beq      lbC025054
+                    beq      error_what_block
                     lea      (OldInstrument_MSG,pc),a0
                     lea      (NewInstrument_MSG,pc),a1
                     bsr      lbC0247B8
@@ -2210,7 +2251,7 @@ lbC01F8E8:
                     moveq    #-1,d0
                     cmp.l    (lbW01F500,pc),d0
                     bne.b    lbC01F8F6
-                    jmp      (lbC025054)
+                    jmp      (error_what_block)
 lbC01F8F6:
                     lea      (OldEffect_MSG,pc),a0
                     lea      (NewEffect_MSG,pc),a1
@@ -2493,44 +2534,53 @@ lbC01FBF2:
                     bsr.b    lbC01FCE0
                     bsr      draw_replay_type
                     bsr      lbC01FEE2
-lbC01FC78:
+draw_channels_muted_status:
+                    ; x pos
                     moveq    #72,d5
                     move.b   (channels_mute_flags),d6
                     lea      (OK_ChannelsModes),a4
                     moveq    #8-1,d7
-lbC01FC88:
+.loop:
                     tst.w    (a4)+
-                    beq.b    lbC01FC94
-                    bsr.b    lbC01FCB0
+                    beq.b    .single
+                    ; doubled channel
+                    bsr.b    draw_channel_muted_status
                     subq.w   #1,d7
-                    bsr.b    lbC01FCB0
-                    bra.b    lbC01FC9A
-lbC01FC94:
-                    bsr.b    lbC01FCB0
-                    bsr.b    lbC01FCC6
+                    bsr.b    draw_channel_muted_status
+                    bra.b    .done
+.single:
+                    ; single channel
+                    bsr.b    draw_channel_muted_status
+                    bsr.b    draw_channel_inactive_status
                     subq.w   #1,d7
-lbC01FC9A:
-                    dbra     d7,lbC01FC88
-                    lea      (lbB02A761),a0
+.done:
+                    dbra     d7,.loop
+                    lea      (channels_number_text),a0
                     moveq    #72,d0
                     moveq    #6,d1
                     jmp      (draw_text)
-lbC01FCB0:
+
+; ===========================================================================
+draw_channel_muted_status:
                     moveq    #'*',d2
                     btst     d7,d6
-                    bne.b    lbC01FCB8
+                    bne.b    .muted
                     moveq    #'-',d2
-lbC01FCB8:
+.muted:
                     move.w   d5,d0
                     addq.w   #1,d5
                     moveq    #5,d1
                     jmp      (draw_one_char)
-lbC01FCC6:
+
+; ===========================================================================
+draw_channel_inactive_status:
                     moveq    #' ',d2
                     move.w   d5,d0
                     addq.w   #1,d5
                     moveq    #5,d1
                     jmp      (draw_one_char)
+
+; ===========================================================================
 lbC01FCD6:
                     move.w   d0,d2
                     moveq    #14,d0
@@ -2540,7 +2590,7 @@ lbC01FCE0:
                     lea      (ascii_MSG58,pc),a0
                     jsr      (draw_text_with_coords_struct)
                     move.w   (current_sample,pc),d2
-                    moveq    #$38,d0
+                    moveq    #56,d0
                     moveq    #0,d1
                     bsr      draw_one_char_alpha_numeric
                     lea      (OK_Samples),a0
@@ -2769,13 +2819,13 @@ lbC01FFC0:
                     bsr.b    lbC01FF8C
                     move.l   (lbL01B29A),d0
                     cmpi.l   #131070,d0
-                    bgt      lbC025060
+                    bgt      error_sample_too_long
                     cmpi.l   #2,d0
-                    blt      lbC0250A8
+                    blt      error_sample_too_short
                     move.l   #$10002,d1
                     EXEC     AllocMem
                     move.l   d0,(lbL01A130)
-                    beq      lbC02504E
+                    beq      error_no_memory
                     move.l   (lbL01B29A),d0
                     move.l   d0,(lbL01A134)
                     move.l   d0,(lbL029ECE)
@@ -2796,7 +2846,7 @@ lbC02001C:
                     EXEC     AllocMem
                     move.l   d0,(lbL01A130)
                     bne.b    lbC020050
-                    bsr      lbC02504E
+                    bsr      error_no_memory
                     bra.b    lbC020074
 lbC020050:
                     move.l   d2,(lbL01A134)
@@ -2871,7 +2921,7 @@ get_given_pattern_rows:
 ; ===========================================================================
 lbC020112:
                     cmpi.w   #64,(lbW01BC6E)
-                    beq      lbC025072
+                    beq      error_no_more_patterns
                     move.l   (lbL02A75C),d0
                     addq.l   #2,d0
                     move.l   #$10000,d1
@@ -2890,7 +2940,7 @@ lbC020112:
                     moveq    #0,d0
                     rts
 lbC020168:
-                    bra      lbC02504E
+                    bra      error_no_memory
 lbC02016E:
                     movem.l  d2/a2,-(sp)
                     move.w   d0,d2
@@ -2913,7 +2963,7 @@ lbC02016E:
                     moveq    #0,d0
                     bra.b    lbC0201BA
 lbC0201B6:
-                    bsr      lbC02504E
+                    bsr      error_no_memory
 lbC0201BA:
                     movem.l  (sp)+,d2/a2
                     rts
@@ -3115,7 +3165,7 @@ draw_one_char_alpha_numeric:
 display_pattern_caret:
                     movem.w  (caret_pos_x,pc),d0/d1
                     addq.w   #7,d1
-                    lea      (lbB01B146),a0
+                    lea      (caret_current_positions),a0
                     move.b   (a0,d0.w),d0
                     movem.l  d0/d1,-(sp)
                     bsr.b    erase_pattern_caret
@@ -3302,12 +3352,12 @@ quit_flag:
                     even
 lbC0206F2:
                     movem.l  d2/d3,-(sp)
-                    tst.b    (lbB020868)
+                    tst.b    (pointer_visible_flag)
                     bne.b    lbC020774
                     bsr      install_mouse_pointer
                     move.w   d0,d2
                     move.w   d1,d3
-                    lea      (lbL02081C,pc),a0
+                    lea      (mouse_pointer_coords,pc),a0
                     movem.w  (a0),d0/d1
                     ext.w    d2
                     ext.w    d3
@@ -3364,7 +3414,7 @@ lbC020774:
                     bra.b    lbC020788
 lbC02077C:
                     moveq    #3,d0
-                    movem.w  (lbL02081C),d1/d2
+                    movem.w  (mouse_pointer_coords),d1/d2
                     lsr.w    #1,d2
 lbC020788:
                     move.w   (lbB01E37A,pc),d3
@@ -3375,101 +3425,105 @@ lbC020788:
 ; ===========================================================================
 install_mouse_pointer:
                     EXEC     Disable
-                    tst.b    (lbB020868)
-                    bne.b    lbC0207C2
-                    tst.b    (lbB020820)
-                    bne.b    lbC0207C2
+                    tst.b    (pointer_visible_flag)
+                    bne.b    .no_op
+                    tst.b    (mouse_pointer_bp_set_flag)
+                    bne.b    .no_op
                     movem.l  d0/a0,-(sp)
                     lea      (mouse_pointer),a0
                     bsr.b    set_mouse_sprite_bp
                     movem.l  (sp)+,d0/a0
-lbC0207C2:
+.no_op:
                     EXEC     Enable
                     rts
 
 ; ===========================================================================
 remove_mouse_pointer:
                     EXEC     Disable
-                    tst.b    (lbB020820)
-                    beq.b    lbC0207F6
+                    tst.b    (mouse_pointer_bp_set_flag)
+                    beq.b    .no_op
                     movem.l  d0/a0,-(sp)
                     lea      (dummy_sprite),a0
                     bsr      set_mouse_sprite_bp
                     movem.l  (sp)+,d0/a0
-lbC0207F6:
+.no_op:
                     EXEC     Enable
                     rts
 
 ; ===========================================================================
 set_mouse_sprite_bp:
-                    not.b    (lbB020820)
+                    not.b    (mouse_pointer_bp_set_flag)
                     move.l   a0,d0
                     lea      (sprites_bps+2),a0
                     move.w   d0,(4,a0)
                     swap     d0
                     move.w   d0,(a0)
                     rts
-lbL02081C:
-                    dc.l     0
-lbB020820:
+mouse_pointer_coords:
+                    dc.w     0,0
+mouse_pointer_bp_set_flag:
                     dc.b     0
                     even
 
 ; ===========================================================================
-lbC020822:
+hide_mouse_pointer:
                     bsr.b    remove_mouse_pointer
-                    st       (lbB020868)
+                    st       (pointer_visible_flag)
                     rts
-lbC020844:
-                    sf       (lbB020868)
+show_mouse_pointer:
+                    sf       (pointer_visible_flag)
                     bra      install_mouse_pointer
-lbB020868:
+pointer_visible_flag:
                     dc.b     0
                     even
-lbC02086A:
+
+; ===========================================================================
+process_commands_sequence:
                     movem.l  a2/a3,-(sp)
                     sub.l    a1,a1
                     sub.l    a2,a2
                     sub.l    a3,a3
-lbC020874:
+.loop:
                     move.w   (a0)+,d0
-                    beq.b    lbC0208AC
+                    beq.b    .done
                     cmpi.w   #1,d0
-                    beq.b    lbC0208A0
+                    beq.b    .sequence_1
                     cmpi.w   #2,d0
-                    beq.b    lbC0208A4
+                    beq.b    .sequence_2
                     cmpi.w   #3,d0
-                    beq.b    lbC0208A8
-                    ; wrong command
+                    beq.b    .sequence_3
+                    ; wrong sequence index
                     move.w   #$F00,(_CUSTOM|COLOR00)
-                    bra.b    lbC0208AC
-lbC0208A0:
+                    bra.b    .done
+.sequence_1:
                     move.l   (a0)+,a1
-                    bra.b    lbC020874
-lbC0208A4:
+                    bra.b    .loop
+.sequence_2:
                     move.l   (a0)+,a2
-                    bra.b    lbC020874
-lbC0208A8:
+                    bra.b    .loop
+.sequence_3:
                     move.l   (a0)+,a3
-                    bra.b    lbC020874
-lbC0208AC:
+                    bra.b    .loop
+.done:
                     ; store at the end of the list
                     movem.l  a1-a3,(a0)
-                    move.l   a0,(lbL0208D2)
+                    move.l   a0,(current_sequence_ptr)
                     clr.l    (lbL0208D6)
                     move.l   (a0),d0
-                    beq.b    lbC0208CC
+                    beq.b    .no_command
                     move.l   d0,a0
                     moveq    #0,d0
                     moveq    #0,d1
                     jsr      (process_command)
-lbC0208CC:
+.no_command:
                     movem.l  (sp)+,a2/a3
                     rts
-lbL0208D2:
+current_sequence_ptr:
                     dc.l     0
 lbL0208D6:
                     dc.l     0
+
+; ===========================================================================
 lbC0208DA:
                     movem.l  d2/a2/a3,-(sp)
                     move.l   a0,a2
@@ -3488,11 +3542,11 @@ lbC0208F4:
                     movem.l  (sp)+,d2/a2/a3
                     rts
 lbC0208FA:
-                    tst.l    (lbL0208D2)
+                    tst.l    (current_sequence_ptr)
                     beq      lbC020A1C
                     cmpi.w   #1,d0
                     beq.b    lbC020950
-                    tst.b    (lbB020868)
+                    tst.b    (pointer_visible_flag)
                     bne      lbC0209FC
                     cmpi.w   #3,d0
                     beq.b    lbC02093C
@@ -3518,7 +3572,7 @@ lbC020950:
                     move.w   d1,-(sp)
                     bsr      lbC020B56
                     move.w   (sp)+,d1
-                    move.l   (lbL0208D2,pc),a0
+                    move.l   (current_sequence_ptr,pc),a0
                     move.l   (4,a0),d0
                     beq      lbC020A18
                     move.l   d0,a0
@@ -3551,7 +3605,7 @@ lbC0209A8:
                     move.w   (4,a0),d0
                     btst     #11,d0
                     beq.b    lbC0209CC
-                    bsr      lbC020822
+                    bsr      hide_mouse_pointer
                     clr.w    (lbW020A30)
                     bra      lbC020A18
 lbC0209CC:
@@ -3581,7 +3635,7 @@ lbC020A0A:
                     bsr      lbC020A34
                     bra.b    lbC020A18
 lbC020A10:
-                    bsr      lbC020844
+                    bsr      show_mouse_pointer
 lbC020A18:
                     moveq    #ERROR,d0
                     bra.b    lbC020A2E
@@ -3668,7 +3722,7 @@ lbC020AF2:
                     move.w   d1,d3
                     lsr.w    #3,d2
                     lsr.w    #3,d3
-                    move.l   (lbL0208D2,pc),d0
+                    move.l   (current_sequence_ptr,pc),d0
                     beq.b    lbC020B3E
                     move.l   d0,a0
                     move.l   (8,a0),d0
@@ -3973,33 +4027,35 @@ lbC020DCE:
                     bra      lbC0202A8
 lbC020DE4:
                     rts
-lbC020DE6:
-                    move.l   #lbC020DF2,(current_cmd_ptr)
+
+; ===========================================================================
+cmd_load_song:
+                    move.l   #do_load_song,(current_cmd_ptr)
                     rts
-lbC020DF2:
+do_load_song:
                     lea      (LoadSong_MSG,pc),a0
                     moveq    #DIR_SONGS,d0
                     jsr      (display_file_requester)
-                    bgt.b    lbC020E02
+                    bgt.b    .confirmed
                     rts
-lbC020E02:
+.confirmed:
                     lea      (filename_to_load),a0
                     jsr      (open_file_for_reading)
-                    bmi      lbC020E92
-                    lea      (lbW01B728),a0
+                    bmi      .error
+                    lea      (song_chunk_header_loaded_data),a0
                     moveq    #8,d0
                     jsr      (read_from_file)
-                    bmi.b    lbC020E92
-                    lea      (lbW01B728),a0
+                    bmi.b    .error
+                    lea      (song_chunk_header_loaded_data),a0
                     cmpi.l   #'OKTA',(a0)+
                     bne      load_st_mod
                     cmpi.l   #'SONG',(a0)+
-                    beq.b    load_okta_mod
-                    bsr      lbC0250F0
+                    beq.b    .load_okta_mod
+                    bsr      error_ok_struct_error
                     bra.b    lbC020E96
 
 ; ===========================================================================
-load_okta_mod:
+.load_okta_mod:
                     jsr      (backup_prefs)
                     bsr      free_all_samples
                     lea      (CMOD_MSG,pc),a0
@@ -4021,7 +4077,7 @@ load_okta_mod:
                     jsr      (close_file)
                     bsr      lbC02001C
                     bra      lbC01FBF2
-lbC020E92:
+.error:
                     bsr      display_dos_error
 lbC020E96:
                     jsr      (close_file)
@@ -4151,7 +4207,7 @@ lbC021020:
                     moveq    #0,d0
                     rts
 lbC021024:
-                    bsr      lbC0250F6
+                    bsr      error_st_struct_error
                     bra.b    lbC02102E
 lbC02102A:
                     bsr      display_dos_error
@@ -4194,7 +4250,7 @@ lbC0210A4:
                     moveq    #0,d0
                     rts
 lbC0210B4:
-                    bsr      lbC0250F6
+                    bsr      error_st_struct_error
                     bra.b    lbC0210BE
 lbC0210BA:
                     bsr      display_dos_error
@@ -4317,18 +4373,18 @@ lbC021202:
                     move.w   (lbW01B730),d7
                     cmp.w    (lbW01BC6E),d7
                     beq.b    lbC021278
-                    lea      (lbW01B728),a0
+                    lea      (song_chunk_header_loaded_data),a0
                     moveq    #8,d0
                     jsr      (read_from_file)
                     bmi.b    lbC02128E
-                    lea      (lbW01B728),a0
+                    lea      (song_chunk_header_loaded_data),a0
                     cmpi.l   #'PBOD',(a0)
                     bne.b    lbC021288
-                    lea      (lbW01B728),a0
+                    lea      (song_chunk_header_loaded_data),a0
                     moveq    #2,d0
                     jsr      (read_from_file)
                     bmi.b    lbC02128E
-                    move.w   (lbW01B728),d0
+                    move.w   (song_chunk_header_loaded_data),d0
                     move.w   d0,(default_pattern_length)
                     mulu.w   (lbW02A75A),d0
                     move.l   d0,(lbL02A75C)
@@ -4347,7 +4403,7 @@ lbC021278:
                     moveq    #OK,d0
                     rts
 lbC021288:
-                    bsr      lbC0250F0
+                    bsr      error_ok_struct_error
                     bra.b    lbC021292
 lbC02128E:
                     bsr      display_dos_error
@@ -4369,11 +4425,11 @@ lbC0212AA:
                     move.l   d0,(lbL01B732)
                     bsr      lbC021F9E
                     bmi.b    lbC021334
-                    lea      (lbW01B728),a0
+                    lea      (song_chunk_header_loaded_data),a0
                     moveq    #8,d0
                     jsr      (read_from_file)
                     bmi.b    lbC021330
-                    lea      (lbW01B728),a0
+                    lea      (song_chunk_header_loaded_data),a0
                     cmpi.l   #'SBOD',(a0)+
                     bne.b    lbC02132A
                     move.l   (lbL01B732),d0
@@ -4395,7 +4451,7 @@ lbC021310:
                     moveq    #OK,d0
                     rts
 lbC02132A:
-                    bsr      lbC0250F0
+                    bsr      error_ok_struct_error
                     bra.b    lbC021334
 lbC021330:
                     bsr      display_dos_error
@@ -4425,11 +4481,11 @@ lbC021362:
 lbC021364:
                     move.l   a0,a5
 lbC021366:
-                    lea      (lbW01B728),a0
+                    lea      (song_chunk_header_loaded_data),a0
                     moveq    #8,d0
                     jsr      (read_from_file)
                     bmi.b    lbC0213A2
-                    movem.l  (lbW01B728),d0/d1
+                    movem.l  (song_chunk_header_loaded_data),d0/d1
                     cmp.l    (a5),d0
                     bne.b    lbC0213AA
                     cmp.l    (4,a5),d1
@@ -4656,7 +4712,7 @@ lbC02163C:
                     beq.b    do_free_all_samples
                     rts
 lbC02164A:
-                    bra      lbC0250E4
+                    bra      error_what_samples
 lbC021650:
                     lea      (OK_SampleTab),a0
                     moveq    #36-1,d0
@@ -4687,7 +4743,7 @@ do_free_all_samples:
 lbC02168E:
                     bsr.b    lbC02161C
                     tst.l    (a0)
-                    beq      lbC025066
+                    beq      error_what_sample
                     bsr      ask_are_you_sure_requester
                     beq.b    do_free_sample
                     rts
@@ -4721,14 +4777,14 @@ lbC0216DA:
 lbC0216DC:
                     bsr      lbC02161C
                     move.l   (a0)+,(lbL021778)
-                    beq      lbC025066
+                    beq      error_what_sample
                     tst.l    (a0)+
-                    beq      lbC025066
+                    beq      error_what_sample
                     lea      (CopyToSample_MSG,pc),a0
                     bsr      lbC024876
                     bmi.b    lbC021762
                     cmp.w    (current_sample,pc),d0
-                    beq      lbC0250B4
+                    beq      error_same_sample
                     move.w   (current_sample,pc),d1
                     move.w   d1,(lbW02177C)
                     move.w   d0,(current_sample)
@@ -4780,16 +4836,16 @@ lbC02177E:
                     move.w   (30,a0),(lbW01BC68)
                     bsr      lbC02161C
                     move.l   (a0)+,(lbL01BC60)
-                    beq      lbC025066
+                    beq      error_what_sample
                     move.l   (a0)+,(lbL01BC64)
-                    beq      lbC025066
+                    beq      error_what_sample
                     move.l   (lbL01A130),d0
-                    beq      lbC025066
+                    beq      error_what_sample
                     lea      (MixWithSample_MSG,pc),a0
                     bsr      lbC024876
                     bmi      lbC021888
                     cmp.w    (current_sample,pc),d0
-                    beq      lbC0250B4
+                    beq      error_same_sample
                     move.w   (current_sample,pc),(lbW01BC5E)
                     move.w   d0,(current_sample)
                     bsr      lbC02161C
@@ -4844,10 +4900,10 @@ lbC021860:
                     jsr      (lbC028324)
                     bra      lbC01FBF2
 lbC021874:
-                    bsr      lbC025066
+                    bsr      error_what_sample
                     bra.b    lbC02187E
 lbC02187A:
-                    bsr      lbC0250BA
+                    bsr      error_different_modes
 lbC02187E:
                     move.w   (lbW01BC5E),(current_sample)
 lbC021888:
@@ -4861,7 +4917,7 @@ lbC02189C:
                     bmi      lbC021908
                     move.w   d0,(lbW02190A)
                     cmp.w    (current_sample,pc),d0
-                    beq      lbC0250B4
+                    beq      error_same_sample
                     move.w   (current_sample,pc),d0
                     bsr      lbC021630
                     move.l   a0,a3
@@ -4986,7 +5042,7 @@ lbC021A20:
                     clr.w    (lbW021C0C)
                     cmpi.l   #2,d0
                     bge.b    lbC021A4E
-                    bsr      lbC0250A8
+                    bsr      error_sample_too_short
                     bra      lbC021BC2
 lbC021A4E:
                     move.l   d0,(lbL021C06)
@@ -5028,12 +5084,12 @@ lbC021AE2:
                     move.l   (lbL021C06,pc),d0
                     cmpi.l   #131070,d0
                     bls.b    lbC021AF8
-                    bsr      lbC0250A2
+                    bsr      error_sample_clipped
                     move.l   #131070,d0
 lbC021AF8:
                     cmpi.l   #2,d0
                     bcc.b    lbC021B08
-                    bsr      lbC0250A8
+                    bsr      error_sample_too_short
                     bra      lbC021BA6
 lbC021B08:
                     lea      (OK_Samples),a0
@@ -5084,7 +5140,7 @@ lbC021BA6:
                     rts
 lbC021BAE:
                     jsr      (close_file)
-                    bsr      lbC0250AE
+                    bsr      error_iff_struct_error
                     bra.b    lbC021BC2
 lbC021BBA:
                     bsr      display_dos_error
@@ -5158,9 +5214,9 @@ lbL021C6A:
                     dcb.b    8,0
 lbC021C72:
                     tst.l    (lbL01A130)
-                    beq      lbC025066
+                    beq      error_what_sample
                     tst.l    (lbL01A134)
-                    beq      lbC025066
+                    beq      error_what_sample
                     move.l   #lbC021C92,(current_cmd_ptr)
                     rts
 lbC021C92:
@@ -5306,7 +5362,7 @@ lbC021E2A:
 lbC021E38:
                     lea      (current_sample,pc),a0
                     cmpi.w   #35,(a0)
-                    beq      lbC02508A
+                    beq      error_no_more_samples
                     addq.w   #1,(a0)
                     bsr      lbC02001C
                     bsr      lbC01FBF2
@@ -5319,7 +5375,7 @@ lbB021E53:
 lbC021E54:
                     lea      (current_sample,pc),a0
                     tst.w    (a0)
-                    beq      lbC02508A
+                    beq      error_no_more_samples
                     subq.w   #1,(a0)
                     bsr      lbC02001C
                     bsr      lbC01FBF2
@@ -5349,9 +5405,9 @@ lbC021EA0:
                     rts
 lbC021EA2:
                     tst.l    (lbL01A130)
-                    beq      lbC025066
+                    beq      error_what_sample
                     tst.l    (lbL01A134)
-                    beq      lbC025066
+                    beq      error_what_sample
                     lea      (OK_Samples+30),a5
                     move.w   (current_sample,pc),d1
                     lsl.w    #5,d1
@@ -5373,9 +5429,9 @@ lbC021EE6:
                     rts
 lbC021EF4:
                     tst.l    (lbL01A130)
-                    beq      lbC025066
+                    beq      error_what_sample
                     tst.l    (lbL01A134)
-                    beq      lbC025066
+                    beq      error_what_sample
                     lea      (OK_Samples+30),a5
                     move.w   (current_sample,pc),d1
                     lsl.w    #5,d1
@@ -5419,7 +5475,7 @@ lbC021F70:
                     bsr.b    lbC021F90
                     jsr      (lbC028324)
                     bsr      lbC01FBF2
-                    bra      lbC025096
+                    bra      error_left_one_bit
 lbC021F90:
                     subq.l   #1,d0
                     bmi.b    lbC021F9C
@@ -5456,7 +5512,7 @@ lbC021FC4:
                     tst.l    d0
                     rts
 lbC021FF0:
-                    bsr      lbC02504E
+                    bsr      error_no_memory
                     bsr      do_free_sample
                     moveq    #ERROR,d0
                     rts
@@ -5478,12 +5534,12 @@ lbC022028:
                     move.w   (OK_PLen),d0
                     subq.w   #1,d0
                     cmp.w    (lbW023890),d0
-                    beq      lbC025078
+                    beq      error_no_more_positions
                     addq.w   #1,(lbW023890)
                     bra      lbC01FBF2
 lbC022044:
                     tst.w    (lbW023890)
-                    beq      lbC025078
+                    beq      error_no_more_positions
                     subq.w   #1,(lbW023890)
                     bra      lbC01FBF2
 lbC022058:
@@ -5492,19 +5548,19 @@ lbC022058:
                     move.w   (lbW01BC6E),d1
                     subq.w   #1,d1
                     cmp.b    (a0,d0.w),d1
-                    beq      lbC025072
+                    beq      error_no_more_patterns
                     addq.b   #1,(a0,d0.w)
                     bra      lbC01FBF2
 lbC02207C:
                     lea      (OK_Patterns),a0
                     move.w   (lbW023890),d0
                     tst.b    (a0,d0.w)
-                    beq      lbC025072
+                    beq      error_no_more_patterns
                     subq.b   #1,(a0,d0.w)
                     bra      lbC01FBF2
 lbC022098:
                     cmpi.w   #1,(OK_PLen)
-                    beq      lbC025078
+                    beq      error_no_more_positions
                     subq.w   #1,(OK_PLen)
                     move.w   (OK_PLen),d0
                     lea      (OK_Patterns),a0
@@ -5515,12 +5571,12 @@ lbC022098:
                     bra      lbC01FBF2
 lbC0220CE:
                     cmpi.w   #128,(OK_PLen)
-                    beq      lbC025078
+                    beq      error_no_more_positions
                     addq.w   #1,(OK_PLen)
                     bra      lbC01FBF2
 lbC0220E4:
                     cmpi.w   #128,(OK_PLen)
-                    beq      lbC025078
+                    beq      error_no_more_positions
                     lea      (OK_Patterns,pc),a0
                     adda.w   (lbW023890),a0
                     lea      (OK_Patterns+127,pc),a1
@@ -5534,7 +5590,7 @@ lbC022108:
                     bra.b    lbC0220CE
 lbC02210C:
                     cmpi.w   #1,(OK_PLen)
-                    beq      lbC025078
+                    beq      error_no_more_positions
                     lea      (OK_Patterns,pc),a0
                     adda.w   (lbW023890),a0
                     lea      (OK_Patterns+127,pc),a1
@@ -5554,7 +5610,7 @@ lbC022136:
 lbC022144:
                     cmp.b    (a0)+,d0
                     dbeq     d1,lbC022144
-                    beq      lbC02507E
+                    beq      error_pattern_in_use
                     cmp.w    (lbW01A138),d0
                     bne.b    lbC022160
                     subq.w   #1,(lbW01A138)
@@ -5680,7 +5736,7 @@ lbC022262:
                     bne.b    lbC022276
                     tst.b    (ntsc_flag)
                     beq.b    lbC022276
-                    bra      lbC02512C
+                    bra      error_only_in_pal
 lbC022276:
                     bsr      lbC01FF8C
                     move.w   (replay_type,pc),d0
@@ -5743,7 +5799,7 @@ lbC02233A:
                     EXEC     AllocMem
                     tst.l    d0
                     bne.b    lbC022356
-                    bra      lbC02504E
+                    bra      error_no_memory
 lbC022356:
                     move.l   d0,(lbL022382)
                     move.l   d0,a0
@@ -6267,7 +6323,7 @@ lbC022CAA:
                     bmi.b    lbC022CCA
                     eori.b   #7,d0
                     bchg     d0,(channels_mute_flags)
-                    bra      lbC01FC78
+                    bra      draw_channels_muted_status
 lbC022CCA:
                     rts
 lbC022CD6:
@@ -6357,7 +6413,7 @@ lbC022DC4:
                     sf       (5,a0)
                     move.w   (lbW01B2B6),d0
                     mulu.w   #5,d0
-                    lea      (lbB01B146),a1
+                    lea      (caret_current_positions),a1
                     move.b   (a1,d0.w),d0
                     move.w   d3,d1
                     addq.w   #7,d1
@@ -6391,7 +6447,7 @@ lbC022E44:
                 ENDR
                     move.w   (lbW01B2B6),d0
                     bmi      lbC022EF8
-                    lea      (lbB01B146),a1
+                    lea      (caret_current_positions),a1
                     mulu.w   #5,d0
                     move.b   (a1,d0.w),d1
                     ext.w    d1
@@ -7765,7 +7821,7 @@ lbC023E34:
                     move.w   d1,(OK_HWChansBits)
                     lea      (_CUSTOM),a6
                     move.w   #DMAF_AUDIO,(DMACON,a6)
-                    lea      (OK_OuputBuff),a0
+                    lea      (OK_OuputBuff_2),a0
                     move.l   a0,(AUD0LCH,a6)
                     move.l   a0,(AUD1LCH,a6)
                     move.l   a0,(AUD2LCH,a6)
@@ -8323,7 +8379,7 @@ display_dos_error:
                     DOS      IoErr
                     tst.l    d0
                     beq.b    .no_error
-                    lea      (dos_errors_text,pc),a0
+                    lea      (dos_errors_text-19,pc),a0
                     lea      (dos_errors_codes,pc),a1
 .search:
                     lea      (19,a0),a0
@@ -8595,6 +8651,8 @@ lbL02494A:
                     dc.l     0
 DrivesWorking_MSG:
                     dc.b     ' Drives Working ! ',0
+
+; ===========================================================================
 errors_text:
                     dc.b     '   No Memory !!   ',0
                     dc.b     '   What Block ?   ',0
@@ -8633,8 +8691,8 @@ errors_text:
                     dc.b     'CopyBuffer Empty !',0
                     dc.b     '   No Entries !   ',0
                     dc.b     'EF Struct Error !!',0
-dos_errors_text:
                     dc.b     '  Only in PAL !!  ',0
+dos_errors_text:
                     dc.b     ' No Free Store !! ',0
                     dc.b     'Task Table Full !!',0
                     dc.b     ' Line Too Long !! ',0
@@ -8669,9 +8727,17 @@ dos_errors_text:
                     dc.b     'Read/Write Error !',0
                     dc.b     '   DOS Error !!   ',0
 dos_errors_codes:
-                    dc.w     103,105,120,121,122,201,202,203,204,205,206
-                    dc.w     207,209,210,211,212,213,214,215,216,217,218
-                    dc.w     219,220,221,222,223,224,225,226,232,286,0
+                    dc.w     ERROR_NO_FREE_STORE,ERROR_TASK_TABLE_FULL,ERROR_LINE_TOO_LONG,ERROR_FILE_NOT_OBJECT
+                    dc.w     ERROR_INVALID_RESIDENT_LIBRARY,ERROR_NO_DEFAULT_DIR,ERROR_OBJECT_IN_USE,ERROR_OBJECT_EXISTS
+                    dc.w     ERROR_DIR_NOT_FOUND,ERROR_OBJECT_NOT_FOUND,ERROR_BAD_STREAM_NAME,ERROR_OBJECT_TOO_LARGE
+                    dc.w     ERROR_ACTION_NOT_KNOWN,ERROR_INVALID_COMPONENT_NAME,ERROR_INVALID_LOCK,ERROR_OBJECT_WRONG_TYPE
+                    dc.w     ERROR_DISK_NOT_VALIDATED,ERROR_DISK_WRITE_PROTECTED,ERROR_RENAME_ACROSS_DEVICES
+                    dc.w     ERROR_DIRECTORY_NOT_EMPTY,ERROR_TOO_MANY_LEVELS,ERROR_DEVICE_NOT_MOUNTED,ERROR_SEEK_ERROR
+                    dc.w     ERROR_COMMENT_TOO_BIG,ERROR_DISK_FULL,ERROR_DELETE_PROTECTED,ERROR_WRITE_PROTECTED
+                    dc.w     ERROR_READ_PROTECTED,ERROR_NOT_A_DOS_DISK,ERROR_NO_DISK,ERROR_NO_MORE_ENTRIES
+                    ; ????
+                    dc.w     286
+                    dc.W     0
 trackdisk_errors_text:
                     dc.b     ' Not Specified !! ',0
                     dc.b     ' No Sector Head ! ',0
@@ -8692,124 +8758,131 @@ trackdisk_errors_text:
                     dc.b     'Trackdisk Error !!',0
                     even
 trackdisk_errors_codes:
-                    dc.w     20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,0
-lbC02504E:
-                    moveq    #0,d0
+                    dc.w     TDERR_NotSpecified,TDERR_NoSecHdr,TDERR_BadSecPreamble,TDERR_BadSecID,TDERR_BadHdrSum
+                    dc.w     TDERR_BadSecSum,TDERR_TooFewSecs,TDERR_BadSecHdr,TDERR_WriteProt,TDERR_DiskChanged
+                    dc.w     TDERR_SeekError,TDERR_NoMem,TDERR_BadUnitNum,TDERR_BadDriveType,TDERR_DriveInUse,TDERR_PostReset
+                    dc.w     0
+error_no_memory:
+                    moveq    #ERROR_NO_MEM,d0
                     bra      display_error
-lbC025054:
-                    moveq    #1,d0
+error_what_block:
+                    moveq    #ERROR_WHAT_BLOCK,d0
                     bra      display_error
-lbC02505A:
-                    moveq    #2,d0
+error_what_position:
+                    moveq    #ERROR_WHAT_POS,d0
                     bra      display_error
-lbC025060:
-                    moveq    #3,d0
+error_sample_too_long:
+                    moveq    #ERROR_SMP_TOO_LONG,d0
                     bra      display_error
-lbC025066:
-                    moveq    #4,d0
+error_what_sample:
+                    moveq    #ERROR_WHAT_SMP,d0
                     bra      display_error
-lbC02506C:
-                    moveq    #5,d0
+error_sample_cleared:
+                    moveq    #ERROR_SMP_CLEARED,d0
                     bra      display_error
-lbC025072:
-                    moveq    #6,d0
+error_no_more_patterns:
+                    moveq    #ERROR_NO_MORE_PATT,d0
                     bra      display_error
-lbC025078:
-                    moveq    #7,d0
+error_no_more_positions:
+                    moveq    #ERROR_NO_MORE_POS,d0
                     bra      display_error
-lbC02507E:
-                    moveq    #8,d0
+error_pattern_in_use:
+                    moveq    #ERROR_PATT_IN_USE,d0
                     bra      display_error
-lbC025084:
-                    moveq    #9,d0
+error_copy_buffer_free:
+                    moveq    #ERROR_COPY_BUF_FREE,d0
                     bra      display_error
-lbC02508A:
-                    moveq    #10,d0
+error_no_more_samples:
+                    moveq    #ERROR_NO_MORE_SMP,d0
                     bra      display_error
-lbC025090:
-                    moveq    #11,d0
+error_only_in_mode_4_b:
+                    moveq    #ERROR_ONLY_4B_MODE,d0
                     bra      display_error
-lbC025096:
-                    moveq    #12,d0
+error_left_one_bit:
+                    moveq    #ERROR_LEFT_ONE_BIT,d0
                     bra      display_error
-lbC02509C:
-                    moveq    #13,d0
+error_block_copied:
+                    moveq    #ERROR_BLOCK_COPIED,d0
                     bra      display_error
-lbC0250A2:
-                    moveq    #14,d0
+error_sample_clipped:
+                    moveq    #ERROR_SMP_CLIPPED,d0
                     bra      display_error
-lbC0250A8:
-                    moveq    #15,d0
+error_sample_too_short:
+                    moveq    #ERROR_SMP_TOO_SHORT,d0
                     bra      display_error
-lbC0250AE:
-                    moveq    #16,d0
+error_iff_struct_error:
+                    moveq    #ERROR_IFF_ERROR,d0
                     bra      display_error
-lbC0250B4:
-                    moveq    #17,d0
+error_same_sample:
+                    moveq    #ERROR_SAME_SMP,d0
                     bra      display_error
-lbC0250BA:
-                    moveq    #18,d0
+error_different_modes:
+                    moveq    #ERROR_DIFF_MODES,d0
                     bra      display_error
-lbC0250C0:
-                    moveq    #19,d0
+error_zero_not_found:
+                    moveq    #ERROR_Z_NOT_FOUND,d0
                     bra      display_error
-lbC0250C6:
-                    moveq    #20,d0
+error_cant_install:
+                    moveq    #ERROR_CANT_INST,d0
                     bra      display_error
-lbC0250CC:
-                    moveq    #21,d0
+error_already_installed:
+                    moveq    #ERROR_ALREADY_INST,d0
                     bra      display_error
-lbC0250D2:
-                    moveq    #22,d0
+error_no_okdir:
+                    moveq    #ERROR_NO_OKDIR,d0
                     bra      display_error
-lbC0250D8:
-                    moveq    #23,d0
+error_cant_open_device:
+                    moveq    #ERROR_OPEN_DEVICE,d0
                     bra      display_error
-lbC0250DE:
-                    moveq    #24,d0
+error_verify_error:
+                    moveq    #ERROR_VERIFY,d0
                     bra      display_error
-lbC0250E4:
-                    moveq    #25,d0
+error_what_samples:
+                    moveq    #ERROR_WHAT_SMPS,d0
                     bra      display_error
-lbC0250EA:
-                    moveq    #26,d0
+error_cant_convert_song:
+                    moveq    #ERROR_CANT_CONVERT,d0
                     bra      display_error
-lbC0250F0:
-                    moveq    #27,d0
+error_ok_struct_error:
+                    moveq    #ERROR_OK_STRUCT,d0
                     bra      display_error
-lbC0250F6:
-                    moveq    #28,d0
+error_st_struct_error:
+                    moveq    #ERROR_ST_STRUCT,d0
                     bra      display_error
-lbC0250FC:
-                    moveq    #29,d0
+error_what_file:
+                    moveq    #ERROR_WHAT_FILE,d0
                     bra      display_error
-lbC025102:
-                    moveq    #30,d0
+error_not_a_directory:
+                    moveq    #ERROR_NOT_DIR,d0
                     bra      display_error
-lbC025108:
-                    moveq    #31,d0
+error_no_more_entries:
+                    moveq    #ERROR_ENDOF_ENTRIES,d0
                     bra      display_error
-lbC02510E:
-                    moveq    #32,d0
+error_nothing_selected:
+                    moveq    #ERROR_NOTHING_SEL,d0
                     bra      display_error
-lbC025114:
-                    moveq    #33,d0
+error_no_multi_selection:
+                    moveq    #ERROR_MULTI_SEL,d0
                     bra      display_error
-lbC02511A:
-                    moveq    #34,d0
+error_copy_buffer_empty:
+                    moveq    #ERROR_COPYBUF_EMPTY,d0
                     bra      display_error
-lbC025120:
-                    moveq    #35,d0
+error_no_entries:
+                    moveq    #ERROR_NO_ENTRIES,d0
                     bra      display_error
-lbC025126:
-                    moveq    #36,d0
+error_ef_struct_error:
+                    moveq    #ERROR_EF_STRUCT,d0
                     bra      display_error
-lbC02512C:
-                    moveq    #37,d0
+error_only_in_pal:
+                    moveq    #ERROR_ONLY_IN_PAL,d0
                     bra      display_error
+
+; ===========================================================================
 lbC025132:
                     moveq    #$A,d4
                     jmp      (draw_filled_box)
+
+; ===========================================================================
 lbW02513C:
                     dc.w     0
 OK_FullPeriodTab:
@@ -10725,7 +10798,7 @@ lbC026A80:
                     moveq    #OK,d0
                     rts
 lbC026AA2:
-                    jsr      (lbC02504E)
+                    jsr      (error_no_memory)
                     moveq    #ERROR,d0
                     rts
 lbC026AAC:
@@ -10749,7 +10822,7 @@ lbC026ACE:
                     move.l   a0,-(sp)
                     bsr      set_current_directory_name
                     lea      (lbW026B22,pc),a0
-                    jsr      (lbC02086A)
+                    jsr      (process_commands_sequence)
                     move.l   (sp)+,a0
                     moveq    #1,d0
                     moveq    #8,d1
@@ -11093,7 +11166,7 @@ lbC026EF0:
                     bsr      lbC02733A
                     bra.b    lbC026F14
 lbC026F06:
-                    jsr      (lbC02504E)
+                    jsr      (error_no_memory)
                     bsr      lbC0272FE
                     bsr      lbC026E5A
 lbC026F14:
@@ -11158,7 +11231,7 @@ lbC026FF6:
                     bmi.b    lbC027016
                     bra.b    lbC026FC4
 lbC027008:
-                    jsr      (lbC025102)
+                    jsr      (error_not_a_directory)
                     bra.b    lbC027016
 lbC027010:
                     jsr      (display_dos_error)
@@ -11171,7 +11244,7 @@ lbC027016:
                     bsr      lbC027350
                     bra.b    lbC02703A
 lbC02702C:
-                    jsr      (lbC02504E)
+                    jsr      (error_no_memory)
                     bsr      lbC026E5A
                     bsr      lbC0277A6
 lbC02703A:
@@ -11379,7 +11452,7 @@ lbC027266:
                     moveq    #OK,d0
                     rts
 lbC027284:
-                    jsr      (lbC02504E)
+                    jsr      (error_no_memory)
                     moveq    #ERROR,d0
                     rts
 lbC02728E:
@@ -11798,7 +11871,7 @@ lbC0276DC:
 lbC02771A:
                     rts
 lbC02771C:
-                    jmp      (lbC0250FC)
+                    jmp      (error_what_file)
 lbC027724:
                     lea      (curent_dir_name),a0
                     moveq    #9,d0
@@ -11884,7 +11957,7 @@ lbC0277F6:
                     EXEC     OpenDevice
                     tst.l    d0
                     beq      lbC027846
-                    jsr      (lbC0250D8)
+                    jsr      (error_cant_open_device)
                     bra      lbC0279B0
 lbC027846:
                     lea      (lbB01B2BC),a1
@@ -11894,7 +11967,7 @@ lbC027846:
                     EXEC     AllocMem
                     move.l   d0,(lbL027B34)
                     bne.b    lbC02787E
-                    jsr      (lbC02504E)
+                    jsr      (error_no_memory)
                     bra      lbC027982
 lbC02787E:
                     clr.w    (lbW027B38)
@@ -11902,7 +11975,7 @@ lbC027884:
                     move.w   #3,(lbW027B3E)
 lbC02788C:
                     bsr      lbC027A1E
-                    moveq    #70,d0
+                    moveq    #'F',d0
                     bsr      lbC0279EE
                     lea      (lbB01B2BC),a1
                     move.w   #11,($1C,a1)
@@ -11919,7 +11992,7 @@ lbC02788C:
 lbC0278DA:
                     tst.b    (lbB027B32)
                     beq.b    lbC02793C
-                    moveq    #86,d0
+                    moveq    #'V',d0
                     bsr      lbC0279EE
                     lea      (lbB01B2BC),a1
                     move.w   #2,($1C,a1)
@@ -11934,7 +12007,7 @@ lbC0278DA:
                     subq.w   #1,(lbW027B3E)
                     bne      lbC02788C
                     jsr      (display_trackdisk_error)
-                    jsr      (lbC0250DE)
+                    jsr      (error_verify_error)
                     bra      lbC02796C
 lbC02793C:
                     tst.b    (lbB027B33)
@@ -12202,7 +12275,7 @@ lbC027CA2:
                     moveq    #0,d0
                     rts
 lbC027CC6:
-                    jmp      (lbC02504E)
+                    jmp      (error_no_memory)
 lbC027CCE:
                     lea      (lbL027CEC,pc),a0
                     move.l   (a0),d0
@@ -12220,7 +12293,7 @@ lbL027CF0:
 lbC027CF4:
                     tst.b    (lbB027FDA)
                     beq.b    lbC027D04
-                    jmp      (lbC0250CC)
+                    jmp      (error_already_installed)
 lbC027D04:
                     bsr      lbC027E12
                     bmi      lbC027DCC
@@ -12279,11 +12352,11 @@ lbC027DB4:
                     rts
 lbC027DCC:
                     jsr      (close_file)
-                    jmp      (lbC0250C6)
+                    jmp      (error_cant_install)
 lbC027DDA:
                     tst.b    (lbB027FDA)
                     bne.b    lbC027DEA
-                    jmp      (lbC0250D2)
+                    jmp      (error_no_okdir)
 lbC027DEA:
                     bsr      lbC027E12
                     bmi      lbC027E0E
@@ -12526,7 +12599,7 @@ lbC02800C:
                     move.l   d0,(lbW0289C0)
 lbC02801A:
                     lea      (lbW02821A,pc),a0
-                    jsr      (lbC02086A)
+                    jsr      (process_commands_sequence)
                     move.w   #161,d0
                     bsr      lbC02823A
                     move.w   #190,d0
@@ -12573,10 +12646,10 @@ lbC0280AE:
                     beq.b    lbC0280FC
                     EXEC     Disable
                     move.w   #DMAF_COPPER,(_CUSTOM|DMACON)
-                    addq.b   #1,(lbB01E9DA)
+                    addq.b   #1,(dma_copper_spinlock)
                     move.b   #$F0,(copper_credits_line)
                     move.b   #$F8,(copper_end_line)
-                    subq.b   #1,(lbB01E9DA)
+                    subq.b   #1,(dma_copper_spinlock)
                     bgt.b    lbC0280F0
                     move.w   #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
 lbC0280F0:
@@ -12588,10 +12661,10 @@ lbC0280FE:
                     beq.b    lbC02814C
                     EXEC     Disable
                     move.w   #DMAF_COPPER,(_CUSTOM|DMACON)
-                    addq.b   #1,(lbB01E9DA)
+                    addq.b   #1,(dma_copper_spinlock)
                     move.b   #$EC,(copper_credits_line)
                     move.b   #$F4,(copper_end_line)
-                    subq.b   #1,(lbB01E9DA)
+                    subq.b   #1,(dma_copper_spinlock)
                     bgt.b    lbC028140
                     move.w   #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
 lbC028140:
@@ -12763,7 +12836,7 @@ lbC02830C:
                     bsr      lbC02896C
                     bsr.b    lbC02837A
                     bsr      lbC028C3E
-                    jmp      (lbC02506C)
+                    jmp      (error_sample_cleared)
 lbC028324:
                     move.l   (lbL029ECE),d0
                     cmpi.l   #2,d0
@@ -12782,10 +12855,10 @@ lbC028324:
                     moveq    #0,d0
                     rts
 lbC02836A:
-                    jsr      (lbC0250A8)
+                    jsr      (error_sample_too_short)
                     bra.b    lbC02830C
 lbC028372:
-                    jsr      (lbC025060)
+                    jsr      (error_sample_too_long)
                     bra.b    lbC02830C
 lbC02837A:
                     lea      (OK_Samples),a0
@@ -13022,7 +13095,7 @@ lbC02869A:
                     EXEC     CopyMem
                     tst.w    (lbW029EE4)
                     beq.b    lbC0286F0
-                    jsr      (lbC02509C)
+                    jsr      (error_block_copied)
 lbC0286F0:
                     moveq    #0,d0
                     rts
@@ -13147,7 +13220,7 @@ lbC028900:
                     rts
 lbC028904:
                     bsr.b    lbC028914
-                    jsr      (lbC025084)
+                    jsr      (error_copy_buffer_free)
                     jmp      (lbC01FBF2)
 lbC028914:
                     move.l   (lbL029EDC),d0
@@ -13700,7 +13773,7 @@ lbC028F32:
 lbC028F3E:
                     move.w   #100,(lbW029F0E)
                     lea      (lbW028FA0,pc),a0
-                    jsr      (lbC02086A)
+                    jsr      (process_commands_sequence)
                     bsr      lbC029026
                     lea      (lbW028F60,pc),a0
                     jmp      (lbC020626)
@@ -13853,7 +13926,7 @@ lbC02911E:
                     rts
 lbC02912A:
                     lea      (lbW02917C,pc),a0
-                    jsr      (lbC02086A)
+                    jsr      (process_commands_sequence)
                     bsr      lbC029762
                     lea      (lbW029148,pc),a0
                     jsr      (lbC020626)
@@ -14060,7 +14133,7 @@ lbC029366:
 lbC029372:
                     move.w   #$64,(lbW029F10)
                     lea      (lbW0293B6,pc),a0
-                    jsr      (lbC02086A)
+                    jsr      (process_commands_sequence)
                     bsr      lbC029488
                     lea      (lbW029394,pc),a0
                     jmp      (lbC020626)
@@ -14586,7 +14659,7 @@ lbC02999E:
                     rts
 lbC0299AA:
                     lea      (lbW0299E2,pc),a0
-                    jsr      (lbC02086A)
+                    jsr      (process_commands_sequence)
                     lea      (lbW0299C0,pc),a0
                     jmp      (lbC020626)
 lbW0299C0:
@@ -14970,19 +15043,19 @@ lbC029E84:
 lbL029E92:
                     dc.l     0
 lbC029E96:
-                    jmp      (lbC025066)
+                    jmp      (error_what_sample)
 lbC029E9E:
-                    jmp      (lbC025054)
+                    jmp      (error_what_block)
 lbC029EA6:
-                    jmp      (lbC02504E)
+                    jmp      (error_no_memory)
 lbC029EAE:
-                    jmp      (lbC02505A)
+                    jmp      (error_what_position)
 lbC029EB6:
-                    jmp      (lbC025060)
+                    jmp      (error_sample_too_long)
 lbC029EBE:
-                    jmp      (lbC025090)
+                    jmp      (error_only_in_mode_4_b)
 lbC029EC6:
-                    jmp      (lbC0250C0)
+                    jmp      (error_zero_not_found)
 lbL029ECE:
                     dc.l     0
 lbW029ED2:
@@ -15086,8 +15159,9 @@ lbL02A75C:
                     dc.l     0
 channels_mute_flags:
                     dc.b     0
-lbB02A761:
-                    dcb.b    9,0
+channels_number_text:
+                    dcb.b    8,0
+                    dc.b     0
 lbL02A76A:
                     dcb.l    2,0
 
@@ -15096,7 +15170,7 @@ lbC02A772:
                     bsr      backup_prefs
 .loop:
                     lea      (lbW02A7BA,pc),a0
-                    jsr      (lbC02086A)
+                    jsr      (process_commands_sequence)
                     bsr      lbC02A9E2
                     lea      (lbW02A7AA,pc),a0
                     jsr      (lbC020626)
@@ -15237,7 +15311,7 @@ lbC02A9E2:
                     bsr      lbC02ACA6
                     bsr      lbC02AD72
                     bsr      lbC02AED4
-                    bsr      lbC02B08E
+                    bsr      draw_font
                     bsr      lbC02B0BC
                     bra      lbC02AA28
 lbC02AA14:
@@ -15917,26 +15991,31 @@ lbC02B080:
                     move.b   d1,(a1)
                     dbra     d0,lbC02B080
                     bra      lbC02B0BC
-lbC02B08E:
+
+; ===========================================================================
+; draw the complete set of chars
+draw_font:
                     movem.l  d3-d7,-(sp)
                     moveq    #0,d5
                     moveq    #12,d4
                     moveq    #16-1,d7
-lbC02B098:
+.loop_y:
                     moveq    #62,d3
                     moveq    #16-1,d6
-lbC02B09C:
+.loop_x:
                     move.w   d3,d0
                     move.w   d4,d1
                     move.b   d5,d2
                     jsr      (draw_one_char)
                     addq.b   #1,d5
                     addq.w   #1,d3
-                    dbra     d6,lbC02B09C
+                    dbra     d6,.loop_x
                     addq.w   #1,d4
-                    dbra     d7,lbC02B098
+                    dbra     d7,.loop_y
                     movem.l  (sp)+,d3-d7
                     rts
+
+; ===========================================================================
 lbC02B0BC:
                     move.w   (lbW02B158),d0
                     cmp.w    (lbW02B15A),d0
@@ -16150,7 +16229,7 @@ lbC02B2BC:
                     moveq    #0,d0
                     rts
 lbC02B2F6:
-                    jmp      (lbC02504E)
+                    jmp      (error_no_memory)
 lbC02B2FE:
                     move.l   (lbL02B34C,pc),a0
                     lea      (prefs_data,pc),a1
@@ -16205,7 +16284,7 @@ lbC02B38C:
                     jmp      (exit)
 lbC02B3AA:
                     bsr      set_colors_palette
-                    bra      lbC02B5B6
+                    bra      construct_caret_positions
 lbC02B3B2:
                     movem.l  d2/d3/a2-a5,-(sp)
                     bsr      lbC02B506
@@ -16250,8 +16329,8 @@ lbC02B432:
                     lea      (lbL01CF58),a0
                     move.w   (lbW02B58E,pc),d0
                     bsr      lbC02B54C
-                    jsr      (lbC02504E)
-                    jsr      (lbC0250EA)
+                    jsr      (error_no_memory)
+                    jsr      (error_cant_convert_song)
 lbC02B44C:
                     movem.l  (sp)+,d2/d3/a2-a5
                     rts
@@ -16397,31 +16476,33 @@ lbC02B590:
                     move.l   d0,(lbL02A75C)
                     st       (channels_mute_flags)
                     rts
-lbC02B5B6:
+
+; ===========================================================================
+construct_caret_positions:
                     lea      (lbL02A76A,pc),a0
                     move.l   a0,(lbL02B61E)
                     move.l   #-1,(a0)
                     move.l   #-1,(4,a0)
-                    lea      (lbB02A761,pc),a2
+                    lea      (channels_number_text,pc),a2
                     lea      (lbL02B684,pc),a3
                     lea      (OK_ChannelsModes,pc),a4
-                    lea      (lbB02B6A4,pc),a5
-                    lea      (lbB01B146),a6
+                    lea      (caret_default_positions,pc),a5
+                    lea      (caret_current_positions),a6
                     moveq    #0,d3
                     moveq    #0,d4
-                    moveq    #49,d6
+                    moveq    #'1',d6
                     moveq    #4-1,d7
-lbC02B5EC:
+.loop:
                     tst.w    (a4)+
-                    beq.b    lbC02B5F6
-                    bsr.b    lbC02B622
-                    bsr.b    lbC02B622
-                    bra.b    lbC02B5FA
-lbC02B5F6:
-                    bsr.b    lbC02B622
-                    bsr.b    lbC02B648
-lbC02B5FA:
-                    dbra     d7,lbC02B5EC
+                    beq.b    .single
+                    bsr.b    copy_caret_position
+                    bsr.b    copy_caret_position
+                    bra.b    .done
+.single:
+                    bsr.b    copy_caret_position
+                    bsr.b    skip_caret_position
+.done:
+                    dbra     d7,.loop
                     sf       (a6)
                     subq.w   #1,d4
                     clr.w    (caret_pos_x)
@@ -16431,7 +16512,7 @@ lbC02B5FA:
                     jmp      (lbC01F430)
 lbL02B61E:
                     dc.l     0
-lbC02B622:
+copy_caret_position:
                     move.b   d6,(a2)+
                     addq.b   #1,d6
                     move.b   (a5)+,(a6)+
@@ -16448,13 +16529,22 @@ lbC02B622:
                     move.l   a0,(a1)
                     addq.w   #1,d3
                     rts
-lbC02B648:
+skip_caret_position:
                     move.b   #' ',(a2)+
                     addq.w   #5,a5
                     move.l   (a3)+,a0
                     jsr      (lbC020C92)
                     addq.w   #1,d3
                     rts
+caret_default_positions:
+                    dc.b     6,10,11,12,13
+                    dc.b     15,19,20,21,22
+                    dc.b     24,28,29,30,31
+                    dc.b     33,37,38,39,40
+                    dc.b     45,49,50,51,52
+                    dc.b     54,58,59,60,61
+                    dc.b     63,67,68,69,70
+                    dc.b     72,76,77,78,79
 
 ; ===========================================================================
 set_colors_palette:
@@ -16464,8 +16554,10 @@ set_colors_palette:
                     move.w   (a0)+,(main_menu_front_color+2)
                     move.w   (a0)+,(main_menu_back_color+2)
                     move.w   (a0)+,(main_front_color+2)
-                    move.w   (a0)+,(main_back_color+2)
+                    move.w   (a0),(main_back_color+2)
                     rts
+
+; ===========================================================================
 lbL02B684:
                     dc.l     lbB0178BE
                     dc.l     lbB0178D0
@@ -16475,13 +16567,9 @@ lbL02B684:
                     dc.l     lbB017918
                     dc.l     lbB01792A
                     dc.l     lbB01793C
-lbB02B6A4:
-                    dc.b     6,$A,$B,$C,$D,$F,$13,$14,$15,$16,$18,$1C,$1D,$1E,$1F,$21,$25,$26,$27
-                    dc.b     $28,$2D,$31,$32,$33,$34,$36,$3A,$3B,$3C,$3D,$3F,$43,$44,$45,$46,$48
-                    dc.b     $4C,$4D,$4E,$4F
 lbC02B6CC:
                     lea      (lbW02B712,pc),a0
-                    jsr      (lbC02086A)
+                    jsr      (process_commands_sequence)
                     bsr      lbC02C054
                     lea      (lbW02B706,pc),a0
                     jsr      (lbC020626)
@@ -16565,7 +16653,7 @@ lbC02B7C4:
                     move.w   d0,d1
                     bra      lbC02C0B2
 lbC02B7D6:
-                    jmp      (lbC025108)
+                    jmp      (error_no_more_entries)
 lbC02B7DE:
                     st       (quit_flag)
                     rts
@@ -16708,7 +16796,7 @@ lbC02B93C:
                     moveq    #OK,d0
                     rts
 lbC02B940:
-                    jsr      (lbC02510E)
+                    jsr      (error_nothing_selected)
                     moveq    #ERROR,d0
                     rts
 lbC02B94A:
@@ -16784,9 +16872,9 @@ lbC02BA06:
                     moveq    #ERROR,d0
                     rts
 lbC02BA12:
-                    jmp      (lbC025114)
+                    jmp      (error_no_multi_selection)
 lbC02BA1A:
-                    jmp      (lbC02511A)
+                    jmp      (error_copy_buffer_empty)
 lbC02BA22:
                     move.l   a0,(lbL02BA72)
                     move.w   d0,(lbW02BA76)
@@ -16936,7 +17024,7 @@ lbC02BBC4:
                     moveq    #OK,d0
                     rts
 lbC02BBD0:
-                    jsr      (lbC025126)
+                    jsr      (error_ef_struct_error)
                     bra.b    lbC02BBE2
 lbC02BBD8:
                     jsr      (display_dos_error)
@@ -16962,7 +17050,7 @@ lbL02BC18:
 lbC02BC20:
                     move.w   (lbW02B710,pc),d0
                     bne.b    lbC02BC2E
-                    jmp      (lbC025120)
+                    jmp      (error_no_entries)
 lbC02BC2E:
                     move.l   #lbC02BC3A,(current_cmd_ptr)
                     rts
@@ -17276,11 +17364,11 @@ lbC02BF88:
                     moveq    #OK,d0
                     rts
 lbC02BFCC:
-                    jsr      (lbC025108)
+                    jsr      (error_no_more_entries)
                     moveq    #ERROR,d0
                     rts
 lbC02BFD6:
-                    jsr      (lbC02504E)
+                    jsr      (error_no_memory)
                     moveq    #ERROR,d0
                     rts
 lbC02BFE0:
@@ -17492,7 +17580,7 @@ lbC02C2E4:
                     beq      lbC02C424
                     moveq    #76,d0
                     moveq    #11,d1
-                    moveq    #95,d2
+                    moveq    #'_',d2
                     jsr      (draw_one_char)
                     moveq    #61,d0
                     moveq    #12,d1
@@ -17578,7 +17666,7 @@ lbC02C418:
                     moveq    #0,d0
                     rts
 lbC02C424:
-                    jmp      (lbC025120)
+                    jmp      (error_no_entries)
 lbC02C42C:
                     bsr      lbC02C45E
                     tst.b    (lbB02C470)
@@ -18912,7 +19000,7 @@ lbB017594:
 lbB0175A6:
                     dc.l     lbB0175B8
                     dc.b     0,1,1,2,4,1
-                    dc.l     lbC020DE6
+                    dc.l     cmd_load_song
                     dc.l     0
 lbB0175B8:
                     dc.l     lbB0175CA
@@ -20427,10 +20515,10 @@ lbL01A13A:
                     dcb.b    12,0
 lbL01A146:
                     dcb.l    1024,0
-lbB01B146:
+caret_current_positions:
+                    dcb.b    40,0
                     dc.b     0
-lbB01B147:
-                    dcb.b    41,0
+                    even
 OK_SampleTab:
                     dcb.l    36*2,0
 pattern_bitplane_top_pos:
@@ -20484,8 +20572,8 @@ lbL01B720:
                     dc.l     0
 lbL01B724:
                     dc.l     0
-lbW01B728:
-                    dcb.w    4,0
+song_chunk_header_loaded_data:
+                    dcb.b    8,0
 lbW01B730:
                     dc.w     0
 lbL01B732:
@@ -20669,7 +20757,7 @@ bottom_credits_picture:
                     section  chip_blocks,bss_c
 OK_MixBuff_1:
                     ds.b     MIX_BUFFERS_1*MIX_BUFFERS_LEN_1
-OK_OuputBuff:
+OK_OuputBuff_2:
                     ds.b     82
 OK_MixBuff_2:
                     ds.b     MIX_BUFFERS_LEN_2*2
