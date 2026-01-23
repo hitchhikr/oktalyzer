@@ -147,7 +147,7 @@ start:
 .no_message:
                     moveq    #0,d0
                     rts
-                    dc.b     0,'$VER: version 1.150 (22.01.2026)',0
+                    dc.b     0,'$VER: version 1.150',0
                     even
 workbench_message:
                     dc.l     0
@@ -182,10 +182,6 @@ init_all:
                     beq.b    .set_wb_cli_msg_ptr
                     move.l   #WB_MSG,(wb_cli_text_ptr)
 .set_wb_cli_msg_ptr:
-                    move.l   (our_task,pc),a0
-                    moveq    #-1,d0
-                    ; ????
-                    move.l   d0,(184,a0)
                     bsr      open_libraries
                     move.l   (current_dir_lock),d1
                     DOS      CurrentDir
@@ -222,7 +218,7 @@ set_pal_ntsc_vars:
                     move.b   #$EB,(copper_pal_line)
                     move.b   #$EC,(copper_credits_line)
                     move.b   #$F4,(copper_end_line)
-                    move.w   #17,(lbW0200F8)
+                    move.w   #17,(number_of_rows_on_screen)
                     move.w   #7,(lbW026954)
                     move.w   #392-1,(max_mouse_pointer_y)
                     st       (ntsc_flag)
@@ -253,23 +249,23 @@ main_loop:
                     moveq    #0,d0
                     moveq    #0,d1
                     jsr      (process_command)
-lbC01E002:
+.loop:
                     lea      (lbW017396),a0
                     bsr      lbC02086A
                     bsr      lbC01FBF2
                     bsr      lbC0202A8
-                    bsr      lbC020434
+                    bsr      display_pattern_caret
                     lea      (lbW01737C),a0
                     bsr      lbC020626
-                    bsr      lbC020460
+                    bsr      erase_pattern_caret
                     move.l   (current_cmd_ptr),d0
-                    beq.b    lbC01E034
+                    beq.b    .no_command
                     move.l   d0,a0
                     jsr      (a0)
-                    bra.b    lbC01E002
-lbC01E034:
-                    tst.b    (lbB0206F0)
-                    beq.b    lbC01E002
+                    bra.b    .loop
+.no_command:
+                    tst.b    (quit_flag)
+                    beq.b    .loop
                     rts
 
 ; ===========================================================================
@@ -572,10 +568,10 @@ patch_sys_requesters_function:
                     subq.w   #1,(a0)
 lbC01E4CC:
                     move.l   (IntBase),a1
-                    movea.w  #_LVOAutoRequest,a0
+                    move.w   #_LVOAutoRequest,a0
                     cmpi.w   #36,(LIB_VERSION,a1)
                     bcs.b    .old_intuition
-                    movea.w  #_LVOEasyRequestArgs,a0
+                    move.w   #_LVOEasyRequestArgs,a0
 .old_intuition:
                     move.l   #our_sys_requesters_function,d0
                     EXEC     SetFunction
@@ -589,10 +585,10 @@ restore_sys_requesters_function:
                     EXEC     Disable
                     addq.w   #1,(lbW01E5E8)
                     move.l   (IntBase),a1
-                    movea.w  #_LVOAutoRequest,a0
+                    move.w   #_LVOAutoRequest,a0
                     cmpi.w   #36,(LIB_VERSION,a1)
                     bcs.b    .old_intuition
-                    movea.w  #_LVOEasyRequestArgs,a0
+                    move.w   #_LVOEasyRequestArgs,a0
 .old_intuition:
                     move.l   (old_sys_requesters_function,pc),d0
                     EXEC     SetFunction
@@ -901,8 +897,8 @@ lbC01E9DC:
                     lsr.w    #3,d2
                     subq.w   #7,d2
                     bmi.b    lbC01EA2C
-                    add.w    (lbW01B290),d2
-                    move.w   d2,(lbW02549E)
+                    add.w    (pattern_bitplane_top_pos),d2
+                    move.w   d2,(viewed_pattern_row)
                     move.w   d2,d0
                     bsr      lbC01F200
                     bsr      lbC01F1D8
@@ -915,12 +911,12 @@ lbC01EA0C:
                     beq.b    lbC01EA1E
                     cmp.b    d3,d1
                     ble.b    lbC01EA0C
-                    move.w   d0,(lbW02549C)
+                    move.w   d0,(caret_pos_x)
                     bra.b    lbC01EA28
 lbC01EA1E:
-                    move.w   (lbW01B294),(lbW02549C)
+                    move.w   (lbW01B294),(caret_pos_x)
 lbC01EA28:
-                    bsr      lbC020434
+                    bsr      display_pattern_caret
 lbC01EA2C:
                     movem.l  (sp)+,d2/d3
                     rts
@@ -956,11 +952,11 @@ lbC01EA70:
                     movem.l  d2/d5/d6/a5,-(sp)
                     move.b   d1,(lbW01EC46)
                     move.w   d0,-(sp)
-                    bsr      lbC0200FA
+                    bsr      get_current_pattern_rows
                     move.l   a0,a5
                     move.w   d0,(lbW01EC42)
                     move.w   (sp)+,d0
-                    move.w   (lbW02549E,pc),d6
+                    move.w   (viewed_pattern_row,pc),d6
                     move.w   d6,d1
                     mulu.w   (lbW02A75A),d1
                     adda.l   d1,a5
@@ -968,10 +964,10 @@ lbC01EA70:
                     sub.w    d6,(lbW01EC44)
                     addq.w   #7,d6
                     moveq    #0,d1
-                    move.w   (lbW02549C,pc),d1
+                    move.w   (caret_pos_x,pc),d1
                     divu.w   #5,d1
                     lea      (lbB01B146),a0
-                    move.w   (lbW02549C,pc),d2
+                    move.w   (caret_pos_x,pc),d2
                     adda.w   d2,a0
                     moveq    #0,d5
                     move.b   (a0),d5
@@ -1037,35 +1033,35 @@ lbC01EB68:
                     bra      lbC01EBEA
 lbC01EB70:
                     bsr      lbC01EE44
-                    bsr      lbC01F192
+                    bsr      next_pattern_row
                     bra      lbC01EBEA
 lbC01EB7C:
                     clr.l    (a5)
-                    bsr      lbC020460
+                    bsr      erase_pattern_caret
                     lea      (ascii_MSG1,pc),a0
                     move.w   d5,d0
                     move.w   d6,d1
                     jsr      (draw_text)
-                    bsr      lbC01F192
+                    bsr      next_pattern_row
                     bra      lbC01EBEA
 ascii_MSG1:
                     dc.b     '--- 0000',0
                     even
 lbC01EBA2:
                     clr.w    (2,a5)
-                    bsr      lbC020460
+                    bsr      erase_pattern_caret
                     lea      (ascii_MSG2,pc),a0
                     move.w   d5,d0
                     addq.w   #5,d0
                     move.w   d6,d1
                     jsr      (draw_text)
-                    bsr      lbC01F192
+                    bsr      next_pattern_row
                     bra      lbC01EBEA
 ascii_MSG2:
                     dc.b     '000',0
 lbC01EBC6:
                     clr.w    (a5)
-                    bsr      lbC020460
+                    bsr      erase_pattern_caret
                     lea      (ascii_MSG3,pc),a0
                     move.w   d5,d0
                     move.w   d6,d1
@@ -1135,7 +1131,7 @@ lbC01EC7A:
                     movem.l  (sp)+,d0/a0
 lbC01ECBC:
                     movem.l  d0/a0,-(sp)
-                    bsr      lbC020460
+                    bsr      erase_pattern_caret
                     movem.l  (sp)+,d0/a0
                     add.w    d0,d0
                     add.w    d0,d0
@@ -1152,7 +1148,7 @@ lbC01ECBC:
                     moveq    #0,d2
                     sf       (1,a5)
                     bsr      draw_one_char_alpha_numeric
-                    bsr      lbC01F192
+                    bsr      next_pattern_row
                     bra.b    lbC01ED0C
 lbC01ED00:
                     bsr      draw_one_char_alpha_numeric
@@ -1203,10 +1199,10 @@ lbC01ED64:
                     move.w   d5,d0
                     move.w   d6,d1
                     movem.l  d0/d1,-(sp)
-                    bsr      lbC020460
+                    bsr      erase_pattern_caret
                     movem.l  (sp)+,d0/d1
                     jsr      (draw_one_char)
-                    bsr      lbC01F192
+                    bsr      next_pattern_row
 lbC01ED96:
                     movem.l  (sp)+,d2
                     rts
@@ -1220,10 +1216,10 @@ lbC01ED9C:
                     move.w   d5,d0
                     move.w   d6,d1
                     movem.w  d0/d1,-(sp)
-                    bsr      lbC020460
+                    bsr      erase_pattern_caret
                     movem.w  (sp)+,d0/d1
                     jsr      (draw_one_char)
-                    bsr      lbC01F192
+                    bsr      next_pattern_row
 lbC01EDCE:
                     movem.l  (sp)+,d2
                     rts
@@ -1239,9 +1235,9 @@ lbC01EDD4:
                     move.b   (a0,d0.w),d2
                     move.w   d5,d0
                     move.w   d6,d1
-                    bsr      lbC020460
+                    bsr      erase_pattern_caret
                     jsr      (draw_one_char)
-                    bsr      lbC01F192
+                    bsr      next_pattern_row
 lbC01EE08:
                     movem.l  (sp)+,d2
                     rts
@@ -1255,9 +1251,9 @@ lbC01EE0E:
                     move.b   (a0,d0.w),d2
                     move.w   d5,d0
                     move.w   d6,d1
-                    bsr      lbC020460
+                    bsr      erase_pattern_caret
                     jsr      (draw_one_char)
-                    bsr      lbC01F192
+                    bsr      next_pattern_row
 lbC01EE3E:
                     movem.l  (sp)+,d2
                     rts
@@ -1281,10 +1277,10 @@ lbC01EE6A:
 lbC01EE6E:
                     move.l   a5,a0
                     clr.l    (a0)
-                    bsr      lbC020460
+                    bsr      erase_pattern_caret
                     bsr      lbC01F508
                     move.w   d5,d0
-                    move.w   (lbW02549E,pc),d1
+                    move.w   (viewed_pattern_row,pc),d1
                     move.w   (lbW01EC44,pc),d2
                     jsr      (lbC0269F2)
                     lea      (ascii_MSG5,pc),a0
@@ -1292,7 +1288,7 @@ lbC01EE6E:
                     move.w   d6,d1
                     jsr      (draw_text)
                     bsr      lbC01F440
-                    bsr      lbC020434
+                    bsr      display_pattern_caret
                     movem.l  (sp)+,d2
                     rts
 ascii_MSG5:
@@ -1300,7 +1296,7 @@ ascii_MSG5:
                     even
 lbC01EEB0:
                     movem.l  d2,-(sp)
-                    move.w   (lbW02549E,pc),d1
+                    move.w   (viewed_pattern_row,pc),d1
                     subq.w   #1,d1
                     bmi.b    lbC01EF0E
                     move.l   a5,a0
@@ -1314,10 +1310,10 @@ lbC01EECC:
 lbC01EED2:
                     dbra     d1,lbC01EECC
                     clr.l    (a0)
-                    bsr      lbC020460
+                    bsr      erase_pattern_caret
                     bsr      lbC01F508
                     move.w   d5,d0
-                    move.w   (lbW02549E,pc),d1
+                    move.w   (viewed_pattern_row,pc),d1
                     subq.w   #1,d1
                     move.w   (lbW01EC44,pc),d2
                     addq.w   #1,d2
@@ -1328,7 +1324,7 @@ lbC01EED2:
                     addq.w   #6,d1
                     jsr      (draw_text)
                     bsr      lbC01F440
-                    bsr      lbC01F18A
+                    bsr      previous_pattern_row
 lbC01EF0E:
                     movem.l  (sp)+,d2
                     rts
@@ -1504,61 +1500,65 @@ ABCDEF_MSG:
                     dc.b     '0123456789ABCDEF',0
                     even
 lbC01F10A:
-                    subq.w   #1,(lbW02549C)
-                    bpl      lbC020434
-                    move.w   (lbW01B294),(lbW02549C)
-                    bra      lbC020434
+                    subq.w   #1,(caret_pos_x)
+                    bpl      display_pattern_caret
+                    move.w   (lbW01B294),(caret_pos_x)
+                    bra      display_pattern_caret
 lbC01F122:
-                    subq.w   #5,(lbW02549C)
-                    bpl      lbC020434
-                    move.w   (lbW02549C,pc),d0
+                    subq.w   #5,(caret_pos_x)
+                    bpl      display_pattern_caret
+                    move.w   (caret_pos_x,pc),d0
                     add.w    (lbW01B294),d0
                     addq.w   #1,d0
-                    move.w   d0,(lbW02549C)
-                    bra      lbC020434
+                    move.w   d0,(caret_pos_x)
+                    bra      display_pattern_caret
 lbC01F142:
-                    addq.w   #1,(lbW02549C)
+                    addq.w   #1,(caret_pos_x)
                     move.w   (lbW01B294),d0
-                    cmp.w    (lbW02549C,pc),d0
-                    bge      lbC020434
-                    clr.w    (lbW02549C)
-                    bra      lbC020434
+                    cmp.w    (caret_pos_x,pc),d0
+                    bge      display_pattern_caret
+                    clr.w    (caret_pos_x)
+                    bra      display_pattern_caret
 lbC01F160:
-                    addq.w   #5,(lbW02549C)
+                    addq.w   #5,(caret_pos_x)
                     move.w   (lbW01B294),d0
-                    cmp.w    (lbW02549C,pc),d0
-                    bge      lbC020434
-                    move.w   (lbW02549C,pc),d0
+                    cmp.w    (caret_pos_x,pc),d0
+                    bge      display_pattern_caret
+                    move.w   (caret_pos_x,pc),d0
                     sub.w    (lbW01B294),d0
                     subq.w   #1,d0
-                    move.w   d0,(lbW02549C)
-                    bra      lbC020434
-lbC01F18A:
-                    subq.w   #1,(lbW02549E)
+                    move.w   d0,(caret_pos_x)
+                    bra      display_pattern_caret
+
+; ===========================================================================
+previous_pattern_row:
+                    subq.w   #1,(viewed_pattern_row)
                     bra.b    lbC01F1D8
-lbC01F192:
-                    addq.w   #1,(lbW02549E)
+
+; ===========================================================================
+next_pattern_row:
+                    addq.w   #1,(viewed_pattern_row)
                     bra.b    lbC01F1D8
 lbC01F19A:
-                    move.w   (f6_key_line_jump_value),(lbW02549E)
+                    move.w   (f6_key_line_jump_value),(viewed_pattern_row)
                     bra.b    lbC01F1D4
 lbC01F1A6:
-                    move.w   (f7_key_line_jump_value),(lbW02549E)
+                    move.w   (f7_key_line_jump_value),(viewed_pattern_row)
                     bra.b    lbC01F1D4
 lbC01F1B2:
-                    move.w   (f8_key_line_jump_value),(lbW02549E)
+                    move.w   (f8_key_line_jump_value),(viewed_pattern_row)
                     bra.b    lbC01F1D4
 lbC01F1BE:
-                    move.w   (f9_key_line_jump_value),(lbW02549E)
+                    move.w   (f9_key_line_jump_value),(viewed_pattern_row)
                     bra.b    lbC01F1D4
 lbC01F1CA:
-                    move.w   (f10_key_line_jump_value),(lbW02549E)
+                    move.w   (f10_key_line_jump_value),(viewed_pattern_row)
 lbC01F1D4:
                     bsr      lbC01F200
 lbC01F1D8:
-                    bsr      lbC0200FA
+                    bsr      get_current_pattern_rows
                     move.w   d0,d1
-                    move.w   (lbW02549E,pc),d0
+                    move.w   (viewed_pattern_row,pc),d0
 lbC01F1E2:
                     tst.w    d0
                     bpl.b    lbC01F1EA
@@ -1570,18 +1570,18 @@ lbC01F1EA:
                     sub.w    d1,d0
                     bra.b    lbC01F1EA
 lbC01F1F2:
-                    move.w   d0,(lbW02549E)
-                    bsr      lbC02007A
-                    bra      lbC020434
+                    move.w   d0,(viewed_pattern_row)
+                    bsr      set_pattern_bitplane
+                    bra      display_pattern_caret
 lbC01F200:
-                    bsr      lbC0200FA
+                    bsr      get_current_pattern_rows
                     move.w   d0,d1
-                    move.w   (lbW02549E,pc),d0
+                    move.w   (viewed_pattern_row,pc),d0
                     subq.w   #1,d1
                     cmp.w    d1,d0
                     ble.b    lbC01F218
                     move.w   d1,d0
-                    move.w   d0,(lbW02549E)
+                    move.w   d0,(viewed_pattern_row)
 lbC01F218:
                     rts
 lbC01F21A:
@@ -1668,7 +1668,7 @@ lbC01F31E:
                     moveq    #-1,d0
                     cmp.l    (lbW01F500,pc),d0
                     beq.b    lbC01F342
-                    bsr      lbC0200FA
+                    bsr      get_current_pattern_rows
                     subq.w   #1,d0
                     cmp.w    (lbW01F506,pc),d0
                     beq.b    lbC01F342
@@ -1718,10 +1718,10 @@ lbC01F3B0:
                     rts
 lbC01F3B2:
                     moveq    #0,d0
-                    move.w   (lbW02549C,pc),d0
+                    move.w   (caret_pos_x,pc),d0
                     divu.w   #5,d0
                     mulu.w   #5,d0
-                    move.w   (lbW02549E,pc),d1
+                    move.w   (viewed_pattern_row,pc),d1
                     movem.w  d0/d1,(lbW01F500)
                     addq.w   #4,d0
                     movem.w  d0/d1,(lbW01F504)
@@ -1729,14 +1729,14 @@ lbC01F3B2:
 lbC01F3DA:
                     bsr.b    lbC01F42C
                     moveq    #0,d0
-                    move.w   (lbW02549C,pc),d0
+                    move.w   (caret_pos_x,pc),d0
                     divu.w   #5,d0
                     mulu.w   #5,d0
                     moveq    #0,d1
                     movem.w  d0/d1,(lbW01F500)
                     addq.w   #4,d0
                     move.w   d0,-(sp)
-                    bsr      lbC0200FA
+                    bsr      get_current_pattern_rows
                     move.w   d0,d1
                     subq.w   #1,d1
                     move.w   (sp)+,d0
@@ -1746,7 +1746,7 @@ lbC01F40C:
                     bsr.b    lbC01F42C
                     clr.l    (lbW01F500)
                     move.w   (lbW01B294),(lbW01F504)
-                    bsr      lbC0200FA
+                    bsr      get_current_pattern_rows
                     subq.w   #1,d0
                     move.w   d0,(lbW01F506)
                     bra.b    lbC01F472
@@ -1778,7 +1778,7 @@ lbC01F472:
                     move.l   d0,(lbW01F46A)
                     cmp.l    (lbW01F500,pc),d0
                     beq.b    lbC01F4FE
-                    bsr      lbC0200FA
+                    bsr      get_current_pattern_rows
                     move.w   d0,d4
                     subq.w   #1,d4
                     movem.w  (lbW01F500,pc),d0/d1
@@ -1861,7 +1861,7 @@ lbC01F54E:
                     moveq    #-1,d0
                     cmp.l    (lbW01F500,pc),d0
                     beq      lbC025054
-                    bsr      lbC0200FA
+                    bsr      get_current_pattern_rows
                     move.l   a0,a5
                     lea      (lbL01A146),a3
                     move.w   (lbW01F502,pc),d5
@@ -1922,7 +1922,7 @@ lbC01F5E4:
                     cmp.l    (lbW01F5C4,pc),d0
                     beq      lbC025054
                     move.l   a0,a4
-                    bsr      lbC0200FA
+                    bsr      get_current_pattern_rows
                     move.w   d0,d3
                     subq.w   #1,d3
                     mulu.w   (lbW02A75A),d3
@@ -1937,8 +1937,8 @@ lbC01F5E4:
                     move.w   (lbW01F502,pc),d5
                     bra.b    lbC01F62A
 lbC01F622:
-                    move.w   (lbW02549C,pc),d4
-                    move.w   (lbW02549E,pc),d5
+                    move.w   (caret_pos_x,pc),d4
+                    move.w   (viewed_pattern_row,pc),d5
 lbC01F62A:
                     ext.l    d4
                     divu.w   #5,d4
@@ -1988,7 +1988,7 @@ lbC01F694:
                     cmp.l    (lbW01F500,pc),d0
                     beq      lbC025054
                     move.l   a0,a3
-                    bsr      lbC0200FA
+                    bsr      get_current_pattern_rows
                     move.l   a0,a5
                     move.w   (lbW01F502,pc),d5
                     mulu.w   (lbW02A75A),d5
@@ -2029,7 +2029,7 @@ lbC01F702:
                     cmp.l    (lbW01F500,pc),d0
                     beq      lbC025054
                     move.l   a0,a3
-                    bsr      lbC0200FA
+                    bsr      get_current_pattern_rows
                     move.l   a0,a5
                     move.w   (lbW01F504,pc),d6
                     ext.l    d6
@@ -2345,13 +2345,13 @@ lbC01FA6C:
                     move.w   (lbW01B294),d0
                     subq.w   #4,d0
 lbC01FA8E:
-                    move.w   d0,(lbW02549C)
-                    bra      lbC020434
+                    move.w   d0,(caret_pos_x)
+                    bra      display_pattern_caret
 lbC01FA98:
                     move.w   (lbW01B296),d1
                     beq.b    lbC01FAFC
                     addq.w   #1,d1
-                    move.w   (lbW02549C,pc),d0
+                    move.w   (caret_pos_x,pc),d0
                     divu.w   #5,d0
                     lea      (polyphony),a0
                     adda.w   (lbW01B298),a0
@@ -2372,8 +2372,8 @@ lbC01FACE:
                     move.w   (lbW01B294),d0
                     subq.w   #4,d0
 lbC01FAF2:
-                    move.w   d0,(lbW02549C)
-                    bra      lbC020434
+                    move.w   d0,(caret_pos_x)
+                    bra      display_pattern_caret
 lbC01FAFC:
                     rts
 lbC01FAFE:
@@ -2455,7 +2455,7 @@ lbC01FBDA:
                     bra.b    lbC01FB80
 lbC01FBE2:
                     move.w   (lbW01FBF0,pc),d0
-                    add.w    d0,(lbW02549E)
+                    add.w    d0,(viewed_pattern_row)
                     bra      lbC01F1D8
 lbW01FBF0:
                     dc.w     1
@@ -2480,7 +2480,7 @@ lbC01FBF2:
                     moveq    #13,d0
                     moveq    #6,d1
                     jsr      (lbC025E20)
-                    bsr      lbC0200FA
+                    bsr      get_current_pattern_rows
                     move.w   d0,d2
                     moveq    #23,d0
                     moveq    #6,d1
@@ -2810,61 +2810,65 @@ lbC020072:
 lbC020074:
                     movem.l  (sp)+,d2/a2
                     rts
-lbC02007A:
-                    move.w   (lbW02549E,pc),d0
-lbC02007E:
-                    move.w   (lbW01B290),d1
-                    add.w    (lbW0200F4,pc),d1
+
+; ===========================================================================
+set_pattern_bitplane:
+                    move.w   (viewed_pattern_row,pc),d0
+set_pattern_bitplane_from_given_pos:
+                    move.w   (pattern_bitplane_top_pos),d1
+                    add.w    (row_pixels_size,pc),d1
                     cmp.w    d1,d0
-                    bge.b    lbC020096
+                    bge.b    .bottom_pos
                     sub.w    d1,d0
-                    add.w    d0,(lbW01B290)
-                    bra.b    lbC0200B2
-lbC020096:
-                    move.w   (lbW01B290),d1
-                    add.w    (lbW0200F8,pc),d1
-                    sub.w    (lbW0200F6,pc),d1
+                    add.w    d0,(pattern_bitplane_top_pos)
+                    bra.b    .top_pos
+.bottom_pos:
+                    move.w   (pattern_bitplane_top_pos),d1
+                    add.w    (number_of_rows_on_screen,pc),d1
+                    sub.w    (row_pixels_size,pc),d1
                     subq.w   #1,d1
                     cmp.w    d1,d0
-                    blt.b    lbC0200B2
+                    blt.b    .top_pos
                     sub.w    d0,d1
-                    sub.w    d1,(lbW01B290)
-lbC0200B2:
-                    move.w   (lbW01B290),d1
-                    bsr      lbC0200FA
-                    sub.w    (lbW0200F8,pc),d0
+                    sub.w    d1,(pattern_bitplane_top_pos)
+.top_pos:
+                    move.w   (pattern_bitplane_top_pos),d1
+                    bsr      get_current_pattern_rows
+                    sub.w    (number_of_rows_on_screen,pc),d0
                     cmp.w    d1,d0
-                    bge.b    lbC0200C6
+                    bge.b    .max
                     move.w   d0,d1
-lbC0200C6:
+.max:
                     tst.w    d1
-                    bpl.b    lbC0200CC
+                    bpl.b    .min
                     moveq    #0,d1
-lbC0200CC:
-                    move.w   d1,(lbW01B290)
+.min:
+                    move.w   d1,(pattern_bitplane_top_pos)
                     mulu.w   #(SCREEN_BYTES*8),d1
-                    addi.l   #main_screen+4480,d1
+                    addi.l   #main_screen+(56*80),d1
                     lea      (main_bp),a1
-                    move.l   d1,(lbL0246B4)
+                    move.l   d1,(pattern_bitplane_offset)
                     move.w   d1,(6,a1)
                     swap     d1
                     move.w   d1,(2,a1)
                     rts
-lbW0200F4:
+row_pixels_size:
                     dc.w     8
-lbW0200F6:
-                    dc.w     8
-lbW0200F8:
+number_of_rows_on_screen:
                     dc.w     24
-lbC0200FA:
+
+; ===========================================================================
+get_current_pattern_rows:
                     move.w   (lbW01A138),d0
-lbC020100:
+get_given_pattern_rows:
                     lea      (OK_PatternList),a0
                     add.w    d0,d0
                     add.w    d0,d0
                     move.l   (a0,d0.w),a0
                     move.w   (a0)+,d0
                     rts
+
+; ===========================================================================
 lbC020112:
                     cmpi.w   #64,(lbW01BC6E)
                     beq      lbC025072
@@ -2914,7 +2918,7 @@ lbC0201BA:
                     movem.l  (sp)+,d2/a2
                     rts
 lbC0201C0:
-                    bsr      lbC0200FA
+                    bsr      get_current_pattern_rows
                     cmp.w    d2,d0
                     ble.b    lbC0201CA
                     move.w   d2,d0
@@ -2937,8 +2941,8 @@ lbC0201F2:
                     st       (channels_mute_flags)
                     clr.w    (lbW023890)
                     clr.w    (lbW01A138)
-                    clr.w    (lbW02549C)
-                    clr.w    (lbW02549E)
+                    clr.w    (caret_pos_x)
+                    clr.w    (viewed_pattern_row)
                     moveq    #-1,d0
                     move.l   d0,(lbW01F5C4)
                     bra      lbC01F430
@@ -2977,10 +2981,10 @@ lbC0202A6:
                     rts
 lbC0202A8:
                     move.w   #$200,(main_bplcon0+2)
-                    bsr      lbC02007A
-                    bsr      lbC0200FA
+                    bsr      set_pattern_bitplane
+                    bsr      get_current_pattern_rows
                     move.w   d0,(lbW01B788)
-                    bsr      lbC020460
+                    bsr      erase_pattern_caret
                     jsr      (clear_1_line_blitter)
                     moveq    #0,d7
                     bsr.b    lbC0202F0
@@ -2995,7 +2999,7 @@ lbC0202CC:
                     move.w   #$9200,(main_bplcon0+2)
                     bra      lbC01FBF2
 lbC0202F0:
-                    bsr      lbC0200FA
+                    bsr      get_current_pattern_rows
                     move.l   a0,a4
                     move.w   d7,d0
                     mulu.w   (lbW02A75A),d0
@@ -3084,13 +3088,13 @@ lbC0203C6:
                     bra      lbC01F440
 lbC0203DC:
                     move.w   d0,-(sp)
-                    bsr      lbC020460
+                    bsr      erase_pattern_caret
                     bsr      lbC01F508
                     jsr      (own_blitter)
-                    ; clear 8 lines
+                    ; clear 1 char line
                     move.l   #$1000000,(BLTCON0,a6)
                     move.w   #0,(BLTDMOD,a6)
-                    lea      (main_screen+4480),a0
+                    lea      (main_screen+(56*80)),a0
                     move.w   (sp)+,d0
                     mulu.w   #(SCREEN_BYTES*8),d0
                     adda.l   d0,a0
@@ -3098,7 +3102,7 @@ lbC0203DC:
                     move.w   #(8*64)+(SCREEN_BYTES/2),(BLTSIZE,a6)
                     jsr      (disown_blitter)
                     bsr      lbC01F440
-                    bra      lbC020434
+                    bra      display_pattern_caret
 
 ; ===========================================================================
 draw_one_char_alpha_numeric:
@@ -3108,29 +3112,31 @@ draw_one_char_alpha_numeric:
                     jmp      (draw_one_char)
 
 ; ===========================================================================
-lbC020434:
-                    movem.w  (lbW02549C,pc),d0/d1
+display_pattern_caret:
+                    movem.w  (caret_pos_x,pc),d0/d1
                     addq.w   #7,d1
                     lea      (lbB01B146),a0
                     move.b   (a0,d0.w),d0
                     movem.l  d0/d1,-(sp)
-                    bsr.b    lbC020460
+                    bsr.b    erase_pattern_caret
                     movem.l  (sp)+,d0/d1
-                    movem.w  d0/d1,(lbW020488)
+                    movem.w  d0/d1,(old_caret_pos)
                     jmp      (invert_one_char)
-lbC020460:
-                    tst.l    (lbW020488)
-                    bmi.b    lbC020486
+erase_pattern_caret:
+                    tst.l    (old_caret_pos)
+                    bmi.b    .no_erase
                     movem.l  d0/d1,-(sp)
-                    movem.w  (lbW020488),d0/d1
+                    movem.w  (old_caret_pos),d0/d1
                     jsr      (invert_one_char)
                     moveq    #-1,d0
-                    move.l   d0,(lbW020488)
+                    move.l   d0,(old_caret_pos)
                     movem.l  (sp)+,d0/d1
-lbC020486:
+.no_erase:
                     rts
-lbW020488:
-                    dc.w     $FFFF,$FFFF
+old_caret_pos:
+                    dc.w     -1,-1
+
+; ===========================================================================
 lbC02048C:
                     movem.l  d0-d3/a0,-(sp)
                     tst.b    (lbB020540)
@@ -3267,14 +3273,14 @@ lbC020686:
 lbC020694:
                     move.l   (a0),a1
                     clr.l    (current_cmd_ptr)
-                    sf       (lbB0206F0)
+                    sf       (quit_flag)
                     movem.l  d0-d3/a0/a2,-(sp)
                     jsr      (a1)
                     movem.l  (sp)+,d0-d3/a0/a2
                     beq.b    lbC0206D2
                     tst.l    (current_cmd_ptr)
                     bne.b    lbC0206D2
-                    tst.b    (lbB0206F0)
+                    tst.b    (quit_flag)
                     bne.b    lbC0206D2
 lbC0206BE:
                     addq.w   #4,a0
@@ -3291,7 +3297,7 @@ lbC0206D2:
                     rts
 current_cmd_ptr:
                     dc.l     0
-lbB0206F0:
+quit_flag:
                     dc.b     0
                     even
 lbC0206F2:
@@ -3524,8 +3530,8 @@ lbC020974:
                     move.w   d1,d0
                     move.w   d2,d1
                     move.w   d3,d2
-                    movea.w  #10,a0
-                    movea.w  #14,a1
+                    move.w   #10,a0
+                    move.w   #14,a1
                     bsr      lbC020A8C
                     bra      lbC020A18
 lbC02098E:
@@ -3533,8 +3539,8 @@ lbC02098E:
                     move.w   d1,d0
                     move.w   d2,d1
                     move.w   d3,d2
-                    movea.w  #10,a0
-                    movea.w  #14,a1
+                    move.w   #10,a0
+                    move.w   #14,a1
                     bsr      lbC020A60
                     bra      lbC020A18
 lbC0209A8:
@@ -3552,8 +3558,8 @@ lbC0209CC:
                     move.w   d1,d0
                     move.w   d2,d1
                     move.w   d3,d2
-                    movea.w  #14,a0
-                    movea.w  #10,a1
+                    move.w   #14,a0
+                    move.w   #10,a1
                     bsr      lbC020A8C
                     bra      lbC020A18
 lbC0209E2:
@@ -3561,8 +3567,8 @@ lbC0209E2:
                     move.w   d1,d0
                     move.w   d2,d1
                     move.w   d3,d2
-                    movea.w  #14,a0
-                    movea.w  #10,a1
+                    move.w   #14,a0
+                    move.w   #10,a1
                     bsr      lbC020A60
                     bra      lbC020A18
 lbC0209FC:
@@ -3598,8 +3604,8 @@ lbC020A34:
                     swap     d0
                     tst.w    d0
                     beq.b    lbC020A5E
-                    movea.w  #14,a0
-                    movea.w  #10,a1
+                    move.w   #14,a0
+                    move.w   #10,a1
                     bra      lbC020A8C
 lbC020A5E:
                     rts
@@ -3831,7 +3837,7 @@ lbC020C92:
                     ori.w    #$4000,(4,a0)
                     rts
 lbC020C9A:
-                    lea      (main_screen+4480),a1
+                    lea      (main_screen+(56*80)),a1
                     bra.b    lbC020CBC
 lbC020CA2:
                     tst.w    (a0)
@@ -3986,13 +3992,15 @@ lbC020E02:
                     bmi.b    lbC020E92
                     lea      (lbW01B728),a0
                     cmpi.l   #'OKTA',(a0)+
-                    bne      lbC020EC4
+                    bne      load_st_mod
                     cmpi.l   #'SONG',(a0)+
-                    beq.b    lbC020E40
+                    beq.b    load_okta_mod
                     bsr      lbC0250F0
                     bra.b    lbC020E96
-lbC020E40:
-                    jsr      (lbC02B280)
+
+; ===========================================================================
+load_okta_mod:
+                    jsr      (backup_prefs)
                     bsr      free_all_samples
                     lea      (CMOD_MSG,pc),a0
                     bsr      lbC021342
@@ -4028,9 +4036,10 @@ lbC020EA6:
                     rts
 LoadSong_MSG:
                     dc.b     'Load Song',0
-; load ST module
-lbC020EC4:
-                    jsr      (lbC02B280)
+
+; ===========================================================================
+load_st_mod:
+                    jsr      (backup_prefs)
                     bsr      free_all_samples
                     lea      (OK_ChannelsModes),a0
                     clr.l    (a0)
@@ -4170,7 +4179,7 @@ lbC021048:
                     bmi.b    lbC0210BE
                     move.w   (lbW01BC6E),d0
                     subq.w   #1,d0
-                    bsr      lbC020100
+                    bsr      get_given_pattern_rows
                     mulu.w   (lbW02A75A),d0
                     move.l   a0,(lbL01B2A8)
                     jsr      (read_from_file)
@@ -4327,7 +4336,7 @@ lbC021202:
                     bmi.b    lbC021292
                     move.w   (lbW01BC6E),d0
                     subq.w   #1,d0
-                    bsr      lbC020100
+                    bsr      get_given_pattern_rows
                     mulu.w   (lbW02A75A),d0
                     jsr      (read_from_file)
                     bmi.b    lbC02128E
@@ -4569,7 +4578,7 @@ lbC02154A:
                     cmp.w    (lbW01BC6E),d7
                     beq.b    lbC0215A8
                     move.w   d7,d0
-                    bsr      lbC020100
+                    bsr      get_given_pattern_rows
                     mulu.w   (lbW02A75A),d0
                     subq.w   #2,a0
                     addq.l   #2,d0
@@ -5562,7 +5571,7 @@ lbC022170:
                     moveq    #1,d0
 lbC022172:
                     move.w   d0,d1
-                    bsr      lbC0200FA
+                    bsr      get_current_pattern_rows
                     move.w   d0,(lbW0221DC)
                     add.w    d1,d0
                     cmpi.w   #1,d0
@@ -5597,7 +5606,7 @@ lbC0221BA:
 lbC0221CA:
                     bsr      lbC01F200
                     bsr      lbC01F1D8
-                    bsr      lbC02007A
+                    bsr      set_pattern_bitplane
                     bra      lbC01FBF2
 lbC0221DA:
                     rts
@@ -5705,10 +5714,10 @@ lbC0222E4:
                     move.w   (lbW01B2B6),d0
                     bmi.b    lbC02230C
                     mulu.w   #5,d0
-                    move.w   d0,(lbW02549C)
+                    move.w   d0,(caret_pos_x)
                     move.w   (OK_PattY,pc),d0
                     bmi.b    lbC02230C
-                    move.w   d0,(lbW02549E)
+                    move.w   d0,(viewed_pattern_row)
 lbC02230C:
                     bsr      lbC01F1D8
 lbC022310:
@@ -6363,8 +6372,8 @@ show_pattern_position_bar:
                     move.w   (OK_PattY,pc),d2
                     bmi      lbC022EF8
                     move.w   d2,d0
-                    bsr      lbC02007E
-                    lea      (main_screen+4480),a0
+                    bsr      set_pattern_bitplane_from_given_pos
+                    lea      (main_screen+(56*80)),a0
                     move.w   d2,d0
                     mulu.w   #(SCREEN_BYTES*8),d0
                     adda.l   d0,a0
@@ -7251,7 +7260,7 @@ lbC0237AC:
                     bsr      OK_GetTrkPos
                     subq.w   #1,(OK_PattY)
                     moveq    #0,d0
-                    move.w   (lbW02549C),d0
+                    move.w   (caret_pos_x),d0
                     divu.w   #5,d0
                     move.w   d0,(lbW01B2BA)
                     move.w   #-1,(lbW01B2B6)
@@ -8284,14 +8293,14 @@ do_go_to_cli_workbench:
 lbC0245D0:
                     bsr      ask_are_you_sure_requester
                     bne.b    lbC0245DC
-                    st       (lbB0206F0)
+                    st       (quit_flag)
 lbC0245DC:
                     rts
 
 ; ===========================================================================
 display_error:
                     movem.l  d0-d7/a0-a6,-(sp)
-                    move.l   (lbL0246B4,pc),d1
+                    move.l   (pattern_bitplane_offset,pc),d1
                     beq.b    .no_error
                     lea      (errors_text,pc),a0
                     mulu.w   #19,d0
@@ -8307,7 +8316,7 @@ display_error:
 ; ===========================================================================
 display_dos_error:
                     movem.l  d0-d7/a0-a6,-(sp)
-                    move.l   (lbL0246B4,pc),d0
+                    move.l   (pattern_bitplane_offset,pc),d0
                     beq.b    .no_error
                     move.l   (DOSBase,pc),d0
                     beq.b    .no_error
@@ -8334,7 +8343,7 @@ display_dos_error:
 ; ===========================================================================
 display_trackdisk_error:
                     movem.l  d0-d7/a0-a6,-(sp)
-                    move.l   (lbL0246B4),d0
+                    move.l   (pattern_bitplane_offset),d0
                     beq.b    .no_error
                     moveq    #0,d0
                     move.b   (lbB01B2DB),d0
@@ -8362,7 +8371,7 @@ display_trackdisk_error:
                     rts
 
 ; ===========================================================================
-lbL0246B4:
+pattern_bitplane_offset:
                     dc.l     0
 lbC0246B8:
                     lea      (lbW0246C0,pc),a0
@@ -8394,7 +8403,7 @@ are_you_sure_text:
 
 ; ===========================================================================
 ask_yes_no_requester:
-                    move.l   (lbL0246B4,pc),d0
+                    move.l   (pattern_bitplane_offset,pc),d0
                     beq.b    lbC024726
                     movem.l  d1-d7/a1-a6,-(sp)
                     jsr      (display_messagebox)
@@ -8438,7 +8447,7 @@ lbC02476A:
                     bne.b    lbC024790
                     st       (lbB0247B6)
                     movem.l  d0-d7/a0-a6,-(sp)
-                    move.l   (lbL0246B4,pc),d0
+                    move.l   (pattern_bitplane_offset,pc),d0
                     beq.b    lbC02478C
                     lea      (DrivesWorking_MSG,pc),a0
                     jsr      (display_messagebox)
@@ -8451,7 +8460,7 @@ lbC024792:
                     beq.b    lbC0247B4
                     sf       (lbB0247B6)
                     movem.l  d0-d7/a0-a6,-(sp)
-                    move.l   (lbL0246B4,pc),d0
+                    move.l   (pattern_bitplane_offset,pc),d0
                     beq.b    lbC0247B0
                     jsr      (remove_messagebox)
 lbC0247B0:
@@ -8469,7 +8478,7 @@ lbC0247B8:
                     jsr      (display_messagebox)
 lbC0247D6:
                     moveq    #$2F,d0
-                    move.l   (lbL0246B4,pc),d1
+                    move.l   (pattern_bitplane_offset,pc),d1
                     subi.l   #main_screen,d1
                     divu.w   #(SCREEN_BYTES*8),d1
                     add.w    (lbW026954),d1
@@ -8516,7 +8525,7 @@ lbC024876:
                     jsr      (display_messagebox)
 lbC02487C:
                     moveq    #$2F,d0
-                    move.l   (lbL0246B4,pc),d1
+                    move.l   (pattern_bitplane_offset,pc),d1
                     subi.l   #main_screen,d1
                     divu.w   #(SCREEN_BYTES*8),d1
                     add.w    (lbW026954),d1
@@ -8557,7 +8566,7 @@ lbC0248CC:
                     move.l   (sp)+,a0
                     jsr      (display_messagebox)
                     moveq    #46,d0
-                    move.l   (lbL0246B4,pc),d1
+                    move.l   (pattern_bitplane_offset,pc),d1
                     subi.l   #main_screen,d1
                     divu.w   #(SCREEN_BYTES*8),d1
                     add.w    (lbW026954),d1
@@ -8840,9 +8849,9 @@ OK_PLen:
                     dc.w     1
 OK_Patterns:
                     dcb.b    128,0
-lbW02549C:
+caret_pos_x:
                     dc.w     0
-lbW02549E:
+viewed_pattern_row:
                     dc.w     0
 trackdiskdevi_MSG:
                     dc.b     'trackdisk.device',0
@@ -8963,7 +8972,7 @@ clear_1_line_blitter:
                     bsr      own_blitter
                     move.l   #$1000000,(BLTCON0,a6)
                     move.w   #0,(BLTDMOD,a6)
-                    move.l   #main_screen+4480,(BLTDPTH,a6)
+                    move.l   #main_screen+(56*80),(BLTDPTH,a6)
                     move.w   #(SCREEN_BYTES/2),(BLTSIZE,a6)
                     bra      disown_blitter
 
@@ -9767,7 +9776,7 @@ lbC026066:
 lbC02606E:
                     bsr      clear_1_line_blitter
                     moveq    #0,d0
-                    jsr      (lbC02007E)
+                    jsr      (set_pattern_bitplane_from_given_pos)
                     bra      next_command
 lbC02607E:
                     bsr      get_xy_from_command
@@ -10577,7 +10586,7 @@ lbC0268AA:
 ; ===========================================================================
 display_messagebox:
                     move.l   a0,-(sp)
-                    move.l   (lbL0246B4),a0
+                    move.l   (pattern_bitplane_offset),a0
                     lea      (30,a0),a0
                     move.w   (lbW026954,pc),d0
                     mulu.w   #(SCREEN_BYTES*8),d0
@@ -10634,7 +10643,7 @@ lbC026994:
                     bcc.b    lbC0269A4
                     addq.w   #1,d3
 lbC0269A4:
-                    lea      (main_screen+4480),a1
+                    lea      (main_screen+(56*80)),a1
                     add.w    d0,d0
                     adda.w   d0,a1
                     mulu.w   #(SCREEN_BYTES*8),d1
@@ -10808,7 +10817,7 @@ Off_MSG:
 lbC026BAC:
                     moveq    #-1,d0
                     move.l   d0,(lbL027FDC)
-                    st       (lbB0206F0)
+                    st       (quit_flag)
                     rts
 lbC026BBC:
                     bsr      get_current_directory_name
@@ -10816,7 +10825,7 @@ lbC026BBC:
                     beq.b    lbC026BDA
                     bsr      lbC026C1A
                     move.l   d0,(lbL027FDC)
-                    st       (lbB0206F0)
+                    st       (quit_flag)
                     rts
 lbC026BDA:
                     lea      (curent_dir_name),a0
@@ -10833,7 +10842,7 @@ lbC026BDA:
 lbC026C0C:
                     clr.l    (lbL027FDC)
 lbC026C12:
-                    st       (lbB0206F0)
+                    st       (quit_flag)
                     rts
 lbC026C1A:
                     move.l   (lbL027FFC,pc),a0
@@ -12536,7 +12545,7 @@ lbC02801A:
                     jsr      (a0)
                     bra.b    lbC02801A
 lbC028066:
-                    tst.b    (lbB0206F0)
+                    tst.b    (quit_flag)
                     beq.b    lbC02801A
                     bra      lbC0280FE
 lbW028074:
@@ -12658,7 +12667,7 @@ lbC0281FE:
                     beq.b    lbC028210
                     rts
 lbC028210:
-                    st       (lbB0206F0)
+                    st       (quit_flag)
                     rts
 lbB028218:
                     dcb.b    2,0
@@ -13709,12 +13718,12 @@ lbC028F7A:
                     jmp      (lbC0208FA)
 lbC028F82:
                     jsr      (lbC02001C)
-                    st       (lbB0206F0)
+                    st       (quit_flag)
                     rts
 lbC028F90:
                     bsr      lbC029066
                     bsr      lbC028324
-                    st       (lbB0206F0)
+                    st       (quit_flag)
                     rts
 lbW028FA0:
                     dc.w     1
@@ -13865,7 +13874,7 @@ lbC029168:
                     jmp      (lbC0208FA)
 lbC029170:
                     bsr      lbC0298CC
-                    st       (lbB0206F0)
+                    st       (quit_flag)
                     rts
 lbW02917C:
                     dc.w     1
@@ -14114,14 +14123,14 @@ lbW029442:
                     dc.w     0
 lbC02944C:
                     jsr      (lbC02001C)
-                    st       (lbB0206F0)
+                    st       (quit_flag)
                     rts
 lbC02945A:
                     lea      (lbC029688,pc),a0
                     lea      (lbC0296A4,pc),a1
                     bsr      lbC029564
                     bsr      lbC028324
-                    st       (lbB0206F0)
+                    st       (quit_flag)
                     rts
 lbC029472:
                     lea      (lbC029688,pc),a0
@@ -14558,7 +14567,7 @@ lbC029942:
                     subi.w   #$20,d1
                     subi.w   #$20,d3
 lbC029966:
-                    lea      (main_screen+4480),a0
+                    lea      (main_screen+(56*80)),a0
                     jsr      (lbC0256DA)
                     movem.l  (sp)+,d0-d7/a0
                     move.w   d7,d4
@@ -14634,11 +14643,11 @@ lbW029A5E:
                     dc.w     0
 lbC029A68:
                     jsr      (lbC02001C)
-                    st       (lbB0206F0)
+                    st       (quit_flag)
                     rts
 lbC029A76:
                     bsr      lbC028324
-                    st       (lbB0206F0)
+                    st       (quit_flag)
                     rts
 lbC029A82:
                     bsr.b    lbC029A88
@@ -15033,7 +15042,8 @@ lbW029F20:
                     dc.w     0
 lbW029F22:
                     dc.w     0
-; =====================
+
+; ===========================================================================
 prefs_data:
                     dc.b     'OK__'
 OK_ChannelsModes:
@@ -15068,7 +15078,8 @@ st_load_tracks_samples:
                     dc.b     -1
 st_load_tracks_mode:
                     dc.b     0
-; =====================
+
+; ===========================================================================
 lbW02A75A:
                     dc.w     0
 lbL02A75C:
@@ -15079,9 +15090,11 @@ lbB02A761:
                     dcb.b    9,0
 lbL02A76A:
                     dcb.l    2,0
+
+; ===========================================================================
 lbC02A772:
-                    bsr      lbC02B280
-lbC02A776:
+                    bsr      backup_prefs
+.loop:
                     lea      (lbW02A7BA,pc),a0
                     jsr      (lbC02086A)
                     bsr      lbC02A9E2
@@ -15089,13 +15102,13 @@ lbC02A776:
                     jsr      (lbC020626)
                     bsr      lbC02B12E
                     move.l   (current_cmd_ptr),d0
-                    beq.b    lbC02A7A0
+                    beq.b    .no_command
                     move.l   d0,a0
                     jsr      (a0)
-                    bra.b    lbC02A776
-lbC02A7A0:
-                    tst.b    (lbB0206F0)
-                    beq.b    lbC02A776
+                    bra.b    .loop
+.no_command:
+                    tst.b    (quit_flag)
+                    beq.b    .loop
                     rts
 lbW02A7AA:
                     dc.w     11
@@ -15127,8 +15140,6 @@ cmd_load_prefs:
                     move.l   #do_load_prefs,(current_cmd_ptr)
                     rts
 do_load_prefs:
-;                    lea      (prefs_filename,pc),a0
-;                    jsr      (lbC026E46)
                     lea      (load_prefs_text,pc),a0
                     moveq    #DIR_PREFS,d0
                     jsr      (display_file_requester)
@@ -15150,8 +15161,6 @@ cmd_save_prefs:
                     move.l   #do_save_prefs,(current_cmd_ptr)
                     rts
 do_save_prefs:
-;                    lea      (prefs_filename,pc),a0
-;                    jsr      (lbC026E46)
                     lea      (save_prefs_text,pc),a0
                     moveq    #DIR_PREFS,d0
                     jsr      (display_file_requester)
@@ -15172,15 +15181,15 @@ save_prefs_text:
 ; ===========================================================================
 lbC02A966:
                     bsr      lbC02B350
-                    st       (lbB0206F0)
+                    st       (quit_flag)
                     rts
 lbC02A972:
-                    bsr      lbC02B29E
+                    bsr      restore_prefs
                     bra      lbC02A9E2
 lbC02A97A:
-                    bsr      lbC02B29E
+                    bsr      restore_prefs
                     bsr      lbC02B354
-                    st       (lbB0206F0)
+                    st       (quit_flag)
                     rts
 auto_load_prefs:
                     lea      (prefs_filename,pc),a0
@@ -16110,18 +16119,24 @@ lbC02B276:
                     not.b    (a0)+
                     dbra     d0,lbC02B276
                     bra      lbC02B0BC
-lbC02B280:
+
+; ===========================================================================
+backup_prefs:
                     lea      (prefs_data,pc),a0
-                    lea      (lbL01D058),a1
+                    lea      (prefs_backup_data),a1
                     move.l   #PREFS_FILE_LEN,d0
                     EXEC     CopyMem
                     rts
-lbC02B29E:
-                    lea      (lbL01D058),a0
+
+; ===========================================================================
+restore_prefs:
+                    lea      (prefs_backup_data),a0
                     lea      (prefs_data,pc),a1
                     move.l   #PREFS_FILE_LEN,d0
                     EXEC     CopyMem
                     rts
+
+; ===========================================================================
 lbC02B2BC:
                     move.l   #PREFS_FILE_LEN,d0
                     moveq    #0,d1
@@ -16163,7 +16178,7 @@ lbC02B354:
                     sf       d0
 lbC02B35A:
                     lea      (OK_ChannelsModes,pc),a0
-                    lea      (lbW01D05C),a1
+                    lea      (OK_ChannelsModes_backup),a1
                     cmpm.l   (a0)+,(a1)+
                     bne.b    lbC02B36C
                     cmpm.l   (a0)+,(a1)+
@@ -16174,12 +16189,12 @@ lbC02B36C:
                     jsr      (ask_are_you_sure_requester)
                     bne.b    lbC02B388
 lbC02B378:
-                    lea      (lbW01D05C),a0
+                    lea      (OK_ChannelsModes_backup),a0
                     lea      (OK_ChannelsModes,pc),a1
                     bsr      lbC02B3B2
                     beq.b    lbC02B38C
 lbC02B388:
-                    bsr      lbC02B29E
+                    bsr      restore_prefs
 lbC02B38C:
                     lea      (prefs_data,pc),a0
                     bsr      lbC02B590
@@ -16409,7 +16424,7 @@ lbC02B5FA:
                     dbra     d7,lbC02B5EC
                     sf       (a6)
                     subq.w   #1,d4
-                    clr.w    (lbW02549C)
+                    clr.w    (caret_pos_x)
                     move.w   d4,(lbW01B294)
                     moveq    #-1,d0
                     move.l   d0,(lbW01F5C4)
@@ -16476,7 +16491,7 @@ lbC02B6CC:
                     jsr      (a0)
                     bra.b    lbC02B6CC
 lbC02B6F2:
-                    tst.b    (lbB0206F0)
+                    tst.b    (quit_flag)
                     beq.b    lbC02B6CC
                     lea      (lbL02C53C,pc),a0
                     jmp      (lbC026AAC)
@@ -16552,7 +16567,7 @@ lbC02B7C4:
 lbC02B7D6:
                     jmp      (lbC025108)
 lbC02B7DE:
-                    st       (lbB0206F0)
+                    st       (quit_flag)
                     rts
 lbC02B7E6:
                     st       d2
@@ -18609,7 +18624,7 @@ lbC02D186:
 lbC02D1B4:
                     move.l   a0,a1
                     move.b   #$FF,(8,a1)
-                    movea.w  #$FFFF,a0
+                    move.w   #$FFFF,a0
                     move.l   a0,(20,a1)
                     move.l   a0,(24,a1)
                     moveq    #0,d0
@@ -19220,9 +19235,9 @@ lbW0179BE:
                     dc.w     4,14
                     dc.l     lbC01F142
                     dc.w     4,12
-                    dc.l     lbC01F18A
+                    dc.l     previous_pattern_row
                     dc.w     4,13
-                    dc.l     lbC01F192
+                    dc.l     next_pattern_row
                     dc.w     0
 lbW017A58:
                     dc.w     2,18
@@ -20418,7 +20433,7 @@ lbB01B147:
                     dcb.b    41,0
 OK_SampleTab:
                     dcb.l    36*2,0
-lbW01B290:
+pattern_bitplane_top_pos:
                     dc.w     0
 pattern_play_flag:
                     dc.b     0
@@ -20551,10 +20566,14 @@ lbL01CA58:
                     dcb.l    320,0
 lbL01CF58:
                     dcb.l    64,0
-lbL01D058:
+
+; ===========================================================================
+prefs_backup_data:
                     dc.l     0
-lbW01D05C:
-                    dcb.w    1049,0
+OK_ChannelsModes_backup:
+                    dcb.b    PREFS_FILE_LEN-4,0
+
+; ===========================================================================
 lbB01D88E:
                     dcb.b    7,0
 lbB01D895:
