@@ -43,7 +43,6 @@ start:
                     DOS     CurrentDir
                     move.l  (a7)+,d1
 .from_WB:
-                    move.l  d1,(current_dir)
                     DOS     DupLock
                     move.l  d0,(current_dir_lock)
                     move.l  #oktalyzer_name,d1
@@ -128,8 +127,6 @@ init_all:
                     bra     construct_main_copperlist
 our_task:
                     dc.l    0
-current_dir:
-                    dc.l    0
 current_dir_lock:
                     dc.l    0
 
@@ -187,8 +184,6 @@ free_resources:
                     jsr     (open_workbench)
                     jsr     restore_screen
                     move.l  current_dir_lock,d1
-                    DOS     UnLock
-                    move.l  current_dir,d1
                     DOS     UnLock
                     bra     close_libraries
 
