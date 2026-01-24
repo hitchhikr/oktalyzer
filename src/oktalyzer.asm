@@ -107,6 +107,7 @@ ERROR_NO_ENTRIES    equ      ERROR_COPYBUF_EMPTY+1
 ERROR_EF_STRUCT     equ      ERROR_NO_ENTRIES+1
 ERROR_ONLY_IN_PAL   equ      ERROR_EF_STRUCT+1
 
+EVT_LIST_END        equ      0
 EVT_KEY_PRESSED     equ      1
 EVT_MOUSE_MOVED     equ      3
 EVT_LEFT_PRESSED    equ      4
@@ -5860,15 +5861,15 @@ lbC022310:
                     bsr      lbC02001C
                     bra      lbC01FBF2
 lbW022318:
-                    dc.w     1
+                    dc.w     EVT_KEY_PRESSED
                     dc.l     lbC0225F6
                     dc.w     2
                     dc.l     lbC02262A
-                    dc.w     4
+                    dc.w     EVT_LEFT_PRESSED
                     dc.l     lbC022612
-                    dc.w     7
+                    dc.w     EVT_RIGHT_PRESSED
                     dc.l     lbC02261E
-                    dc.w     0
+                    dc.w     EVT_LIST_END
 lbW022332:
                     dc.w     lbC02233A-lbW022332,lbC022386-lbW022332
 lbW022336:
@@ -7424,9 +7425,9 @@ OK_NextPt:
 OK_PtPtr:
                     dc.w     0
 ; ====
-                    ds.l     2
+                    dcb.l    2,0
 OK_Volume2:
-                    ds.l     2
+                    dcb.l    2,0
 ; ====
 OK_Filter:
                     dc.b     0
@@ -8512,13 +8513,13 @@ lbC0246B8:
                     lea      (lbW0246C0,pc),a0
                     bra      stop_audio_and_process_event
 lbW0246C0:
-                    dc.w     1
+                    dc.w     EVT_KEY_PRESSED
                     dc.l     lbC0246D4
-                    dc.w     4
+                    dc.w     EVT_LEFT_PRESSED
                     dc.l     lbC0246DE
-                    dc.w     7
+                    dc.w     EVT_RIGHT_PRESSED
                     dc.l     lbC0246DE
-                    dc.w     0
+                    dc.w     EVT_LIST_END
 lbC0246D4:
                     btst     #15,d1
                     beq.b    lbC0246DE
@@ -8553,13 +8554,13 @@ ask_yes_no_requester:
                     moveq    #0,d0
                     rts
 lbW02473A:
-                    dc.w     1
+                    dc.w     EVT_KEY_PRESSED
                     dc.l     lbC02474E
-                    dc.w     4
+                    dc.w     EVT_LEFT_PRESSED
                     dc.l     lbC02475C
-                    dc.w     7
+                    dc.w     EVT_RIGHT_PRESSED
                     dc.l     lbC02475C
-                    dc.w     0
+                    dc.w     EVT_LIST_END
 lbC02474E:
                     moveq    #0,d0
                     cmpi.b   #$79,d1
@@ -10413,13 +10414,13 @@ lbC02652E:
                     move.b   (lbB026823,pc),d0
                     rts
 lbW02654A:
-                    dc.w     1
+                    dc.w     EVT_KEY_PRESSED
                     dc.l     lbC02655E
-                    dc.w     4
+                    dc.w     EVT_LEFT_PRESSED
                     dc.l     lbC0265AA
-                    dc.w     7
+                    dc.w     EVT_RIGHT_PRESSED
                     dc.l     lbC0265AA
-                    dc.w     0
+                    dc.w     EVT_LIST_END
 lbC02655E:
                     move.w   d1,d0
                     cmpi.w   #5,d0
@@ -10856,38 +10857,44 @@ lbC026A0C:
 lbC026A54:
                     movem.l  (sp)+,d3
                     rts
-lbC026A5A:
+
+; ===========================================================================
+realloc_mem_block_from_struct:
                     movem.l  d0/a0,-(sp)
-                    bsr      lbC026AAC
+                    bsr      free_mem_block_from_struct
                     movem.l  (sp)+,d0/a0
-lbC026A6A:
+
+; ===========================================================================
+alloc_mem_block_from_struct:
                     tst.l    (a0)
-                    beq.b    lbC026A80
+                    beq.b    .not_allocated
                     move.w   #$F00,(_CUSTOM|COLOR00)
-                    bra.b    lbC026AA2
-lbC026A80:
+                    bra.b    .error
+.not_allocated:
                     move.l   d0,(4,a0)
                     move.l   (8,a0),d1
                     move.l   a0,-(sp)
                     EXEC     AllocMem
                     move.l   (sp)+,a0
                     move.l   d0,(a0)
-                    beq.b    lbC026AA2
+                    beq.b    .error
                     move.l   d0,a0
                     moveq    #OK,d0
                     rts
-lbC026AA2:
+.error:
                     jsr      (error_no_memory)
                     moveq    #ERROR,d0
                     rts
-lbC026AAC:
+
+; ===========================================================================
+free_mem_block_from_struct:
                     move.l   (a0),d0
-                    beq.b    lbC026AC4
+                    beq.b    .not_allocated
                     clr.l    (a0)
                     move.l   d0,a1
                     move.l   (4,a0),d0
                     EXEC     FreeMem
-lbC026AC4:
+.not_allocated:
                     rts
 
 ; ===========================================================================
@@ -10920,7 +10927,7 @@ lbW026B0C:
                     dc.l     lbC0208FA
                     dc.w     EVT_DISK_CHANGE
                     dc.l     handle_disk_changed
-                    dc.w     0
+                    dc.w     EVT_LIST_END
 lbW026B22:
                     dc.w     1
                     dc.l     files_sel_text
@@ -11003,7 +11010,7 @@ lbC026C1A:
                     move.w   d0,(lbW026CAA)
                     mulu.w   #32,d0
                     lea      (lbL026CAC,pc),a0
-                    jsr      (lbC026A6A)
+                    jsr      (alloc_mem_block_from_struct)
                     bmi.b    lbC026C58
                     move.l   (lbL027FFC,pc),a0
                     move.l   (lbL026CAC,pc),a1
@@ -11027,7 +11034,7 @@ lbC026C5C:
                     bmi.b    lbC026C58
                     moveq    #32,d0
                     lea      (lbL026CAC,pc),a0
-                    jsr      (lbC026A6A)
+                    jsr      (alloc_mem_block_from_struct)
                     bmi.b    lbC026C58
                     lea      (lbB01BEE8),a0
                     move.l   (lbL026CAC,pc),a1
@@ -11080,7 +11087,7 @@ lbC026D20:
                     rts
 lbC026D24:
                     lea      (lbL026CAC,pc),a0
-                    jsr      (lbC026AAC)
+                    jsr      (free_mem_block_from_struct)
                     moveq    #ERROR,d0
                     rts
 lbC026D32:
@@ -12744,13 +12751,13 @@ lbW028074:
                     dc.l     lbC0208FA
                     dc.w     11
                     dc.l     lbC0282B8
-                    dc.w     1
+                    dc.w     EVT_KEY_PRESSED
                     dc.l     lbC02814E
                     dc.w     2
                     dc.l     lbC0281AE
-                    dc.w     14
+                    dc.w     EVT_KEY_RELEASED
                     dc.l     lbC029E1A
-                    dc.w     0
+                    dc.w     EVT_LIST_END
 max_lines:
                     dc.w     21
 lbL028096:
@@ -13896,13 +13903,13 @@ lbC028F3E:
 lbW028F60:
                     dc.w     11
                     dc.l     lbC0208FA
-                    dc.w     1
+                    dc.w     EVT_KEY_PRESSED
                     dc.l     lbC02814E
                     dc.w     2
                     dc.l     lbC0281AE
-                    dc.w     14
+                    dc.w     EVT_KEY_RELEASED
                     dc.l     lbC029E1A
-                    dc.w     0
+                    dc.w     EVT_LIST_END
 lbC028F82:
                     jsr      (lbC02001C)
                     st       (quit_flag)
@@ -14051,13 +14058,13 @@ lbW029148:
                     dc.l     lbC0208FA
                     dc.w     11
                     dc.l     lbC0297AC
-                    dc.w     1
+                    dc.w     EVT_KEY_PRESSED
                     dc.l     lbC02814E
                     dc.w     2
                     dc.l     lbC0281AE
-                    dc.w     14
+                    dc.w     EVT_KEY_RELEASED
                     dc.l     lbC029E1A
-                    dc.w     0
+                    dc.w     EVT_LIST_END
 lbC029170:
                     bsr      lbC0298CC
                     st       (quit_flag)
@@ -14254,13 +14261,13 @@ lbC029372:
 lbW029394:
                     dc.w     11
                     dc.l     lbC0208FA
-                    dc.w     1
+                    dc.w     EVT_KEY_PRESSED
                     dc.l     lbC02814E
                     dc.w     2
                     dc.l     lbC0281AE
-                    dc.w     14
+                    dc.w     EVT_KEY_RELEASED
                     dc.l     lbC029E1A
-                    dc.w     0
+                    dc.w     EVT_LIST_END
 lbW0293B6:
                     dc.w     1
                     dc.l     ascii_MSG17
@@ -14777,13 +14784,13 @@ lbC0299AA:
 lbW0299C0:
                     dc.w     11
                     dc.l     lbC0208FA
-                    dc.w     1
+                    dc.w     EVT_KEY_PRESSED
                     dc.l     lbC02814E
                     dc.w     2
                     dc.l     lbC0281AE
-                    dc.w     14
+                    dc.w     EVT_KEY_RELEASED
                     dc.l     lbC029E1A
-                    dc.w     0
+                    dc.w     EVT_LIST_END
 lbW0299E2:
                     dc.w     1
                     dc.l     ascii_MSG19
@@ -16219,7 +16226,7 @@ invert_selected_char:
                     addi.w   #12,d1
                     jmp      (invert_one_char)
 current_selected_char:
-                    dc.w     $20
+                    dc.w     32
 lbW02B15A:
                     dc.w     -1
 lbC02B15C:
@@ -16744,7 +16751,7 @@ lbC02B6F2:
                     tst.b    (quit_flag)
                     beq.b    lbC02B6CC
                     lea      (lbL02C53C,pc),a0
-                    jmp      (lbC026AAC)
+                    jmp      (free_mem_block_from_struct)
 lbW02B706:
                     dc.w     11
                     dc.l     lbC0208FA
@@ -16948,7 +16955,7 @@ lbC02B914:
                     beq.b    lbC02B940
                     mulu.w   #131,d0
                     lea      (lbL02C53C,pc),a0
-                    jsr      (lbC026A5A)
+                    jsr      (realloc_mem_block_from_struct)
                     bmi.b    lbC02B93C
                     move.l   a0,a1
                     lea      (lbL01D89C),a0
@@ -17011,7 +17018,7 @@ lbC02B9BA:
                     move.l   (lbL02C53C,pc),d1
                     beq      lbC02BA1A
                     move.l   d1,a0
-                    move.l   (lbL02C540,pc),d1
+                    move.l   (lbL02C53C+4,pc),d1
                     beq      lbC02BA1A
                     divu.w   #131,d1
                     bra.b    lbC02B9F6
@@ -17163,9 +17170,9 @@ lbC02BB32:
                     move.w   (lbW02BC12,pc),d0
                     mulu.w   #131,d0
                     lea      (lbL02BC14,pc),a0
-                    jsr      (lbC026A6A)
+                    jsr      (alloc_mem_block_from_struct)
                     bmi.b    lbC02BBE2
-                    move.l   (lbL02BC18,pc),d0
+                    move.l   (lbL02BC14+4,pc),d0
                     jsr      (read_from_file)
                     bmi.b    lbC02BBD8
                     bsr      lbC02BFE0
@@ -17197,7 +17204,7 @@ lbC02BBE2:
 lbC02BBEA:
                     jsr      (close_file)
                     lea      (lbL02BC14,pc),a0
-                    jmp      (lbC026AAC)
+                    jmp      (free_mem_block_from_struct)
 LoadEffectTab_MSG:
                     dc.b     'Load EffectTable',0
                     even
@@ -17206,9 +17213,7 @@ lbL02BC0E:
 lbW02BC12:
                     dc.w     0
 lbL02BC14:
-                    dc.l     0
-lbL02BC18:
-                    dc.l     0,$10000
+                    dc.l     0,0,$10000
 lbC02BC20:
                     move.w   (lbW02B710,pc),d0
                     bne.b    lbC02BC2E
@@ -17226,7 +17231,7 @@ lbC02BC4A:
                     lea      (lbL02BCDA,pc),a0
                     move.w   (lbW02B710,pc),d0
                     mulu.w   #131,d0
-                    jsr      (lbC026A6A)
+                    jsr      (alloc_mem_block_from_struct)
                     bmi.b    lbC02BCAA
                     move.l   a0,a1
                     lea      (lbL01D89C),a0
@@ -17240,7 +17245,7 @@ lbC02BC4A:
                     jsr      (write_to_file)
                     bmi.b    lbC02BCA0
                     move.l   (lbL02BCDA,pc),a0
-                    move.l   (lbL02BCDE,pc),d0
+                    move.l   (lbL02BCDA+4,pc),d0
                     jsr      (write_to_file)
                     bmi.b    lbC02BCA0
                     bsr.b    lbC02BCB2
@@ -17255,16 +17260,14 @@ lbC02BCAA:
 lbC02BCB2:
                     jsr      (close_file)
                     lea      (lbL02BCDA,pc),a0
-                    jmp      (lbC026AAC)
+                    jmp      (free_mem_block_from_struct)
 SaveEffectTab_MSG:
                     dc.b     'Save EffectTable',0
                     even
 OK_E_MSG:
                     dc.b     'OK_E'
 lbL02BCDA:
-                    dc.l     0
-lbL02BCDE:
-                    dc.l     0,$10000
+                    dc.l     0,0,$10000
 lbC02BCE6:
                     bsr      lbC02B82A
                     bmi.b    lbC02BCFC
@@ -17920,9 +17923,7 @@ lbB02C53A:
                     dc.b     0
                     even
 lbL02C53C:
-                    dc.l     0
-lbL02C540:
-                    dc.l     0,$10000
+                    dc.l     0,0,$10000
 lbC02C548:
                     move.l   sp,(lbL02C568)
                     bsr.b    lbC02C56C
@@ -19084,11 +19085,11 @@ lbW01737C:
                     dc.l     lbC0208FA
                     dc.w     2
                     dc.l     lbC01EA3E
-                    dc.w     1
+                    dc.w     EVT_KEY_PRESSED
                     dc.l     lbC01EA32
-                    dc.w     14
+                    dc.w     EVT_KEY_RELEASED
                     dc.l     lbC029E1A
-                    dc.w     0
+                    dc.w     EVT_LIST_END
 lbW017396:
                     dc.w     2
                     dc.l     lbW017984
