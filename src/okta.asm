@@ -201,9 +201,9 @@ set_pal_ntsc_context:
                     st      (ntsc_flag)
                     move.w  #17,(max_lines)
 .pal_machine:
-                    lea     (lbL028096),a0
+                    lea     (gadgets_list_to_fix),a0
                     move.w  (max_lines),d0
-                    bra     lbC0208DA
+                    bra     fix_gadgets_coords
 ntsc_flag:
                     dc.b    0
                     even
@@ -3509,23 +3509,26 @@ lbL0208D6:
                     dc.l    0
 
 ; ===========================================================================
-lbC0208DA:
+; fix coords for NTSC
+fix_gadgets_coords:
                     movem.l d2/a2/a3,-(a7)
                     move.l  a0,a2
                     move.w  d0,d2
-lbC0208E2:
+.next_gadgets_list:
                     move.l  (a2)+,d0
-                    beq.b   lbC0208F4
+                    beq.b   .done
                     move.l  d0,a3
-lbC0208E8:
+.next_gadget:
                     add.b   d2,(7,a3)
                     move.l  (a3),d0
-                    beq.b   lbC0208E2
+                    beq.b   .next_gadgets_list
                     move.l  d0,a3
-                    bra.b   lbC0208E8
-lbC0208F4:
+                    bra.b   .next_gadget
+.done:
                     movem.l (a7)+,d2/a2/a3
                     rts
+
+; ===========================================================================
 lbC0208FA:
                     tst.l   (current_sequence_ptr)
                     beq     lbC020A1C
@@ -12681,12 +12684,13 @@ lbW028074:
                     dc.w    EVT_LIST_END
 max_lines:
                     dc.w    21
-lbL028096:
+gadgets_list_to_fix:
                     dc.l    lbW018A04
                     dc.l    lbW028FDC
                     dc.l    lbL0291B8
                     dc.l    lbL0293F0
-                    dc.l    lbL029A1E,0
+                    dc.l    lbL029A1E
+                    dc.l    0
 lbC0280AE:
                     tst.b   (ntsc_flag)
                     beq.b   lbC0280FC
