@@ -35,7 +35,7 @@ SCREEN_WIDTH        equ      640
 SCREEN_BYTES        equ      (SCREEN_WIDTH/8)
 
 PREFS_FILE_LEN      equ      2102
-TRACK_LEN           equ      (22*512)
+TRACK_LEN           equ      (11*1024)
 
 OK                  equ      0
 ERROR               equ      -1
@@ -369,7 +369,7 @@ lbC01E0B6:
                     move.l   #lbC02B6CC,(current_cmd_ptr)
                     rts
 lbC01E0C2:
-                    jsr      (lbC0259DC)
+                    jsr      (wait_drive_ready)
                     jsr      (own_blitter)
                     EXEC     Disable
                     bsr      stop_audio_channels
@@ -382,7 +382,7 @@ lbC01E0FA:
                     st       (lbB020540)
                     EXEC     Enable
                     jsr      (disown_blitter)
-                    jmp      (lbC025AFC)
+                    jmp      (release_drive)
 save_joy0dat:
                     dc.w     0
 
@@ -8487,7 +8487,7 @@ are_you_sure_text:
 ; ===========================================================================
 ask_yes_no_requester:
                     move.l   (pattern_bitplane_offset,pc),d0
-                    beq.b    lbC024726
+                    beq.b    .no_display
                     movem.l  d1-d7/a1-a6,-(sp)
                     jsr      (display_messagebox)
                     lea      (lbW02473A,pc),a0
@@ -8496,7 +8496,7 @@ ask_yes_no_requester:
                     movem.l  (sp)+,d1-d7/a1-a6
                     move.b   (lbB024768,pc),d0
                     rts
-lbC024726:
+.no_display:
                     move.w   #$F00,(_CUSTOM|COLOR00)
                     moveq    #0,d0
                     rts
@@ -8525,34 +8525,38 @@ lbB024768:
                     even
 
 ; ===========================================================================
-lbC02476A:
-                    tst.b    (lbB0247B6)
-                    bne.b    lbC024790
-                    st       (lbB0247B6)
+display_waiting_for_drives_message:
+                    tst.b    (waiting_for_drives_text_flag)
+                    bne.b    .already_displayed
+                    st       (waiting_for_drives_text_flag)
                     movem.l  d0-d7/a0-a6,-(sp)
                     move.l   (pattern_bitplane_offset,pc),d0
-                    beq.b    lbC02478C
-                    lea      (DrivesWorking_MSG,pc),a0
+                    beq.b    .no_display
+                    lea      (waiting_for_drives_text,pc),a0
                     jsr      (display_messagebox)
-lbC02478C:
+.no_display:
                     movem.l  (sp)+,d0-d7/a0-a6
-lbC024790:
+.already_displayed:
                     rts
-lbC024792:
-                    tst.b    (lbB0247B6)
-                    beq.b    lbC0247B4
-                    sf       (lbB0247B6)
+
+; ===========================================================================
+remove_waiting_for_drives_message:
+                    tst.b    (waiting_for_drives_text_flag)
+                    beq.b    .not_already_displayed
+                    sf       (waiting_for_drives_text_flag)
                     movem.l  d0-d7/a0-a6,-(sp)
                     move.l   (pattern_bitplane_offset,pc),d0
-                    beq.b    lbC0247B0
+                    beq.b    .no_display
                     jsr      (remove_messagebox)
-lbC0247B0:
+.no_display:
                     movem.l  (sp)+,d0-d7/a0-a6
-lbC0247B4:
+.not_already_displayed:
                     rts
-lbB0247B6:
+waiting_for_drives_text_flag:
                     dc.b     0
                     even
+
+; ===========================================================================
 lbC0247B8:
                     movem.l  a0/a1,(lbL01B7D2)
                     movem.l  d2-d7/a0-a6,-(sp)
@@ -8676,10 +8680,10 @@ lbW024948:
                     dc.w     0
 lbL02494A:
                     dc.l     0
-DrivesWorking_MSG:
-                    dc.b     ' Drives Working ! ',0
 
 ; ===========================================================================
+waiting_for_drives_text:
+                    dc.b     ' Drives Working ! ',0
 errors_text:
                     dc.b     '   No Memory !!   ',0
                     dc.b     '   What Block ?   ',0
@@ -9473,55 +9477,51 @@ file_handle:
                     dc.l     0
 
 ; ===========================================================================
-lbC0259DC:
+wait_drive_ready:
                     movem.l  d7,-(sp)
-                    move.l   #lbB025A80,(lbL025AB2)
-                    move.b   #5,(lbB025AAC)
-                    lea      (lbB025A80,pc),a0
+                    move.l   #.drive_message_port,(.disk_resource+MN_REPLYPORT)
+                    move.b   #NT_MESSAGE,(.disk_resource+LN_TYPE)
+                    lea      (.drive_message_port,pc),a0
                     bsr      install_port
                     moveq    #-1,d0
                     EXEC     AllocSignal
-                    move.b   d0,(lbB025A8F)
-                    move.b   d0,(lbB025AFA)
+                    move.b   d0,(.drive_message_port+MP_SIGBIT)
+                    move.b   d0,(.signal_number)
                     moveq    #0,d1
                     bset     d0,d1
                     move.l   d1,d7
-lbC025A1A:
-                    lea      (lbL025AA4,pc),a1
+.retry:
+                    lea      (.disk_resource,pc),a1
                     DISK     GetUnit
                     tst.l    d0
-                    bne.b    lbC025A5A
-                    jsr      (lbC02476A)
-lbC025A36:
+                    bne.b    .drive_ready
+                    jsr      (display_waiting_for_drives_message)
+.wait_drive_ready:
                     move.l   d7,d0
                     EXEC     Wait
-                    lea      (lbB025A80,pc),a0
+                    lea      (.drive_message_port,pc),a0
                     EXEC     GetMsg
                     tst.l    d0
-                    beq.b    lbC025A36
-                    bra.b    lbC025A1A
-lbC025A5A:
-                    jsr      (lbC024792)
-                    move.b   (lbB025AFA,pc),d0
+                    beq.b    .wait_drive_ready
+                    bra.b    .retry
+.drive_ready:
+                    jsr      (remove_waiting_for_drives_message)
+                    move.b   (.signal_number,pc),d0
                     EXEC     FreeSignal
-                    lea      (lbB025A80,pc),a0
+                    lea      (.drive_message_port,pc),a0
                     bsr      remove_port
                     movem.l  (sp)+,d7
                     rts
-                    dcb.b    2,0
-lbB025A80:
-                    dcb.b    15,0
-lbB025A8F:
-                    dcb.b    21,0
-lbL025AA4:
-                    dcb.l    2,0
-lbB025AAC:
-                    dcb.b    6,0
-lbL025AB2:
-                    dcb.l    18,0
-lbB025AFA:
-                    dcb.b    2,0
-lbC025AFC:
+.drive_message_port:
+                    dcb.b    MP_SIZE,0
+.disk_resource:
+                    dcb.b    DRU_SIZE,0
+.signal_number:
+                    dc.b     0
+                    even
+
+; ===========================================================================
+release_drive:
                     DISK     GiveUnit
                     rts
 
@@ -9872,6 +9872,8 @@ lbC02606E:
                     moveq    #0,d0
                     jsr      (set_pattern_bitplane_from_given_pos)
                     bra      next_command
+
+; ===========================================================================
 lbC02607E:
                     bsr      get_xy_from_command
                     add.w    d2,d0
@@ -9908,6 +9910,8 @@ lbC0260B2:
                     bsr      lbC026250
                     movem.l  (sp)+,d2/d3
                     bra      next_command
+
+; ===========================================================================
 lbC0260D2:
                     bsr      make_pointer_even
                     move.w   (a2)+,d0
@@ -12112,6 +12116,7 @@ prepare_track_buffer:
                     dbra     d7,.loop
                     move.w   (current_formatted_track,pc),d0
                     beq.b    copy_bootblock_to_track_buffer
+                    ; reached rootblock track (at 11*1024*40=450560 bytes)
                     cmpi.w   #40,d0
                     beq.b    copy_rootblock_to_track_buffer
                     rts
@@ -12129,40 +12134,59 @@ copy_bootblock_to_track_buffer:
 ; ===========================================================================
 copy_rootblock_to_track_buffer:
                     move.l   (track_buffer,pc),a0
+                    ; type (T.SHORT)
                     move.b   #2,(3,a0)
-                    move.b   #$48,(15,a0)
+                    ; size of hashtable
+                    move.b   #72,(15,a0)
+                    ; BMFLAG
                     moveq    #-1,d0
                     move.l   d0,(312,a0)
-                    move.w   #$371,(318,a0)
+                    ; bitmap block
+                    move.w   #881,(318,a0)
+                    ; disk name
                     move.l   #(5<<24)|'Emp',(432,a0)
                     move.w   #'ty',(436,a0)
+                    ; sub type of the block (ST.ROOT)
                     move.b   #1,(511,a0)
-                    lea      (512,a0),a1
-                    move.l   #$C000C037,(a1)+
+                    lea      (512+4,a0),a1
                     moveq    #-1,d1
                     moveq    #55-1,d0
-lbC027AAC:
+                    ; fill the bitmap blocks field
+.fill_bitmap:
                     move.l   d1,(a1)+
-                    dbra     d0,lbC027AAC
-                    moveq    #$3F,d0
+                    dbra     d0,.fill_bitmap
+                    ; mark the root and bitmap blocks as occupied
+                    moveq    #%00111111,d0
                     move.b   d0,(626,a0)
-                    move.b   d0,(732,a0)
+                    ; calc the checksum of the bitmap block
+                    lea      (512,a0),a1
+                    clr.l    (a1)
+                    bsr      .calc_checksum
+                    move.l   d0,(a1)
                     move.l   a0,-(sp)
+                    ; last write access date (day.l/minutes.l/ticks.l)
                     lea      (420,a0),a0
                     move.l   a0,d1
                     DOS      DateStamp
                     move.l   (sp)+,a0
+                    ; copy it to disk creation date
                     move.l   (420,a0),(484,a0)
                     move.l   (424,a0),(488,a0)
                     move.l   (428,a0),(492,a0)
+                    ; calc the checksum of the root block
+                    lea      (a0),a1
                     clr.l    (20,a0)
-                    moveq    #0,d1
-                    moveq    #128-1,d0
-lbC027AEE:
-                    sub.l    (a0)+,d1
-                    dbra     d0,lbC027AEE
-                    move.l   (track_buffer,pc),a0
-                    move.l   d1,(20,a0)
+                    bsr      .calc_checksum
+                    move.l   d0,(20,a0)
+                    rts
+.calc_checksum:
+                    move.l   a1,-(a7)
+                    moveq    #0,d0
+                    moveq    #128-1,d1
+.loop:
+                    sub.l    (a1)+,d0
+                    dbra     d1,.loop
+                    move.l   (a7)+,a1
                     rts
 
 ; ===========================================================================
