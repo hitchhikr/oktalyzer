@@ -111,7 +111,7 @@ start:
                     lea     (start-4,pc),a0
                     move.l  (a0),d3
                     clr.l   (a0)
-                    move.l  #8*1024,d4
+                    move.l  #STACK_KB*1024,d4
                     DOS     CreateProc
                     move.l  (DOSBase),a1
                     EXEC    CloseLibrary
@@ -966,7 +966,7 @@ lbC01EA70:
                     move.w  (a7)+,d0
                     move.w  (viewed_pattern_row,pc),d6
                     move.w  d6,d1
-                    mulu.w  (lbW02A75A),d1
+                    mulu.w  (current_channels_size),d1
                     adda.l  d1,a5
                     move.w  (lbW01EC42),(lbW01EC44)
                     sub.w   d6,(lbW01EC44)
@@ -1270,7 +1270,7 @@ lbC01EE44:
                     move.l  a5,a0
                     move.w  (lbW01EC44,pc),d0
                     subq.w  #2,d0
-                    move.w  (lbW02A75A),d1
+                    move.w  (current_channels_size),d1
                     mulu.w  d1,d0
                     adda.l  d0,a0
                     move.w  (lbW01EC44,pc),d0
@@ -1308,7 +1308,7 @@ lbC01EEB0:
                     subq.w  #1,d1
                     bmi.b   lbC01EF0E
                     move.l  a5,a0
-                    move.w  (lbW02A75A),d0
+                    move.w  (current_channels_size),d0
                     suba.w  d0,a0
                     move.w  (lbW01EC44,pc),d1
                     bra.b   lbC01EED2
@@ -1873,14 +1873,14 @@ lbC01F54E:
                     move.l  a0,a5
                     lea     (lbL01A146),a3
                     move.w  (lbW01F502,pc),d5
-                    mulu.w  (lbW02A75A),d5
+                    mulu.w  (current_channels_size),d5
                     move.w  (lbW01F504,pc),d6
                     ext.l   d6
                     divu.w  #5,d6
                     add.w   d6,d6
                     add.w   d6,d6
                     move.w  (lbW01F506,pc),d7
-                    mulu.w  (lbW02A75A),d7
+                    mulu.w  (current_channels_size),d7
                     move.w  (lbW01F500,pc),d3
                     ext.l   d3
                     divu.w  #5,d3
@@ -1901,7 +1901,7 @@ lbC01F5AA:
                     addq.w  #4,d4
                     cmp.w   d4,d6
                     bge.b   lbC01F5AA
-                    add.w   (lbW02A75A),d5
+                    add.w   (current_channels_size),d5
                     cmp.w   d5,d7
                     bge.b   lbC01F5A8
                     rts
@@ -1933,7 +1933,7 @@ lbC01F5E4:
                     bsr     get_current_pattern_rows
                     move.w  d0,d3
                     subq.w  #1,d3
-                    mulu.w  (lbW02A75A),d3
+                    mulu.w  (current_channels_size),d3
                     move.l  a0,a5
                     lea     (lbL01A146),a3
                     tst.b   (lbB01FA0E)
@@ -1952,7 +1952,7 @@ lbC01F62A:
                     divu.w  #5,d4
                     add.w   d4,d4
                     add.w   d4,d4
-                    mulu.w  (lbW02A75A),d5
+                    mulu.w  (current_channels_size),d5
                     move.w  d4,d6
                     add.w   (lbW01F5C4,pc),d6
                     moveq   #0,d2
@@ -1985,7 +1985,7 @@ lbC01F674:
                     cmp.w   d4,d6
                     bge.b   lbC01F674
                     adda.w  d3,a3
-                    add.w   (lbW02A75A),d5
+                    add.w   (current_channels_size),d5
                     cmp.w   d5,d7
                     bge.b   lbC01F670
                     bra     lbC0202A8
@@ -1999,14 +1999,14 @@ lbC01F694:
                     bsr     get_current_pattern_rows
                     move.l  a0,a5
                     move.w  (lbW01F502,pc),d5
-                    mulu.w  (lbW02A75A),d5
+                    mulu.w  (current_channels_size),d5
                     move.w  (lbW01F504,pc),d6
                     ext.l   d6
                     divu.w  #5,d6
                     add.w   d6,d6
                     add.w   d6,d6
                     move.w  (lbW01F506,pc),d7
-                    mulu.w  (lbW02A75A),d7
+                    mulu.w  (current_channels_size),d7
 lbC01F6C8:
                     move.w  (lbW01F500,pc),d4
                     ext.l   d4
@@ -2020,7 +2020,7 @@ lbC01F6D6:
                     addq.w  #4,d4
                     cmp.w   d4,d6
                     bge.b   lbC01F6D6
-                    add.w   (lbW02A75A),d5
+                    add.w   (current_channels_size),d5
                     cmp.w   d5,d7
                     bge.b   lbC01F6C8
                     bra     lbC0202A8
@@ -2045,18 +2045,18 @@ lbC01F702:
                     add.w   d6,d6
                     add.w   d6,d6
                     move.w  (lbW01F502,pc),d5
-                    mulu.w  (lbW02A75A),d5
+                    mulu.w  (current_channels_size),d5
                     move.w  (lbW01F506,pc),d7
                     sub.w   (lbW01F502,pc),d7
                     addq.w  #1,d7
                     asr.w   #1,d7
                     subq.w  #1,d7
                     bmi.b   lbC01F786
-                    mulu.w  (lbW02A75A),d7
+                    mulu.w  (current_channels_size),d7
                     add.w   d5,d7
                     move.l  a5,a4
                     move.w  (lbW01F506,pc),d0
-                    mulu.w  (lbW02A75A),d0
+                    mulu.w  (current_channels_size),d0
                     adda.w  d0,a4
 lbC01F752:
                     move.w  (lbW01F500,pc),d4
@@ -2072,8 +2072,8 @@ lbC01F760:
                     addq.w  #4,d4
                     cmp.w   d4,d6
                     bge.b   lbC01F760
-                    suba.w  (lbW02A75A),a4
-                    add.w   (lbW02A75A),d5
+                    suba.w  (current_channels_size),a4
+                    add.w   (current_channels_size),d5
                     cmp.w   d5,d7
                     bge.b   lbC01F752
                     bra     lbC0202A8
@@ -2388,7 +2388,7 @@ lbC01FAFE:
                     clr.w   (lbW01B298)
                     move.b  (polyphony),d0
                     ext.w   d0
-                    move.w  (lbW02A75A),d1
+                    move.w  (current_channels_size),d1
                     lsr.w   #2,d1
                     cmp.w   d1,d0
                     blt.b   lbC01FB1C
@@ -2415,7 +2415,7 @@ lbC01FB58:
                     adda.w  (lbW01B298),a0
                     moveq   #0,d0
                     move.b  (a0),d0
-                    move.w  (lbW02A75A),d1
+                    move.w  (current_channels_size),d1
                     lsr.w   #2,d1
                     cmp.w   d1,d0
                     blt.b   lbC01FB78
@@ -2433,10 +2433,10 @@ lbC01FB80:
 lbC01FB94:
                     lea     (ascii_MSG57,pc),a0
                     jsr     (draw_text_with_coords_struct)
-                    moveq   #$17,d0
+                    moveq   #23,d0
                     moveq   #5,d1
                     move.w  (lbW01FBF0,pc),d2
-                    jmp     (lbC025E20)
+                    jmp     (draw_2_digits_decimal_number_leading_zeroes)
 ascii_MSG57:
                     dc.b    22,5,' ',0
 Off_MSG3:
@@ -2471,23 +2471,23 @@ lbC01FBF2:
                     move.w  (current_song_position),d2
                     moveq   #12,d0
                     moveq   #1,d1
-                    jsr     (lbC025E0C)
+                    jsr     (draw_3_digits_decimal_number_leading_zeroes)
                     lea     (OK_Patterns),a0
                     move.w  (current_song_position),d2
                     move.b  (a0,d2.w),d2
                     moveq   #13,d0
                     moveq   #2,d1
-                    jsr     (lbC025E20)
+                    jsr     (draw_2_digits_decimal_number_leading_zeroes)
                     move.w  (OK_PLen),d2
                     moveq   #12,d0
                     moveq   #3,d1
-                    jsr     (lbC025E0C)
+                    jsr     (draw_3_digits_decimal_number_leading_zeroes)
                     move.w  (OK_Speed),d0
                     bsr     lbC01FCD6
                     move.w  (lbW01BC6E),d2
                     moveq   #13,d0
                     moveq   #6,d1
-                    jsr     (lbC025E20)
+                    jsr     (draw_2_digits_decimal_number_leading_zeroes)
                     bsr     get_current_pattern_rows
                     move.w  d0,d2
                     moveq   #23,d0
@@ -2500,7 +2500,7 @@ lbC01FBF2:
                     bsr     lbC01F9E0
                     bsr.b   lbC01FCE0
                     bsr     draw_replay_type
-                    bsr     lbC01FEE2
+                    bsr     do_draw_available_memory_and_song_metrics
 draw_channels_muted_status:
                     ; x pos
                     moveq   #72,d5
@@ -2570,9 +2570,9 @@ lbC01FCE0:
                     jsr     (draw_text)
                     move.l  (a7),a0
                     move.l  (20,a0),d2
-                    moveq   #$2E,d0
+                    moveq   #46,d0
                     moveq   #2,d1
-                    jsr     (lbC025DF0)
+                    jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     move.l  (a7),a0
                     tst.w   (30,a0)
                     beq.b   lbC01FD80
@@ -2585,21 +2585,21 @@ lbC01FCE0:
                     moveq   #0,d2
                     move.w  (24,a0),d2
                     add.l   d2,d2
-                    moveq   #$2E,d0
+                    moveq   #46,d0
                     moveq   #3,d1
-                    jsr     (lbC025DF0)
+                    jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     move.l  (a7),a0
                     moveq   #0,d2
                     move.w  (26,a0),d2
                     add.l   d2,d2
-                    moveq   #$2E,d0
+                    moveq   #46,d0
                     moveq   #4,d1
-                    jsr     (lbC025DF0)
+                    jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     move.l  (a7),a0
                     move.w  (28,a0),d2
-                    moveq   #$2E,d0
+                    moveq   #46,d0
                     moveq   #5,d1
-                    jsr     (lbC025E20)
+                    jsr     (draw_2_digits_decimal_number_leading_zeroes)
                     lea     (lbB0177D4),a0
                     bsr     lbC020C8A
                     bra.b   lbC01FD98
@@ -2644,129 +2644,136 @@ draw_replay_type:
                     bra     draw_one_char_alpha_numeric
 
 ; ===========================================================================
-lbC01FE26:
+draw_available_memory:
                     lea     (largest_mem_avail,pc),a0
                     move.l  (a0),d0
                     eori.l  #MEMF_LARGEST,d0
                     move.l  d0,(a0)
-                    beq.b   lbC01FE3C
-                    lea     (CCMax_MSG,pc),a0
-                    bra.b   lbC01FE40
-lbC01FE3C:
-                    lea     (CChip_MSG,pc),a0
-lbC01FE40:
-                    move.l  a0,(lbL01FE5A)
+                    beq.b   .chip_fast
+                    lea     (CMax_MSG,pc),a0
+                    bra.b   .largest
+.chip_fast:
+                    lea     (Chip_MSG,pc),a0
+.largest:
+                    move.l  a0,(available_memory_text_ptr)
                     moveq   #0,d0
                     moveq   #0,d1
                     jsr     (process_commands)
-                    bra     lbC01FEE2
+                    bra     do_draw_available_memory_and_song_metrics
 largest_mem_avail:
                     dc.l    0
-lbL01FE5A:
-                    dc.l    CChip_MSG
-CChip_MSG:
+available_memory_text_ptr:
+                    dc.l    Chip_MSG
+Chip_MSG:
                     dc.b    CMD_TEXT,67,1,'Chip:',0
                     dc.b    CMD_TEXT,67,2,'Fast:',0
                     dc.b    CMD_END
-CCMax_MSG:
+CMax_MSG:
                     dc.b    CMD_TEXT,67,1,'CMax:',0
                     dc.b    CMD_TEXT,67,2,'FMax:',0
                     dc.b    CMD_END
                     even
-lbC01FE86:
-                    lea     (lbW01FEBE,pc),a0
+
+; ===========================================================================
+draw_song_metrics:
+                    lea     (current_song_metrics_index,pc),a0
                     addq.w  #1,(a0)
                     cmpi.w  #3,(a0)
-                    bcs.b   lbC01FE94
+                    bcs.b   .reset
                     clr.w   (a0)
-lbC01FE94:
+.reset:
                     move.w  (a0),d0
                     lsl.w   #2,d0
-                    move.l  (lbL01FEB2,pc,d0.w),a0
-                    move.l  a0,(lbL01FEC0)
+                    move.l  (song_metrics_text_table,pc,d0.w),a0
+                    move.l  a0,(song_metrics_text_ptr)
                     moveq   #0,d0
                     moveq   #0,d1
                     jsr     (process_commands)
-                    bra     lbC01FEE2
-lbL01FEB2:
-                    dc.l    CSong_MSG
-                    dc.l    CPtts_MSG
-                    dc.l    CSmps_MSG
-lbW01FEBE:
+                    bra     do_draw_available_memory_and_song_metrics
+song_metrics_text_table:
+                    dc.l    Song_MSG
+                    dc.l    Ptts_MSG
+                    dc.l    Smps_MSG
+current_song_metrics_index:
                     dc.w    0
-lbL01FEC0:
-                    dc.l    CSong_MSG
-CSong_MSG:
+song_metrics_text_ptr:
+                    dc.l    Song_MSG
+Song_MSG:
                     dc.b    CMD_TEXT,67,3,'Song:',0
                     dc.b    CMD_END
-CPtts_MSG:
+Ptts_MSG:
                     dc.b    CMD_TEXT,67,3,'Ptts:',0
                     dc.b    CMD_END
-CSmps_MSG:
+Smps_MSG:
                     dc.b    CMD_TEXT,67,3,'Smps:',0
                     dc.b    CMD_END
-lbC01FEE2:
+
+; ===========================================================================
+do_draw_available_memory_and_song_metrics:
                     moveq   #MEMF_CHIP,d1
                     or.l    (largest_mem_avail,pc),d1
                     EXEC    AvailMem
                     move.l  d0,d2
                     moveq   #73,d0
                     moveq   #1,d1
-                    jsr     (lbC025DD6)
+                    jsr     (draw_7_digits_decimal_number_leading_zeroes)
                     moveq   #MEMF_FAST,d1
                     or.l    (largest_mem_avail,pc),d1
                     EXEC    AvailMem
                     move.l  d0,d2
                     moveq   #73,d0
                     moveq   #2,d1
-                    jsr     (lbC025DD6)
-                    move.w  (lbW01FEBE,pc),d0
-                    bne.b   lbC01FF32
-                    bsr     lbC01FF50
+                    jsr     (draw_7_digits_decimal_number_leading_zeroes)
+                    move.w  (current_song_metrics_index,pc),d0
+                    bne.b   .patterns
+                    bsr     get_patterns_metrics
                     move.l  d0,d2
-                    bsr     lbC01FF74
+                    bsr     get_samples_metrics
                     add.l   d2,d0
-                    bra.b   lbC01FF42
-lbC01FF32:
+                    bra.b   .draw_it
+.patterns:
                     cmpi.w  #1,d0
-                    bne.b   lbC01FF3E
-                    bsr     lbC01FF50
-                    bra.b   lbC01FF42
-lbC01FF3E:
-                    bsr     lbC01FF74
-lbC01FF42:
+                    bne.b   .samples
+                    bsr     get_patterns_metrics
+                    bra.b   .draw_it
+.samples:
+                    bsr     get_samples_metrics
+.draw_it:
                     move.l  d0,d2
-                    moveq   #$49,d0
+                    moveq   #73,d0
                     moveq   #3,d1
-                    jmp     (lbC025DD6)
-lbC01FF50:
+                    jmp     (draw_7_digits_decimal_number_leading_zeroes)
+get_patterns_metrics:
                     move.l  d2,-(a7)
                     lea     (OK_PatternList),a0
                     moveq   #0,d0
                     moveq   #64-1,d1
-lbC01FF5C:
+.loop:
                     move.l  (a0)+,d2
-                    beq.b   lbC01FF6C
+                    beq.b   .empty
                     move.l  d2,a1
+                    ; rows
                     move.w  (a1),d2
-                    mulu.w  (lbW02A75A),d2
+                    mulu.w  (current_channels_size),d2
                     add.l   d2,d0
-lbC01FF6C:
-                    dbra    d1,lbC01FF5C
+.empty:
+                    dbra    d1,.loop
                     move.l  (a7)+,d2
                     rts
-lbC01FF74:
+get_samples_metrics:
                     lea     (OK_SampleTab),a0
                     moveq   #0,d0
                     moveq   #36-1,d1
-lbC01FF7E:
+.loop:
                     tst.l   (a0)+
-                    beq.b   lbC01FF84
+                    beq.b   .empty
                     add.l   (a0),d0
-lbC01FF84:
+.empty:
                     addq.w  #4,a0
-                    dbra    d1,lbC01FF7E
+                    dbra    d1,.loop
                     rts
+
+; ===========================================================================
 lbC01FF8C:
                     bsr     stop_audio_channels
                     move.l  (lbL01A130),d0
@@ -2889,7 +2896,8 @@ get_given_pattern_rows:
 lbC020112:
                     cmpi.w  #64,(lbW01BC6E)
                     beq     error_no_more_patterns
-                    move.l  (lbL02A75C),d0
+                    move.l  (current_default_patterns_size),d0
+                    ; +2 to store the rows number
                     addq.l  #2,d0
                     move.l  #MEMF_CLEAR|MEMF_ANY,d1
                     EXEC    AllocMem
@@ -2911,7 +2919,7 @@ lbC020168:
 lbC02016E:
                     movem.l d2/a2,-(a7)
                     move.w  d0,d2
-                    mulu.w  (lbW02A75A),d0
+                    mulu.w  (current_channels_size),d0
                     addq.l  #2,d0
                     move.l  #MEMF_CLEAR|MEMF_ANY,d1
                     EXEC    AllocMem
@@ -2940,7 +2948,7 @@ lbC0201C0:
                     ble.b   lbC0201CA
                     move.w  d2,d0
 lbC0201CA:
-                    mulu.w  (lbW02A75A),d0
+                    mulu.w  (current_channels_size),d0
                     move.l  a2,a1
                     lea     (2,a1),a1
                     EXEC    CopyMem
@@ -2973,7 +2981,7 @@ lbC020232:
                     clr.l   (a0,d0.w)
                     move.l  d1,a1
                     move.w  (a1),d0
-                    mulu.w  (lbW02A75A),d0
+                    mulu.w  (current_channels_size),d0
                     addq.l  #2,d0
                     EXEC    FreeMem
 lbC020264:
@@ -2990,7 +2998,7 @@ lbC020266:
                     clr.l   (a0,d0.w)
                     moveq   #0,d0
                     move.w  (a1),d0
-                    mulu.w  (lbW02A75A),d0
+                    mulu.w  (current_channels_size),d0
                     addq.l  #2,d0
                     EXEC    FreeMem
                     subq.w  #1,(lbW01BC6E)
@@ -3019,7 +3027,7 @@ lbC0202F0:
                     bsr     get_current_pattern_rows
                     move.l  a0,a4
                     move.w  d7,d0
-                    mulu.w  (lbW02A75A),d0
+                    mulu.w  (current_channels_size),d0
                     adda.l  d0,a4
                     move.w  (current_viewed_pattern),d0
                     ext.l   d0
@@ -4221,21 +4229,21 @@ lbC021034:
                     rts
 lbC02103C:
                     move.w  (default_pattern_length),-(a7)
-                    move.l  (lbL02A75C),-(a7)
+                    move.l  (current_default_patterns_size),-(a7)
 lbC021048:
                     move.w  (lbW01B730),d7
                     cmp.w   (lbW01BC6E),d7
                     beq.b   lbC0210A4
                     move.w  #$40,(default_pattern_length)
                     move.w  (default_pattern_length),d0
-                    mulu.w  (lbW02A75A),d0
-                    move.l  d0,(lbL02A75C)
+                    mulu.w  (current_channels_size),d0
+                    move.l  d0,(current_default_patterns_size)
                     bsr     lbC020112
                     bmi.b   lbC0210BE
                     move.w  (lbW01BC6E),d0
                     subq.w  #1,d0
                     bsr     get_given_pattern_rows
-                    mulu.w  (lbW02A75A),d0
+                    mulu.w  (current_channels_size),d0
                     move.l  a0,(lbL01B2A8)
                     jsr     (read_from_file)
                     bmi.b   lbC0210BA
@@ -4244,7 +4252,7 @@ lbC021048:
                     bmi.b   lbC0210B4
                     bra.b   lbC021048
 lbC0210A4:
-                    move.l  (a7)+,(lbL02A75C)
+                    move.l  (a7)+,(current_default_patterns_size)
                     move.w  (a7)+,(default_pattern_length)
                     moveq   #0,d0
                     rts
@@ -4254,7 +4262,7 @@ lbC0210B4:
 lbC0210BA:
                     bsr     display_dos_error
 lbC0210BE:
-                    move.l  (a7)+,(lbL02A75C)
+                    move.l  (a7)+,(current_default_patterns_size)
                     move.w  (a7)+,(default_pattern_length)
                     moveq   #ERROR,d0
                     rts
@@ -4367,7 +4375,7 @@ lbC0211D0:
                     rts
 lbC0211F6:
                     move.w  (default_pattern_length),-(a7)
-                    move.l  (lbL02A75C),-(a7)
+                    move.l  (current_default_patterns_size),-(a7)
 lbC021202:
                     move.w  (lbW01B730),d7
                     cmp.w   (lbW01BC6E),d7
@@ -4385,19 +4393,19 @@ lbC021202:
                     bmi.b   lbC02128E
                     move.w  (song_chunk_header_loaded_data),d0
                     move.w  d0,(default_pattern_length)
-                    mulu.w  (lbW02A75A),d0
-                    move.l  d0,(lbL02A75C)
+                    mulu.w  (current_channels_size),d0
+                    move.l  d0,(current_default_patterns_size)
                     bsr     lbC020112
                     bmi.b   lbC021292
                     move.w  (lbW01BC6E),d0
                     subq.w  #1,d0
                     bsr     get_given_pattern_rows
-                    mulu.w  (lbW02A75A),d0
+                    mulu.w  (current_channels_size),d0
                     jsr     (read_from_file)
                     bmi.b   lbC02128E
                     bra.b   lbC021202
 lbC021278:
-                    move.l  (a7)+,(lbL02A75C)
+                    move.l  (a7)+,(current_default_patterns_size)
                     move.w  (a7)+,(default_pattern_length)
                     moveq   #OK,d0
                     rts
@@ -4407,7 +4415,7 @@ lbC021288:
 lbC02128E:
                     bsr     display_dos_error
 lbC021292:
-                    move.l  (a7)+,(lbL02A75C)
+                    move.l  (a7)+,(current_default_patterns_size)
                     move.w  (a7)+,(default_pattern_length)
                     moveq   #ERROR,d0
                     rts
@@ -4634,7 +4642,7 @@ lbC02154A:
                     beq.b   lbC0215A8
                     move.w  d7,d0
                     bsr     get_given_pattern_rows
-                    mulu.w  (lbW02A75A),d0
+                    mulu.w  (current_channels_size),d0
                     subq.w  #2,a0
                     addq.l  #2,d0
                     move.l  a0,(lbL01B718)
@@ -6329,7 +6337,7 @@ lbC022CD6:
                     lea     (lbW01B2BA),a0
                     subq.w  #1,(a0)
                     bpl.b   lbC022CEC
-                    move.w  (lbW02A75A),d0
+                    move.w  (current_channels_size),d0
                     lsr.w   #2,d0
                     subq.w  #1,d0
                     move.w  d0,(a0)
@@ -6338,7 +6346,7 @@ lbC022CEC:
 lbC022CEE:
                     lea     (lbW01B2BA),a0
                     addq.w  #1,(a0)
-                    move.w  (lbW02A75A),d0
+                    move.w  (current_channels_size),d0
                     lsr.w   #2,d0
                     cmp.w   (a0),d0
                     bne.b   lbC022D04
@@ -6381,7 +6389,7 @@ lbC022D5E:
                     bra.b   lbC022D5E
 lbC022D66:
                     move.w  d2,d3
-                    mulu.w  (lbW02A75A),d2
+                    mulu.w  (current_channels_size),d2
                     adda.l  d2,a0
                     move.w  (lbW01B2B6),d1
                     add.w   d1,d1
@@ -6610,14 +6618,14 @@ OK_GetTrkPos:
                     move.w  (OK_PtPtr,pc),d2
                     moveq   #12,d0
                     moveq   #1,d1
-                    jsr     (lbC025E0C)
+                    jsr     (draw_3_digits_decimal_number_leading_zeroes)
                     lea     (OK_Patterns),a0
                     move.w  (OK_PtPtr,pc),d2
                     move.b  (a0,d2.w),d2
                     move.w  d2,-(a7)
                     moveq   #13,d0
                     moveq   #2,d1
-                    jsr     (lbC025E20)
+                    jsr     (draw_2_digits_decimal_number_leading_zeroes)
                     move.w  (a7)+,d0
                     bra.b   lbC0230D2
 .OK_PlayPattern:
@@ -9625,59 +9633,63 @@ lbC025DC4:
 lbC025DD2:
                     moveq   #ERROR,d0
                     rts
-lbC025DD6:
-                    lea     (lbL025E52,pc),a0
-                    lea     (lbL025E72,pc),a1
+
+; ===========================================================================
+draw_7_digits_decimal_number_leading_zeroes:
+                    lea     (decimal_number_leading_zeroes_table,pc),a0
+                    lea     (decimal_number_leading_zeroes_text,pc),a1
                     move.l  #'0000',(2,a1)
                     move.l  #('000'<<8),(6,a1)
-                    bra.b   lbC025E34
-lbC025DF0:
-                    lea     (lbL025E56,pc),a0
-                    lea     (lbL025E72,pc),a1
+                    bra.b   draw_decimal_number_leading_zeroes
+draw_6_digits_decimal_number_leading_zeroes:
+                    lea     (decimal_number_leading_zeroes_table+4,pc),a0
+                    lea     (decimal_number_leading_zeroes_text,pc),a1
                     move.l  #'0000',(2,a1)
                     move.w  #'00',(6,a1)
                     sf      (8,a1)
-                    bra.b   lbC025E34
-lbC025E0C:
+                    bra.b   draw_decimal_number_leading_zeroes
+draw_3_digits_decimal_number_leading_zeroes:
                     ext.l   d2
-                    lea     (lbL025E62,pc),a0
-                    lea     (lbL025E72,pc),a1
+                    lea     (decimal_number_leading_zeroes_table+16,pc),a0
+                    lea     (decimal_number_leading_zeroes_text,pc),a1
                     move.l  #('000'<<8),(2,a1)
-                    bra.b   lbC025E34
-lbC025E20:
+                    bra.b   draw_decimal_number_leading_zeroes
+draw_2_digits_decimal_number_leading_zeroes:
                     ext.l   d2
-                    lea     (lbL025E66,pc),a0
-                    lea     (lbL025E72,pc),a1
+                    lea     (decimal_number_leading_zeroes_table+20,pc),a0
+                    lea     (decimal_number_leading_zeroes_text,pc),a1
                     move.w  #'00',(2,a1)
                     sf      (4,a1)
-lbC025E34:
+draw_decimal_number_leading_zeroes:
+                    ; store the coords
                     move.b  d0,(a1)+
                     move.b  d1,(a1)+
-lbC025E38:
+.loop:
                     move.l  (a0)+,d3
-                    beq.b   lbC025E4A
-lbC025E3C:
+                    beq.b   .done
+.search:
                     sub.l   d3,d2
-                    bmi.b   lbC025E44
+                    bmi.b   .threshold
                     addq.b  #1,(a1)
-                    bra.b   lbC025E3C
-lbC025E44:
+                    bra.b   .search
+.threshold:
                     add.l   d3,d2
                     addq.w  #1,a1
-                    bra.b   lbC025E38
-lbC025E4A:
-                    lea     (lbL025E72,pc),a0
+                    bra.b   .loop
+.done:
+                    lea     (decimal_number_leading_zeroes_text,pc),a0
                     bra     draw_text_with_coords_struct
-lbL025E52:
+decimal_number_leading_zeroes_table:
                     dc.l    1000000
-lbL025E56:
-                    dc.l    100000,10000,1000
-lbL025E62:
+                    dc.l    100000
+                    dc.l    10000
+                    dc.l    1000
                     dc.l    100
-lbL025E66:
-                    dc.l    10,1,0
-lbL025E72:
-                    dcb.l   3,0
+                    dc.l    10
+                    dc.l    1
+                    dc.l    0
+decimal_number_leading_zeroes_text:
+                    dcb.b   12,0
 
 ; ===========================================================================
 draw_2_digits_hex_number:
@@ -13610,7 +13622,7 @@ lbC028C8C:
                     move.l  (lbL01A134),d2
                     moveq   #38,d0
                     moveq   #10,d1
-                    jsr     (lbC025DF0)
+                    jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     bsr     lbC028EB2
                     lea     (OK_Samples),a0
                     move.w  (current_sample),d0
@@ -13624,14 +13636,14 @@ lbC028C8C:
                     add.l   d2,d2
                     moveq   #45,d0
                     moveq   #10,d1
-                    jsr     (lbC025DF0)
+                    jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     move.l  (a7)+,a0
                     moveq   #0,d2
                     move.w  (26,a0),d2
                     add.l   d2,d2
                     moveq   #52,d0
                     moveq   #10,d1
-                    jsr     (lbC025DF0)
+                    jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     bra.b   lbC028D06
 lbC028CFC:
                     lea     (ascii_MSG,pc),a0
@@ -13667,7 +13679,7 @@ lbC028D5A:
                     move.l  d2,(lbW029ED4)
                     moveq   #66,d0
                     moveq   #10,d1
-                    jsr     (lbC025DF0)
+                    jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     bra.b   lbC028D82
 lbC028D6C:
                     move.l  #-1,(lbW029ED4)
@@ -13689,7 +13701,7 @@ lbC028DA8:
                     move.l  d2,(lbL029ED8)
                     moveq   #73,d0
                     moveq   #10,d1
-                    jsr     (lbC025DF0)
+                    jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     bra.b   lbC028DD0
 lbC028DBA:
                     move.l  #-1,(lbL029ED8)
@@ -13888,7 +13900,7 @@ lbC029026:
                     moveq   #$1D,d0
                     move.w  (max_lines,pc),d1
                     move.w  (lbW029F0E),d2
-                    jmp     (lbC025E0C)
+                    jmp     (draw_3_digits_decimal_number_leading_zeroes)
 lbC02903A:
                     lea     (lbW029F0E,pc),a0
                     cmpi.w  #395,(a0)
@@ -15195,9 +15207,9 @@ st_load_tracks_mode:
                     dc.b    0
 
 ; ===========================================================================
-lbW02A75A:
+current_channels_size:
                     dc.w    0
-lbL02A75C:
+current_default_patterns_size:
                     dc.l    0
 channels_mute_flags:
                     dc.b    0
@@ -15497,7 +15509,7 @@ lbC02AB78:
                     moveq   #23,d0
                     moveq   #18,d1
                     move.w  (mouse_repeat_delay,pc),d2
-                    jmp     (lbC025E20)
+                    jmp     (draw_2_digits_decimal_number_leading_zeroes)
 lbC02AB88:
                     lea     (mouse_repeat_speed,pc),a0
                     cmpi.w  #50,(a0)
@@ -15518,7 +15530,7 @@ lbC02ABAC:
                     moveq   #23,d0
                     moveq   #19,d1
                     move.w  (mouse_repeat_speed,pc),d2
-                    jmp     (lbC025E20)
+                    jmp     (draw_2_digits_decimal_number_leading_zeroes)
 lbC02ABBC:
                     lea     (lbW02ACE0,pc),a0
                     cmpi.w  #2,(a0)
@@ -16565,9 +16577,9 @@ lbC02B590:
                     addq.w  #4,d0
                     add.w   d0,d0
                     add.w   d0,d0
-                    move.w  d0,(lbW02A75A)
+                    move.w  d0,(current_channels_size)
                     mulu.w  (a0)+,d0
-                    move.l  d0,(lbL02A75C)
+                    move.l  d0,(current_default_patterns_size)
                     st      (channels_mute_flags)
                     rts
 
@@ -19043,9 +19055,9 @@ main_menu_text:
                     dc.b    CMD_TEXT,54,6,'Swap  ClrCB',0
                     dc.b    CMD_TEXT,67,0,'Memory:',0
                     dc.b    CMD_SUB_COMMAND,0
-                    dc.l    lbL01FE5A
+                    dc.l    available_memory_text_ptr
                     dc.b    CMD_SUB_COMMAND,0
-                    dc.l    lbL01FEC0
+                    dc.l    song_metrics_text_ptr
                     dc.b    CMD_TEXT,71,5,'S',0
                     dc.b    CMD_TEXT,71,6,'C',0
                     dc.b    CMD_END
@@ -19328,12 +19340,12 @@ lbB01794E:
                     dc.l    lbB017960
                     dc.w    %1000000000001
                     dc.b    67,1,13,2
-                    dc.l    lbC01FE26,0
+                    dc.l    draw_available_memory,0
 lbB017960:
                     dc.l    lbL017972
                     dc.w    %1000000000001
                     dc.b    67,3,13,1
-                    dc.l    lbC01FE86,0
+                    dc.l    draw_song_metrics,0
 lbL017972:
                     dc.l    0
                     dc.w    %10000000000001

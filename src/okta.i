@@ -12,6 +12,8 @@ SCREEN_BYTES        equ     (SCREEN_WIDTH/8)
 PREFS_FILE_LEN      equ     2102
 TRACK_LEN           equ     (22*512)
 
+STACK_KB            equ     8
+
 OK                  equ     0
 ERROR               equ     -1
 
