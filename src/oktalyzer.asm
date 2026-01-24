@@ -35,7 +35,7 @@ SCREEN_WIDTH        equ      640
 SCREEN_BYTES        equ      (SCREEN_WIDTH/8)
 
 PREFS_FILE_LEN      equ      2102
-TRACK_LEN           equ      (11*1024)
+TRACK_LEN           equ      (22*512)
 
 OK                  equ      0
 ERROR               equ      -1
@@ -12116,7 +12116,7 @@ prepare_track_buffer:
                     dbra     d7,.loop
                     move.w   (current_formatted_track,pc),d0
                     beq.b    copy_bootblock_to_track_buffer
-                    ; reached rootblock track (at 11*1024*40=450560 bytes)
+                    ; reached rootblock track (at 22*512*40=450560 bytes)
                     cmpi.w   #40,d0
                     beq.b    copy_rootblock_to_track_buffer
                     rts
