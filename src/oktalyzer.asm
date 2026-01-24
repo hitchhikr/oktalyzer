@@ -20,6 +20,9 @@
                     include  "workbench/startup.i"
                     include  "devices/trackdisk.i"
                     include  "devices/bootblock.i"
+                    include  "devices/input.i"
+                    include  "devices/inputevent.i"
+                    include  "exec/io.i"
                     include  "lvo/exec_lib.i"
                     include  "lvo/dos_lib.i"
                     include  "lvo/graphics_lib.i"
@@ -103,6 +106,22 @@ ERROR_COPYBUF_EMPTY equ      ERROR_MULTI_SEL+1
 ERROR_NO_ENTRIES    equ      ERROR_COPYBUF_EMPTY+1
 ERROR_EF_STRUCT     equ      ERROR_NO_ENTRIES+1
 ERROR_ONLY_IN_PAL   equ      ERROR_EF_STRUCT+1
+
+EVT_KEY_PRESSED     equ      1
+EVT_MOUSE_MOVED     equ      3
+EVT_LEFT_PRESSED    equ      4
+EVT_LEFT_RELEASED   equ      5
+EVT_MOUSE_DELAY_L   equ      6
+EVT_RIGHT_PRESSED   equ      7
+EVT_RIGHT_RELEASED  equ      8
+EVT_MOUSE_DELAY_R   equ      9
+EVT_VBI             equ      10
+EVT_MOUSE_MOVED_HID equ      12
+EVT_DISK_CHANGE     equ      13
+EVT_KEY_RELEASED    equ      14
+
+RESP_EVT_ROUT_1     equ      10
+RESP_EVT_ROUT_2     equ      14
 
 ; ===========================================================================
 EXEC                MACRO
@@ -230,7 +249,7 @@ init_all:
                     DOS      CurrentDir
                     jsr      (close_workbench)
                     bsr      set_copper_bitplanes
-                    bsr      set_pal_ntsc_vars
+                    bsr      set_pal_ntsc_context
                     bsr      set_chipset_aga
                     bsr      install_vbi_int
                     bsr      patch_sys_requesters_function
@@ -255,7 +274,7 @@ current_dir_lock:
                     dc.l     0
 
 ; ===========================================================================
-set_pal_ntsc_vars:
+set_pal_ntsc_context:
                     move.l   (4).w,a0
                     cmpi.b   #60,(VBlankFrequency,a0)
                     bne      .pal_machine
@@ -303,7 +322,7 @@ free_resources:
                     jsr      (lbC02B732)
                     bsr      free_all_samples
                     bsr      restore_sys_requesters_function
-                    bsr      lbC01E476
+                    bsr      remove_ints
                     jsr      (open_workbench)
                     jsr      restore_screen
                     bra      close_libraries
@@ -321,7 +340,7 @@ main_loop:
                     bsr      lbC0202A8
                     bsr      display_pattern_caret
                     lea      (lbW01737C),a0
-                    bsr      lbC020626
+                    bsr      stop_audio_and_process_event
                     bsr      erase_pattern_caret
                     move.l   (current_cmd_ptr),d0
                     beq.b    .no_command
@@ -374,12 +393,12 @@ lbC01E0C2:
                     EXEC     Disable
                     bsr      stop_audio_channels
                     move.w   (_CUSTOM|JOY0DAT),(save_joy0dat)
-                    move.w   (lbW01B70E),(lbW01B70C)
+                    move.w   (previous_event_index),(current_event_index)
                     jmp      (lbC02576C)
 lbC01E0FA:
                     jsr      (lbC02576C)
                     move.w   (save_joy0dat),(_CUSTOM|JOYTEST)
-                    st       (lbB020540)
+                    st       (in_key_repeat_flag)
                     EXEC     Enable
                     jsr      (disown_blitter)
                     jmp      (release_drive)
@@ -390,16 +409,16 @@ save_joy0dat:
 install_vbi_int:
                     moveq    #-1,d0
                     EXEC     AllocSignal
-                    move.b   d0,(lbB01E1D2)
+                    move.b   d0,(vbi_signal_number)
                     moveq    #0,d1
                     bset     d0,d1
-                    move.l   d1,(lbL01E1D4)
-                    lea      (lbW018516),a0
-                    jsr      (lbC02D022)
+                    move.l   d1,(vbi_signal)
+                    lea      (input_device_int),a0
+                    jsr      (install_input_handler)
                     EXEC     Disable
-                    clr.w    (lbW01E376)
-                    clr.w    (lbW01E378)
-                    clr.w    (lbB01E37A)
+                    clr.w    (mouse_repeat_delay_left)
+                    clr.w    (mouse_repeat_delay_right)
+                    clr.w    (mouse_buttons_status)
                     lea      (vbi_int_struct,pc),a1
                     moveq    #INTB_VERTB,d0
                     EXEC     AddIntServer
@@ -411,16 +430,16 @@ remove_vbi_int:
                     lea      (vbi_int_struct,pc),a1
                     moveq    #INTB_VERTB,d0
                     EXEC     RemIntServer
-                    lea      (lbW018516),a0
-                    jsr      (lbC02D046)
+                    lea      (input_device_int),a0
+                    jsr      (remove_input_handler)
                     moveq    #0,d0
-                    move.b   (lbB01E1D2,pc),d0
+                    move.b   (vbi_signal_number,pc),d0
                     EXEC     FreeSignal
                     rts
-lbB01E1D2:
+vbi_signal_number:
                     dc.b     0
                     even
-lbL01E1D4:
+vbi_signal:
                     dc.l     0
 vbi_int_struct:
                     dc.l     0,0
@@ -485,16 +504,16 @@ vbi_int_code:
                     tst.w    (lbW01E5E8)
                     bne.b    lbC01E326
                     movem.l  d0-d3/a0/a1,-(sp)
-                    moveq    #10,d0
+                    moveq    #EVT_VBI,d0
                     moveq    #0,d1
                     moveq    #0,d2
                     moveq    #0,d3
-                    bsr      lbC0205C4
-                    lea      (lbW01E376,pc),a0
-                    moveq    #6,d0
+                    bsr      store_event
+                    lea      (mouse_repeat_delay_left,pc),a0
+                    moveq    #EVT_MOUSE_DELAY_L,d0
                     bsr      lbC01E32A
-                    lea      (lbW01E378,pc),a0
-                    moveq    #9,d0
+                    lea      (mouse_repeat_delay_right,pc),a0
+                    moveq    #EVT_MOUSE_DELAY_R,d0
                     bsr      lbC01E32A
                     ; must be 0 as some flag is tested right after that
                     moveq    #0,d0
@@ -514,104 +533,114 @@ lbC01E32A:
                     movem.w  (mouse_pointer_coords,pc),d1/d2
                     lsr.w    #1,d2
                     moveq    #0,d3
-                    bra      lbC0205C4
+                    bra      store_event
 lbC01E368:
                     EXEC     Enable
                     rts
-lbW01E376:
+mouse_repeat_delay_left:
                     dc.w     0
-lbW01E378:
+mouse_repeat_delay_right:
                     dc.w     0
-lbB01E37A:
-                    dc.b     0
-lbB01E37B:
-                    dc.b     0
+mouse_buttons_status:
+                    dc.w     0
 
 ; ===========================================================================
-lbC01E37C:
+input_device_handler:
                     tst.w    (lbW01E5E8)
                     bne.b    lbC01E3A4
-                    move.b   (4,a0),d0
-                    cmpi.b   #1,d0
-                    beq.b    lbC01E3A8
-                    cmpi.b   #2,d0
-                    beq.b    lbC01E3B8
-                    cmpi.b   #15,d0
-                    beq.b    lbC01E3D6
-                    cmpi.b   #16,d0
-                    beq.b    lbC01E3D6
+                    move.b   (ie_Class,a0),d0
+                    cmpi.b   #IECLASS_RAWKEY,d0
+                    beq.b    input_event_raw_key
+                    cmpi.b   #IECLASS_RAWMOUSE,d0
+                    beq.b    input_event_raw_mouse
+                    cmpi.b   #IECLASS_DISKREMOVED,d0
+                    beq.b    input_event_disk_changed
+                    cmpi.b   #IECLASS_DISKINSERTED,d0
+                    beq.b    input_event_disk_changed
                     moveq    #0,d0
                     rts
 lbC01E3A4:
                     move.l   a0,d0
                     rts
-lbC01E3A8:
-                    move.w   (6,a0),d0
-                    move.w   (8,a0),d1
+
+; ===========================================================================
+input_event_raw_key:
+                    move.w   (ie_Code,a0),d0
+                    move.w   (ie_Qualifier,a0),d1
                     bsr      lbC02048C
                     moveq    #0,d0
                     rts
-lbC01E3B8:
-                    movem.w  (10,a0),d0/d1
-                    move.w   (6,a0),-(sp)
-                    move.w   (8,a0),-(sp)
-                    bsr      lbC0206F2
+
+; ===========================================================================
+input_event_raw_mouse:
+                    movem.w  (ie_X,a0),d0/d1
+                    move.w   (ie_Code,a0),-(sp)
+                    move.w   (ie_Qualifier,a0),-(sp)
+                    bsr      get_mouse_coords
                     move.w   (sp)+,d1
                     move.w   (sp)+,d0
-                    bsr      lbC01E3EE
+                    bsr      get_mouse_buttons
                     moveq    #0,d0
                     rts
-lbC01E3D6:
+
+; ===========================================================================
+input_event_disk_changed:
                     movem.l  d2/d3,-(sp)
-                    moveq    #13,d0
+                    moveq    #EVT_DISK_CHANGE,d0
                     moveq    #0,d1
                     moveq    #0,d2
                     moveq    #0,d3
-                    bsr      lbC0205C4
+                    bsr      store_event
                     movem.l  (sp)+,d2/d3
                     moveq    #0,d0
                     rts
-lbC01E3EE:
+
+; ===========================================================================
+; d0 = ie_Code
+; d1 = ie_Qualifier
+get_mouse_buttons:
                     movem.l  d2/d3,-(sp)
                     move.w   d1,d3
                     movem.w  (mouse_pointer_coords),d1/d2
                     lsr.w    #1,d2
-                    cmpi.w   #104,d0
-                    bne.b    lbC01E41C
-                    st       (lbB01E37B)
-                    moveq    #4,d0
-                    bsr      lbC0205C4
-                    move.w   (mouse_repeat_delay),(lbW01E376)
-                    bra.b    lbC01E46C
-lbC01E41C:
-                    cmpi.w   #232,d0
-                    bne.b    lbC01E436
-                    clr.w    (lbW01E376)
-                    sf       (lbB01E37B)
-                    moveq    #5,d0
-                    bsr      lbC0205C4
-                    bra.b    lbC01E46C
-lbC01E436:
-                    cmpi.w   #105,d0
-                    bne.b    lbC01E454
-                    st       (lbB01E37A)
-                    moveq    #7,d0
-                    bsr      lbC0205C4
-                    move.w   (mouse_repeat_delay),(lbW01E378)
-                    bra.b    lbC01E46C
-lbC01E454:
-                    cmpi.w   #233,d0
-                    bne.b    lbC01E470
-                    clr.w    (lbW01E378)
-                    sf       (lbB01E37A)
-                    moveq    #8,d0
-                    bsr      lbC0205C4
-lbC01E46C:
+                    cmpi.w   #IECODE_LBUTTON,d0
+                    bne.b    .left_button_pressed
+                    st       (mouse_buttons_status+1)
+                    moveq    #EVT_LEFT_PRESSED,d0
+                    bsr      store_event
+                    move.w   (mouse_repeat_delay),(mouse_repeat_delay_left)
+                    bra.b    .done
+.left_button_pressed:
+                    cmpi.w   #IECODE_LBUTTON|IECODE_UP_PREFIX,d0
+                    bne.b    .left_button_released
+                    clr.w    (mouse_repeat_delay_left)
+                    sf       (mouse_buttons_status+1)
+                    moveq    #EVT_LEFT_RELEASED,d0
+                    bsr      store_event
+                    bra.b    .done
+.left_button_released:
+                    cmpi.w   #IECODE_RBUTTON,d0
+                    bne.b    .right_button_pressed
+                    st       (mouse_buttons_status)
+                    moveq    #EVT_RIGHT_PRESSED,d0
+                    bsr      store_event
+                    move.w   (mouse_repeat_delay),(mouse_repeat_delay_right)
+                    bra.b    .done
+.right_button_pressed:
+                    cmpi.w   #IECODE_RBUTTON|IECODE_UP_PREFIX,d0
+                    bne.b    .right_button_released
+                    clr.w    (mouse_repeat_delay_right)
+                    sf       (mouse_buttons_status)
+                    moveq    #EVT_RIGHT_RELEASED,d0
+                    bsr      store_event
+.done:
                     bsr      install_mouse_pointer
-lbC01E470:
+.right_button_released:
                     movem.l  (sp)+,d2/d3
                     rts
-lbC01E476:
+
+; ===========================================================================
+remove_ints:
                     bsr      remove_midi_ints
                     bra      remove_vbi_int
 
@@ -619,9 +648,9 @@ lbC01E476:
 reinstall_midi_ints:
                     EXEC     Disable
                     bsr      install_midi_ints
-                    clr.w    (lbW01E376)
-                    clr.w    (lbW01E378)
-                    clr.w    (lbB01E37A)
+                    clr.w    (mouse_repeat_delay_left)
+                    clr.w    (mouse_repeat_delay_right)
+                    clr.w    (mouse_buttons_status)
                     EXEC     Enable
                     rts
 
@@ -2510,9 +2539,9 @@ lbC01FBBE:
                     bpl.b    lbC01FBCA
                     moveq    #0,d1
 lbC01FBCA:
-                    cmpi.w   #$20,d1
+                    cmpi.w   #32,d1
                     ble.b    lbC01FBD2
-                    moveq    #$20,d1
+                    moveq    #32,d1
 lbC01FBD2:
                     move.w   d1,(lbW01FBF0)
                     bra.b    lbC01FB80
@@ -3212,160 +3241,172 @@ old_caret_pos:
                     dc.w     -1,-1
 
 ; ===========================================================================
+; d0 = ie_Code
+; d1 = ie_Qualifier
 lbC02048C:
                     movem.l  d0-d3/a0,-(sp)
-                    tst.b    (lbB020540)
-                    beq.b    lbC0204AC
-                    btst     #9,d1
-                    bne      lbC02053A
+                    tst.b    (in_key_repeat_flag)
+                    beq.b    .not_in_key_repeat
+                    btst     #IEQUALIFIERB_REPEAT,d1
+                    bne      .nothing_to_do
                     tst.b    d0
-                    bmi      lbC02053A
-                    sf       (lbB020540)
-lbC0204AC:
-                    btst     #9,d1
-                    bne.b    lbC0204BA
+                    bmi      .nothing_to_do
+                    sf       (in_key_repeat_flag)
+.not_in_key_repeat:
+                    btst     #IEQUALIFIERB_REPEAT,d1
+                    bne.b    .hide_mouse_pointer
                     tst.b    d0
-                    bmi.b    lbC0204BA
+                    bmi.b    .hide_mouse_pointer
                     bsr      remove_mouse_pointer
-lbC0204BA:
+.hide_mouse_pointer:
                     tst.b    d0
                     smi      d3
                     andi.w   #$7F,d0
-                    moveq    #7,d2
+                    moveq    #IEQUALIFIER_CAPSLOCK|IEQUALIFIER_RSHIFT|IEQUALIFIER_LSHIFT,d2
                     and.w    d1,d2
-                    beq.b    lbC0204CC
+                    beq.b    .key_shift_capslock
                     ori.w    #$100,d0
-lbC0204CC:
-                    moveq    #$30,d2
+.key_shift_capslock:
+                    moveq    #IEQUALIFIER_RALT|IEQUALIFIER_LALT,d2
                     and.w    d1,d2
-                    beq.b    lbC0204D6
+                    beq.b    .key_alt
                     ori.w    #$200,d0
-lbC0204D6:
-                    move.w   #$C0,d2
+.key_alt:
+                    move.w   #IEQUALIFIER_RCOMMAND|IEQUALIFIER_LCOMMAND,d2
                     and.w    d1,d2
-                    beq.b    lbC0204E2
+                    beq.b    .key_amiga
                     ori.w    #$400,d0
-lbC0204E2:
-                    btst     #8,d1
-                    beq.b    lbC0204EC
+.key_amiga:
+                    btst     #IEQUALIFIERB_NUMERICPAD,d1
+                    beq.b    .key_numeric_pad
                     ori.w    #$800,d0
-lbC0204EC:
-                    btst     #9,d1
-                    beq.b    lbC0204F6
+.key_numeric_pad:
+                    btst     #IEQUALIFIERB_REPEAT,d1
+                    beq.b    .key_repeat
                     ori.w    #$8000,d0
-lbC0204F6:
-                    btst     #3,d1
-                    beq.b    lbC020500
+.key_repeat:
+                    btst     #IEQUALIFIERB_CONTROL,d1
+                    beq.b    .key_control
                     ori.w    #$1000,d0
-lbC020500:
+.key_control:
                     cmpi.b   #$40,d0
-                    bhi.b    lbC02051E
-                    lea      (qwertyuiop123_MSG,pc),a0
+                    bhi.b    .not_printable
+                    lea      (keys_lower_case_table,pc),a0
+                    ; $100
                     btst     #8,d0
-                    beq.b    lbC020514
-                    lea      (_0QWERTYUIOP1_MSG,pc),a0
-lbC020514:
+                    beq.b    .no_shift_table
+                    lea      (keys_upper_case_table,pc),a0
+.no_shift_table:
                     moveq    #0,d2
                     move.b   d0,d2
                     move.b   (a0,d2.w),d0
-                    bra.b    lbC020528
-lbC02051E:
+                    bra.b    .printable
+.not_printable:
+                    ; between $40 and $5f
                     cmpi.b   #$5F,d0
-                    bhi.b    lbC02053A
+                    bhi.b    .nothing_to_do
+                    ; $00 to $1f
                     subi.b   #$40,d0
-lbC020528:
+.printable:
                     move.w   d0,d1
-                    moveq    #1,d0
+                    moveq    #EVT_KEY_PRESSED,d0
                     tst.b    d3
-                    beq.b    lbC020532
-                    moveq    #$E,d0
-lbC020532:
+                    beq.b    .key_was_pressed
+                    moveq    #EVT_KEY_RELEASED,d0
+.key_was_pressed:
                     moveq    #0,d2
                     moveq    #0,d3
-                    bsr      lbC0205C4
-lbC02053A:
+                    bsr      store_event
+.nothing_to_do:
                     movem.l  (sp)+,d0-d3/a0
                     rts
-lbB020540:
+in_key_repeat_flag:
                     dc.b     0
                     even
-qwertyuiop123_MSG:
+keys_lower_case_table:
                     dc.b     '`1234567890-=\ 0qwertyuiop[] 123asdfghjkl;''  456<zxcvbnm,./ .789 '
-_0QWERTYUIOP1_MSG:
+keys_upper_case_table:
                     dc.b     '~!@#$%^&*()_+| 0QWERTYUIOP{} 123ASDFGHJKL:"  456>ZXCVBNM<>? .789 '
-lbC0205C4:
+
+; ===========================================================================
+store_event:
                     EXEC     Disable
                     movem.l  d4/d5/a0/a1,-(sp)
-                    move.w   (lbW01B70C),d4
-                    lea      (lbL01B30C),a0
+                    move.w   (current_event_index),d4
+                    lea      (events_buffer),a0
                     move.w   d4,d5
                     lsl.w    #3,d5
-                    movem.w  d0-d3,(a0,d5.w)
+                    ; d0 = event number
+                    ; d1/d2 = usually mouse coords
+                    movem.w  d0/d1/d2/d3,(a0,d5.w)
                     addq.w   #1,d4
-                    andi.w   #$7F,d4
-                    cmp.w    (lbW01B70E),d4
-                    bne.b    lbC0205FA
-                    bra.b    lbC020600
-lbC0205FA:
-                    move.w   d4,(lbW01B70C)
-lbC020600:
+                    andi.w   #127,d4
+                    cmp.w    (previous_event_index),d4
+                    bne.b    .event_processed
+                    bra.b    .event_not_processed
+.event_processed:
+                    move.w   d4,(current_event_index)
+.event_not_processed:
                     move.l   (our_task,pc),a1
-                    move.l   (lbL01E1D4,pc),d0
+                    move.l   (vbi_signal,pc),d0
                     EXEC     Signal
                     movem.l  (sp)+,d4/d5/a0/a1
                     EXEC     Enable
                     rts
-lbC020626:
+
+; ===========================================================================
+stop_audio_and_process_event:
                     bsr      stop_audio_channels
-lbC02062A:
+process_event:
                     movem.l  d2-d4/a1/a2,-(sp)
                     move.l   a0,a2
-                    bra.b    lbC020642
-lbC020632:
-                    move.l   (lbL01E1D4,pc),d0
+                    bra.b    .reset
+.wait:
+                    move.l   (vbi_signal,pc),d0
                     EXEC     Wait
-lbC020642:
+.reset:
                     move.l   a2,a0
                     EXEC     Disable
-                    move.w   (lbW01B70E),d4
-                    cmp.w    (lbW01B70C),d4
-                    beq.b    lbC0206C2
-                    lea      (lbL01B30C),a1
+                    move.w   (previous_event_index),d4
+                    cmp.w    (current_event_index),d4
+                    beq.b    .event_already_processed
+                    lea      (events_buffer),a1
                     move.w   d4,d3
                     lsl.w    #3,d3
-                    movem.w  (a1,d3.w),d0-d3
+                    movem.w  (a1,d3.w),d0/d1/d2/d3
                     addq.w   #1,d4
-                    andi.w   #$7F,d4
-                    move.w   d4,(lbW01B70E)
+                    andi.w   #127,d4
+                    move.w   d4,(previous_event_index)
                     EXEC     Enable
-lbC020686:
+.loop:
                     move.w   (a0)+,d4
-                    beq.b    lbC020642
+                    beq.b    .reset
                     cmpi.w   #11,d4
-                    beq.b    lbC020694
+                    beq.b    .execute_command
+                    ; check against retrieved event code
                     cmp.w    d0,d4
-                    bne.b    lbC0206BE
-lbC020694:
+                    bne.b    .next_command
+.execute_command:
                     move.l   (a0),a1
                     clr.l    (current_cmd_ptr)
                     sf       (quit_flag)
                     movem.l  d0-d3/a0/a2,-(sp)
                     jsr      (a1)
                     movem.l  (sp)+,d0-d3/a0/a2
-                    beq.b    lbC0206D2
+                    beq.b    .done
                     tst.l    (current_cmd_ptr)
-                    bne.b    lbC0206D2
+                    bne.b    .done
                     tst.b    (quit_flag)
-                    bne.b    lbC0206D2
-lbC0206BE:
+                    bne.b    .done
+.next_command:
                     addq.w   #4,a0
-                    bra.b    lbC020686
-lbC0206C2:
+                    bra.b    .loop
+.event_already_processed:
                     EXEC     Enable
-                    bra      lbC020632
-lbC0206D2:
+                    bra      .wait
+.done:
                     move.l   (lbL0208D6),a0
-                    bsr      lbC020C14
+                    bsr      draw_box_around_gadget
                     clr.l    (lbL0208D6)
                     bsr      stop_audio_channels
                     movem.l  (sp)+,d2-d4/a1/a2
@@ -3375,7 +3416,9 @@ current_cmd_ptr:
 quit_flag:
                     dc.b     0
                     even
-lbC0206F2:
+
+; ===========================================================================
+get_mouse_coords:
                     movem.l  d2/d3,-(sp)
                     tst.b    (pointer_visible_flag)
                     bne.b    lbC020774
@@ -3435,15 +3478,15 @@ max_mouse_pointer_y:
 lbC020774:
                     move.w   d1,d2
                     move.w   d0,d1
-                    moveq    #12,d0
+                    moveq    #EVT_MOUSE_MOVED_HID,d0
                     bra.b    lbC020788
 lbC02077C:
-                    moveq    #3,d0
+                    moveq    #EVT_MOUSE_MOVED,d0
                     movem.w  (mouse_pointer_coords),d1/d2
                     lsr.w    #1,d2
 lbC020788:
-                    move.w   (lbB01E37A,pc),d3
-                    bsr      lbC0205C4
+                    move.w   (mouse_buttons_status,pc),d3
+                    bsr      store_event
                     movem.l  (sp)+,d2/d3
                     rts
 
@@ -3573,22 +3616,22 @@ lbC0208FA:
                     beq.b    lbC020950
                     tst.b    (pointer_visible_flag)
                     bne      lbC0209FC
-                    cmpi.w   #3,d0
+                    cmpi.w   #EVT_MOUSE_MOVED,d0
                     beq.b    lbC02093C
-                    cmpi.w   #4,d0
+                    cmpi.w   #EVT_LEFT_PRESSED,d0
                     beq.b    lbC020974
-                    cmpi.w   #6,d0
+                    cmpi.w   #EVT_MOUSE_DELAY_L,d0
                     beq      lbC02098E
-                    cmpi.w   #7,d0
+                    cmpi.w   #EVT_RIGHT_PRESSED,d0
                     beq      lbC0209A8
-                    cmpi.w   #9,d0
+                    cmpi.w   #EVT_MOUSE_DELAY_R,d0
                     beq      lbC0209E2
                     bra      lbC020A18
 lbC02093C:
                     add.w    (lbW01E8E8,pc),d2
                     move.w   d1,d0
                     move.w   d2,d1
-                    bsr      lbC020AF2
+                    bsr      check_gadget_mouse_coords
                     bsr      lbC020B56
                     bra      lbC020A18
 lbC020950:
@@ -3609,8 +3652,8 @@ lbC020974:
                     move.w   d1,d0
                     move.w   d2,d1
                     move.w   d3,d2
-                    move.w   #10,a0
-                    move.w   #14,a1
+                    move.w   #RESP_EVT_ROUT_1,a0
+                    move.w   #RESP_EVT_ROUT_2,a1
                     bsr      lbC020A8C
                     bra      lbC020A18
 lbC02098E:
@@ -3618,8 +3661,8 @@ lbC02098E:
                     move.w   d1,d0
                     move.w   d2,d1
                     move.w   d3,d2
-                    move.w   #10,a0
-                    move.w   #14,a1
+                    move.w   #RESP_EVT_ROUT_1,a0
+                    move.w   #RESP_EVT_ROUT_2,a1
                     bsr      lbC020A60
                     bra      lbC020A18
 lbC0209A8:
@@ -3637,8 +3680,8 @@ lbC0209CC:
                     move.w   d1,d0
                     move.w   d2,d1
                     move.w   d3,d2
-                    move.w   #14,a0
-                    move.w   #10,a1
+                    move.w   #RESP_EVT_ROUT_2,a0
+                    move.w   #RESP_EVT_ROUT_1,a1
                     bsr      lbC020A8C
                     bra      lbC020A18
 lbC0209E2:
@@ -3646,14 +3689,14 @@ lbC0209E2:
                     move.w   d1,d0
                     move.w   d2,d1
                     move.w   d3,d2
-                    move.w   #14,a0
-                    move.w   #10,a1
+                    move.w   #RESP_EVT_ROUT_2,a0
+                    move.w   #RESP_EVT_ROUT_1,a1
                     bsr      lbC020A60
                     bra      lbC020A18
 lbC0209FC:
-                    cmpi.w   #7,d0
+                    cmpi.w   #EVT_RIGHT_PRESSED,d0
                     beq.b    lbC020A10
-                    cmpi.w   #12,d0
+                    cmpi.w   #EVT_MOUSE_MOVED_HID,d0
                     beq.b    lbC020A0A
                     bra.b    lbC020A18
 lbC020A0A:
@@ -3663,11 +3706,10 @@ lbC020A10:
                     bsr      show_mouse_pointer
 lbC020A18:
                     moveq    #ERROR,d0
-                    bra.b    lbC020A2E
+                    rts
 lbC020A1C:
                     move.w   #$F00,(_CUSTOM|COLOR00)
-                    moveq    #0,d0
-lbC020A2E:
+                    moveq    #OK,d0
                     rts
 lbW020A30:
                     dc.w     0
@@ -3683,8 +3725,8 @@ lbC020A34:
                     swap     d0
                     tst.w    d0
                     beq.b    lbC020A5E
-                    move.w   #14,a0
-                    move.w   #10,a1
+                    move.w   #RESP_EVT_ROUT_2,a0
+                    move.w   #RESP_EVT_ROUT_1,a1
                     bra      lbC020A8C
 lbC020A5E:
                     rts
@@ -3714,7 +3756,7 @@ lbC020A8C:
                     clr.l    (lbL0208D6)
                     move.l   d0,a2
                     move.l   a2,a0
-                    bsr      lbC020C14
+                    bsr      draw_box_around_gadget
                     move.w   d5,d0
                     move.w   d6,d1
                     move.l   (a2,d3.w),d7
@@ -3737,49 +3779,55 @@ lbC020AC4:
 lbC020AE0:
                     move.l   a2,a0
                     move.l   a0,(lbL0208D6)
-                    bsr      lbC020C14
+                    bsr      draw_box_around_gadget
 lbC020AEC:
                     movem.l  (sp)+,d3-d7/a2
                     rts
-lbC020AF2:
+
+; ===========================================================================
+check_gadget_mouse_coords:
                     movem.l  d2/d3,-(sp)
                     move.w   d0,d2
                     move.w   d1,d3
+                    ; 8x8 pixels grid
                     lsr.w    #3,d2
                     lsr.w    #3,d3
                     move.l   (current_sequence_ptr,pc),d0
-                    beq.b    lbC020B3E
+                    beq.b    .error
                     move.l   d0,a0
                     move.l   (8,a0),d0
-                    beq.b    lbC020B3E
-lbC020B0C:
+                    beq.b    .error
+.loop:
                     move.l   d0,a0
                     move.w   (4,a0),d0
                     btst     #14,d0
-                    bne.b    lbC020B38
+                    bne.b    .no_hit
                     move.b   (6,a0),d0
                     cmp.b    d2,d0
-                    bhi.b    lbC020B38
+                    bhi.b    .no_hit
                     move.b   (7,a0),d1
                     cmp.b    d3,d1
-                    bhi.b    lbC020B38
+                    bhi.b    .no_hit
                     add.b    (8,a0),d0
                     cmp.b    d2,d0
-                    bls.b    lbC020B38
+                    bls.b    .no_hit
                     add.b    (9,a0),d1
                     cmp.b    d3,d1
-                    bhi.b    lbC020B50
-lbC020B38:
+                    bhi.b    .got_hit
+.no_hit:
+                    ; next coords struct
                     move.l   (a0),d0
-                    bne.b    lbC020B0C
-                    bra.b    lbC020B4E
-lbC020B3E:
+                    bne.b    .loop
+                    bra.b    .no_match
+.error:
                     move.w   #$F00,(_CUSTOM|COLOR00)
-lbC020B4E:
+.no_match:
                     sub.l    a0,a0
-lbC020B50:
+.got_hit:
                     movem.l  (sp)+,d2/d3
                     rts
+
+; ===========================================================================
 lbC020B56:
                     movem.l  a2/a3,-(sp)
                     move.l   (lbL0208D6,pc),a2
@@ -3787,9 +3835,9 @@ lbC020B56:
                     cmpa.l   a2,a3
                     beq.b    lbC020B76
                     move.l   a2,a0
-                    bsr      lbC020C14
+                    bsr      draw_box_around_gadget
                     move.l   a3,a0
-                    bsr      lbC020C14
+                    bsr      draw_box_around_gadget
                     move.l   a3,(lbL0208D6)
 lbC020B76:
                     movem.l  (sp)+,a2/a3
@@ -3862,13 +3910,15 @@ lbC020BF6:
                     bsr.b    lbC020B90
                     move.l   (sp)+,a0
                     bra      lbC020B90
-lbC020C14:
+
+; ===========================================================================
+draw_box_around_gadget:
                     movem.l  d2-d6/a2,-(sp)
                     move.l   a0,d0
-                    beq.b    lbC020C84
+                    beq.b    .no_draw
                     move.w   (4,a0),d0
                     btst     #13,d0
-                    bne.b    lbC020C84
+                    bne.b    .no_draw
                     lea      (main_screen),a2
                     moveq    #0,d3
                     moveq    #0,d4
@@ -3878,6 +3928,7 @@ lbC020C14:
                     move.l   d4,d6
                     add.b    (8,a0),d5
                     add.b    (9,a0),d6
+                    ; 8x8 pixels grid expanded
                     lsl.w    #3,d3
                     lsl.w    #3,d4
                     lsl.w    #3,d5
@@ -3906,9 +3957,11 @@ lbC020C14:
                     move.w   d4,d1
                     move.w   d6,d2
                     bsr      lbC020D84
-lbC020C84:
+.no_draw:
                     movem.l  (sp)+,d2-d6/a2
                     rts
+
+; ===========================================================================
 lbC020C8A:
                     andi.w   #$BFFF,(4,a0)
                     rts
@@ -5776,7 +5829,7 @@ go_play:
                     bsr      install_copper_int
                     bsr      lbC022A2C
                     lea      (lbW022318,pc),a0
-                    bsr      lbC02062A
+                    bsr      process_event
                     bsr      lbC022A2C
                     bsr      remove_copper_int
                     bsr      stop_audio_channels
@@ -6008,7 +6061,7 @@ receive_bytes_from_ser:
                     moveq    #0,d2
                     move.b   (lbB0228DF,pc),d2
                     moveq    #0,d3
-                    bsr      lbC0205C4
+                    bsr      store_event
                     bra.b    lbC0228D8
 lbC02286E:
                     cmpi.b   #$80,(lbW0228E2)
@@ -6023,7 +6076,7 @@ lbC02286E:
                     move.b   (lbB0228DE,pc),d1
                     moveq    #0,d2
                     moveq    #0,d3
-                    bsr      lbC0205C4
+                    bsr      store_event
                     bra.b    lbC0228D8
 lbC02289E:
                     cmpi.b   #$90,d0
@@ -7717,8 +7770,7 @@ lbC023CC6:
                     move.b   d0,(a1)+
                     move.b   d1,(a1)+
 lbW023CDA:
-                    dc.w     14
-                    dc.w     1
+                    dc.w     14,1
                     move.b   (a0)+,d0
                     add.b    d0,d1
                     asr.b    #1,d1
@@ -8458,7 +8510,7 @@ pattern_bitplane_offset:
                     dc.l     0
 lbC0246B8:
                     lea      (lbW0246C0,pc),a0
-                    bra      lbC020626
+                    bra      stop_audio_and_process_event
 lbW0246C0:
                     dc.w     1
                     dc.l     lbC0246D4
@@ -8491,7 +8543,7 @@ ask_yes_no_requester:
                     movem.l  d1-d7/a1-a6,-(sp)
                     jsr      (display_messagebox)
                     lea      (lbW02473A,pc),a0
-                    bsr      lbC020626
+                    bsr      stop_audio_and_process_event
                     jsr      (remove_messagebox)
                     movem.l  (sp)+,d1-d7/a1-a6
                     move.b   (lbB024768,pc),d0
@@ -10356,7 +10408,7 @@ lbC02652E:
                     bsr      lbC026618
                     bsr      lbC0267EA
                     lea      (lbW02654A,pc),a0
-                    jsr      (lbC020626)
+                    jsr      (stop_audio_and_process_event)
                     move.b   (lbB026825,pc),d1
                     move.b   (lbB026823,pc),d0
                     rts
@@ -10857,7 +10909,7 @@ lbC026ACE:
                     bsr      lbC026B42
                     bsr      lbC026F1C
                     lea      (lbW026B0C,pc),a0
-                    jsr      (lbC020626)
+                    jsr      (stop_audio_and_process_event)
                     bsr      lbC026E5A
                     move.l   (lbL027FDC,pc),d0
                     rts
@@ -10865,12 +10917,10 @@ lbC026ACE:
 ; ===========================================================================
 lbW026B0C:
                     dc.w     11
-                    dc.l     lbC026B1A
-                    dc.w     13
-                    dc.l     lbC026EF0
+                    dc.l     lbC0208FA
+                    dc.w     EVT_DISK_CHANGE
+                    dc.l     handle_disk_changed
                     dc.w     0
-lbC026B1A:
-                    jmp      (lbC0208FA)
 lbW026B22:
                     dc.w     1
                     dc.l     files_sel_text
@@ -11184,7 +11234,7 @@ lbC026ED4:
 lbC026EEC:
                     move.l   (sp)+,a2
                     rts
-lbC026EF0:
+handle_disk_changed:
                     bsr      lbC027308
                     bsr.b    lbC026EA0
                     bsr      lbC027102
@@ -12009,7 +12059,7 @@ format_disk:
 .no_memory_error:
                     clr.w    (current_formatted_track)
 .loop:
-                    move.w   #3,(verify_counter)
+                    move.w   #3,(verify_retry_counter)
 .reformat_track:
                     bsr      prepare_track_buffer
                     moveq    #'F',d0
@@ -12041,7 +12091,7 @@ format_disk:
                     EXEC     DoIO
                     tst.b    (trackdisk_device+IO_ERROR)
                     beq.b    .no_verify
-                    subq.w   #1,(verify_counter)
+                    subq.w   #1,(verify_retry_counter)
                     bne      .reformat_track
                     jsr      (display_trackdisk_error)
                     jsr      (error_verify_error)
@@ -12219,8 +12269,8 @@ clear_mode_flag:
 track_buffer:
                     dc.l     0
 current_formatted_track:
-                    dcb.w    3,0
-verify_counter:
+                    dc.w     0
+verify_retry_counter:
                     dc.w     0
 lbC027B40:
                     tst.b    d0
@@ -12678,7 +12728,7 @@ lbC02801A:
                     bsr      lbC028284
                     bsr      lbC0280AE
                     lea      (lbW028074,pc),a0
-                    jsr      (lbC020626)
+                    jsr      (stop_audio_and_process_event)
                     bsr      lbC028292
                     move.l   (current_cmd_ptr),d0
                     beq.b    lbC028066
@@ -12691,7 +12741,7 @@ lbC028066:
                     bra      lbC0280FE
 lbW028074:
                     dc.w     11
-                    dc.l     lbC0281F6
+                    dc.l     lbC0208FA
                     dc.w     11
                     dc.l     lbC0282B8
                     dc.w     1
@@ -12799,8 +12849,6 @@ lbC0281D2:
 lbC0281F2:
                     moveq    #ERROR,d0
                     rts
-lbC0281F6:
-                    jmp      (lbC0208FA)
 lbC0281FE:
                     tst.b    (lbB028218)
                     beq.b    lbC028210
@@ -13844,10 +13892,10 @@ lbC028F3E:
                     jsr      (process_commands_sequence)
                     bsr      lbC029026
                     lea      (lbW028F60,pc),a0
-                    jmp      (lbC020626)
+                    jmp      (stop_audio_and_process_event)
 lbW028F60:
                     dc.w     11
-                    dc.l     lbC028F7A
+                    dc.l     lbC0208FA
                     dc.w     1
                     dc.l     lbC02814E
                     dc.w     2
@@ -13855,8 +13903,6 @@ lbW028F60:
                     dc.w     14
                     dc.l     lbC029E1A
                     dc.w     0
-lbC028F7A:
-                    jmp      (lbC0208FA)
 lbC028F82:
                     jsr      (lbC02001C)
                     st       (quit_flag)
@@ -13885,18 +13931,19 @@ ascii_MSG15:
                     even
 lbW028FDC:
                     dc.l     lbW028FEE
-                    dc.w     1,$1C00,$601
-                    dc.l     lbC02903A
-                    dc.l     lbC02904C
+                    dc.w     %1
+                    dc.b     28,0,6,1
+                    dc.l     lbC02903A,lbC02904C
 lbW028FEE:
                     dc.l     lbW029000
-                    dc.w     $1001,$1C01,$301
-                    dc.l     lbC02905E
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     28,1,3,1
+                    dc.l     lbC02905E,0
 lbW029000:
-                    dc.w     0,0,1,$2001,$201
-                    dc.l     lbC028F90
                     dc.l     0
+                    dc.w     %1
+                    dc.b     32,1,2,1
+                    dc.l     lbC028F90,0
 lbW029012:
                     dc.w     10,0
                     dc.l     lbW02901C
@@ -13997,11 +14044,11 @@ lbC02912A:
                     jsr      (process_commands_sequence)
                     bsr      lbC029762
                     lea      (lbW029148,pc),a0
-                    jsr      (lbC020626)
+                    jsr      (stop_audio_and_process_event)
                     bra      lbC0298CC
 lbW029148:
                     dc.w     11
-                    dc.l     lbC029168
+                    dc.l     lbC0208FA
                     dc.w     11
                     dc.l     lbC0297AC
                     dc.w     1
@@ -14011,8 +14058,6 @@ lbW029148:
                     dc.w     14
                     dc.l     lbC029E1A
                     dc.w     0
-lbC029168:
-                    jmp      (lbC0208FA)
 lbC029170:
                     bsr      lbC0298CC
                     st       (quit_flag)
@@ -14035,21 +14080,22 @@ ascii_MSG16:
                     dc.b     CMD_END
                     even
 lbL0291B8:
-                    dc.l     lbL0291CA,$11C00
-                    dc.w     $601
-                    dc.l     lbC029202
-                    dc.l     0
+                    dc.l     lbL0291CA
+                    dc.w     %1
+                    dc.b     28,0,6,1
+                    dc.l     lbC029202,0
 lbL0291CA:
-                    dc.l     lbW0291DC,$10011C01
-                    dc.w     $301
-                    dc.l     lbC02920C
-                    dc.l     0
+                    dc.l     lbW0291DC
+                    dc.w     %1000000000001
+                    dc.b     28,1,3,1
+                    dc.l     lbC02920C,0
 lbW0291DC:
-                    dc.w     0,0,1,$2001,$201
-                    dc.l     lbC029214
                     dc.l     0
+                    dc.w     %1
+                    dc.b     32,1,2,1
+                    dc.l     lbC029214,0
 lbW0291EE:
-                    dc.w     $A,0
+                    dc.w     10,0
                     dc.l     lbW0291F8
                     dc.w     0
 lbW0291F8:
@@ -14204,10 +14250,10 @@ lbC029372:
                     jsr      (process_commands_sequence)
                     bsr      lbC029488
                     lea      (lbW029394,pc),a0
-                    jmp      (lbC020626)
+                    jmp      (stop_audio_and_process_event)
 lbW029394:
                     dc.w     11
-                    dc.l     lbC0293AE
+                    dc.l     lbC0208FA
                     dc.w     1
                     dc.l     lbC02814E
                     dc.w     2
@@ -14215,8 +14261,6 @@ lbW029394:
                     dc.w     14
                     dc.l     lbC029E1A
                     dc.w     0
-lbC0293AE:
-                    jmp      (lbC0208FA)
 lbW0293B6:
                     dc.w     1
                     dc.l     ascii_MSG17
@@ -14235,27 +14279,27 @@ ascii_MSG17:
                     dc.b     CMD_END
                     even
 lbL0293F0:
-                    dc.l     lbL029402,$12200
-                    dc.w     $301
-                    dc.l     lbC029492
-                    dc.l     lbC0294AA
+                    dc.l     lbL029402
+                    dc.w     %1
+                    dc.b     34,0,3,1
+                    dc.l     lbC029492,lbC0294AA
 lbL029402:
-                    dc.l     lbL029414,$12900
-                    dc.w     $301
-                    dc.l     lbC0294EA
-                    dc.l     lbC029502
+                    dc.l     lbL029414
+                    dc.w     %1
+                    dc.b     41,0,3,1
+                    dc.l     lbC0294EA,lbC029502
 lbL029414:
-                    dc.l     lbL029426,$10012201
-                    dc.w     $501
-                    dc.l     lbC029472
-                    dc.l     0
+                    dc.l     lbL029426
+                    dc.w     %1000000000001
+                    dc.b     34,1,5,1
+                    dc.l     lbC029472,0
 lbL029426:
-                    dc.l     0,$12801
-                    dc.w     $401
-                    dc.l     lbC02945A
                     dc.l     0
+                    dc.w     %1
+                    dc.b     40,1,4,1
+                    dc.l     lbC02945A,0
 lbW029438:
-                    dc.w     $A,0
+                    dc.w     10,0
                     dc.l     lbW029442
                     dc.w     0
 lbW029442:
@@ -14729,10 +14773,10 @@ lbC0299AA:
                     lea      (lbW0299E2,pc),a0
                     jsr      (process_commands_sequence)
                     lea      (lbW0299C0,pc),a0
-                    jmp      (lbC020626)
+                    jmp      (stop_audio_and_process_event)
 lbW0299C0:
                     dc.w     11
-                    dc.l     lbC0299DA
+                    dc.l     lbC0208FA
                     dc.w     1
                     dc.l     lbC02814E
                     dc.w     2
@@ -14740,8 +14784,6 @@ lbW0299C0:
                     dc.w     14
                     dc.l     lbC029E1A
                     dc.w     0
-lbC0299DA:
-                    jmp      (lbC0208FA)
 lbW0299E2:
                     dc.w     1
                     dc.l     ascii_MSG19
@@ -14760,22 +14802,22 @@ ascii_MSG19:
                     dc.b     CMD_END
                     even
 lbL029A1E:
-                    dc.l     lbL029A30,$12C00
-                    dc.w     $601
-                    dc.l     lbC029A68
-                    dc.l     0
+                    dc.l     lbL029A30
+                    dc.w     %1
+                    dc.b     44,0,6,1
+                    dc.l     lbC029A68,0
 lbL029A30:
-                    dc.l     lbL029A42,$10012C01
-                    dc.w     $301
-                    dc.l     lbC029A82
-                    dc.l     0
+                    dc.l     lbL029A42
+                    dc.w     %1000000000001
+                    dc.b     44,1,3,1
+                    dc.l     lbC029A82,0
 lbL029A42:
-                    dc.l     0,$13001
-                    dc.w     $201
-                    dc.l     lbC029A76
                     dc.l     0
+                    dc.w     %1
+                    dc.b     48,1,2,1
+                    dc.l     lbC029A76,0
 lbW029A54:
-                    dc.w     $A,0
+                    dc.w     10,0
                     dc.l     lbW029A5E
                     dc.w     0
 lbW029A5E:
@@ -15241,7 +15283,7 @@ lbC02A772:
                     jsr      (process_commands_sequence)
                     bsr      lbC02A9E2
                     lea      (lbW02A7AA,pc),a0
-                    jsr      (lbC020626)
+                    jsr      (stop_audio_and_process_event)
                     bsr      lbC02B12E
                     move.l   (current_cmd_ptr),d0
                     beq.b    .no_command
@@ -15254,10 +15296,8 @@ lbC02A772:
                     rts
 lbW02A7AA:
                     dc.w     11
-                    dc.l     lbC02A7B2
+                    dc.l     lbC0208FA
                     dc.w     0
-lbC02A7B2:
-                    jmp      (lbC0208FA)
 lbW02A7BA:
                     dc.w     1
                     dc.l     prefs_text
@@ -16694,7 +16734,7 @@ lbC02B6CC:
                     jsr      (process_commands_sequence)
                     bsr      lbC02C054
                     lea      (lbW02B706,pc),a0
-                    jsr      (lbC020626)
+                    jsr      (stop_audio_and_process_event)
                     move.l   (current_cmd_ptr),d0
                     beq.b    lbC02B6F2
                     move.l   d0,a0
@@ -18647,70 +18687,64 @@ open_input_device:
                     movem.l  d6/d7/a3/a5/a6,-(sp)
                     move.l   d0,d7
                     move.l   a0,a5
-                    moveq    #0,d6
+                    moveq    #ERROR,d6
                     moveq    #0,d0
                     sub.l    a0,a0
                     jsr      (lbC02D1E4,pc)
                     move.l   d0,a3
                     move.l   a3,d0
-                    beq.b    lbC02D00A
+                    beq.b    .error_port
                     move.l   a3,a0
-                    moveq    #48,d0
-                    jsr      (lbC02D274,pc)
+                    moveq    #IOSTD_SIZE,d0
+                    jsr      (alloc_standard_io_request,pc)
                     move.l   d0,(20,sp)
-                    beq.b    lbC02D004
+                    beq.b    .error_memory
                     move.l   d0,a1
-                    lea      (inputdevice_MSG,pc),a0
+                    lea      (input_device_name,pc),a0
                     moveq    #0,d0
                     move.l   d0,d1
                     EXEC     OpenDevice
                     tst.b    d0
-                    bne.b    lbC02CFFC
+                    bne.b    .error_device
                     move.l   d7,d0
                     move.l   (20,sp),a0
-                    move.w   d0,(28,a0)
-                    move.l   a5,(40,a0)
+                    move.w   d0,(IO_COMMAND,a0)
+                    move.l   a5,(IO_DATA,a0)
                     move.l   a0,a1
                     EXEC     DoIO
                     tst.b    d0
-                    bne.b    lbC02CFF4
-                    moveq    #1,d6
-lbC02CFF4:
+                    bne.b    .error_command
+                    moveq    #OK,d6
+.error_command:
                     move.l   (20,sp),a1
                     EXEC     CloseDevice
-lbC02CFFC:
+.error_device:
                     move.l   (20,sp),a0
                     jsr      (lbC02D1B4,pc)
-lbC02D004:
+.error_memory:
                     move.l   a3,a0
                     jsr      (lbC02D170,pc)
-lbC02D00A:
+.error_port:
                     move.w   d6,d0
                     movem.l  (sp)+,d6/d7/a3/a5/a6
                     addq.w   #4,sp
                     rts
-inputdevice_MSG:
+input_device_name:
                     dc.b     'input.device',0
                     even
-lbC02D022:
+
+; ===========================================================================
+install_input_handler:
                     movem.l  a4/a5,-(sp)
-                    move.l   a0,a5
-                    moveq    #9,d0
+                    moveq    #IND_ADDHANDLER,d0
                     bsr      open_input_device
-                    tst.w    d0
-                    beq.b    lbC02D03E
-                    move.l   a5,d0
-                    bra.b    lbC02D040
-lbC02D03E:
-                    moveq    #0,d0
-lbC02D040:
                     movem.l  (sp)+,a4/a5
                     rts
-lbC02D046:
+
+; ===========================================================================
+remove_input_handler:
                     movem.l  a4/a5,-(sp)
-                    move.l   a0,a5
-                    move.l   a5,a0
-                    moveq    #10,d0
+                    moveq    #IND_REMHANDLER,d0
                     bsr      open_input_device
                     movem.l  (sp)+,a4/a5
                     rts
@@ -18892,28 +18926,30 @@ lbC02D264:
 lbC02D266:
                     movem.l  (sp)+,d6/d7/a3/a5/a6
                     rts
-lbC02D274:
+
+; ===========================================================================
+alloc_standard_io_request:
                     movem.l  d7/a3/a5/a6,-(sp)
                     move.l   d0,d7
                     move.l   a0,a5
                     move.l   a5,d0
-                    bne.b    lbC02D284
+                    bne.b    .ok_alloc
                     moveq    #0,d0
-                    bra.b    lbC02D2AE
-lbC02D284:
+                    bra.b    .error
+.ok_alloc:
                     move.l   d7,d0
                     move.l   #$10001,d1
                     EXEC     AllocMem
                     move.l   d0,a3
                     tst.l    d0
-                    beq.b    lbC02D2AC
-                    move.b   #5,(8,a3)
-                    clr.b    (9,a3)
-                    move.l   a5,(14,a3)
-                    move.w   d7,(18,a3)
-lbC02D2AC:
+                    beq.b    .error_memory
+                    move.b   #NT_MESSAGE,(LN_TYPE,a3)
+                    clr.b    (LN_PRI,a3)
+                    move.l   a5,(MN_REPLYPORT,a3)
+                    move.w   d7,(MN_LENGTH,a3)
+.error_memory:
                     move.l   a3,d0
-lbC02D2AE:
+.error:
                     movem.l  (sp)+,d7/a3/a5/a6
                     rts
 
@@ -19111,283 +19147,284 @@ WB_MSG:
                     even
 lbB017594:
                     dc.l     lbB0175A6
-                    dc.b     0,1,1,1,4,1
-                    dc.l     lbC020DCE
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     1,1,4,1
+                    dc.l     lbC020DCE,0
 lbB0175A6:
                     dc.l     lbB0175B8
-                    dc.b     0,1,1,2,4,1
-                    dc.l     load_song
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     1,2,4,1
+                    dc.l     load_song,0
 lbB0175B8:
                     dc.l     lbB0175CA
-                    dc.b     0,1,1,3,4,1
-                    dc.l     lbC02145E
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     1,3,4,1
+                    dc.l     lbC02145E,0
 lbB0175CA:
                     dc.l     lbB0175DC
-                    dc.b     0,1,1,4,4,1
-                    dc.l     lbC01E0AA
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     1,4,4,1
+                    dc.l     lbC01E0AA,0
 lbB0175DC:
                     dc.l     lbB0175EE
-                    dc.b     0,1,1,5,4,1
-                    dc.l     lbC0245D0
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     1,5,4,1
+                    dc.l     lbC0245D0,0
 lbB0175EE:
                     dc.l     lbB017600
-                    dc.b     0,1,1,6,4,1
-                    dc.l     go_to_cli_workbench
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     1,6,4,1
+                    dc.l     go_to_cli_workbench,0
 lbB017600:
                     dc.l     lbB017612
-                    dc.b     0,1,6,1,9,1
-                    dc.l     lbC022028
-                    dc.l     lbC022044
+                    dc.w     %1
+                    dc.b     6,1,9,1
+                    dc.l     lbC022028,lbC022044
 lbB017612:
                     dc.l     lbB017624
-                    dc.b     0,1,6,2,9,1
-                    dc.l     lbC022058
-                    dc.l     lbC02207C
+                    dc.w     %1
+                    dc.b     6,2,9,1
+                    dc.l     lbC022058,lbC02207C
 lbB017624:
                     dc.l     lbB017636
-                    dc.b     0,1,6,3,9,1
-                    dc.l     lbC0220CE
-                    dc.l     lbC022098
+                    dc.w     %1
+                    dc.b     6,3,9,1
+                    dc.l     lbC0220CE,lbC022098
 lbB017636:
                     dc.l     lbB017648
-                    dc.b     0,1,6,4,4,1
-                    dc.l     lbC0220E4
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     6,4,4,1
+                    dc.l     lbC0220E4,0
 lbB017648:
                     dc.l     lbB01765A
-                    dc.b     0,1,11,4,4,1
-                    dc.l     lbC02210C
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     11,4,4,1
+                    dc.l     lbC02210C,0
 lbB01765A:
                     dc.l     lbB01766C
-                    dc.b     0,1,6,5,9,1
-                    dc.l     lbC022000
-                    dc.l     lbC022014
+                    dc.w     %1
+                    dc.b     6,5,9,1
+                    dc.l     lbC022000,lbC022014
 lbB01766C:
                     dc.l     lbB01767E
-                    dc.b     0,1,6,6,9,1
-                    dc.l     lbC022168
-                    dc.l     lbC022136
+                    dc.w     %1
+                    dc.b     6,6,9,1
+                    dc.l     lbC022168,lbC022136
 lbB01767E:
                     dc.l     lbB017690
-                    dc.b     0,1,16,1,9,1
-                    dc.l     play_song
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     16,1,9,1
+                    dc.l     play_song,0
 lbB017690:
                     dc.l     lbB0176A2
-                    dc.b     0,1,16,2,9,1
-                    dc.l     play_pattern
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     16,2,9,1
+                    dc.l     play_pattern,0
 lbB0176A2:
                     dc.l     lbB0176B4
-                    dc.b     16,1,16,3,9,1
-                    dc.l     lbC01F96C
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     16,3,9,1
+                    dc.l     lbC01F96C,0
 lbB0176B4:
                     dc.l     lbB0176C6
-                    dc.b     0,1,16,4,9,1
-                    dc.l     lbC01FA4A
-                    dc.l     lbC01FA4E
+                    dc.w     %1
+                    dc.b     16,4,9,1
+                    dc.l     lbC01FA4A,lbC01FA4E
 lbB0176C6:
                     dc.l     lbB0176D8
-                    dc.b     0,1,16,5,9,1
-                    dc.l     lbC01FBBC
-                    dc.l     lbC01FBB8
+                    dc.w     %1
+                    dc.b     16,5,9,1
+                    dc.l     lbC01FBBC,lbC01FBB8
 lbB0176D8:
                     dc.l     lbB0176EA
-                    dc.b     0,1,16,6,9,1
-                    dc.l     lbC022170
-                    dc.l     lbC02216C
+                    dc.w     %1
+                    dc.b     16,6,9,1
+                    dc.l     lbC022170,lbC02216C
 lbB0176EA:
                     dc.l     lbB0176FC
-                    dc.b     16,1,26,1,13,1
-                    dc.l     lbC01F9BC
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     26,1,13,1
+                    dc.l     lbC01F9BC,0
 lbB0176FC:
                     dc.l     lbB01770E
-                    dc.b     16,1,26,2,4,1
-                    dc.l     lbC01F51C
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     26,2,4,1
+                    dc.l     lbC01F51C,0
 lbB01770E:
                     dc.l     lbB017720
-                    dc.b     16,1,31,2,3,1
-                    dc.l     lbC01F532
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     31,2,3,1
+                    dc.l     lbC01F532,0
 lbB017720:
                     dc.l     lbB017732
-                    dc.b     16,1,35,2,4,1
-                    dc.l     lbC01FA06
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     35,2,4,1
+                    dc.l     lbC01FA06,0
 lbB017732:
                     dc.l     lbB017744
-                    dc.b     16,1,26,3,6,1
-                    dc.l     lbC01F5C8
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     26,3,6,1
+                    dc.l     lbC01F5C8,0
 lbB017744:
                     dc.l     lbB017756
-                    dc.b     16,1,33,3,6,1
-                    dc.l     lbC01F5D2
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     33,3,6,1
+                    dc.l     lbC01F5D2,0
 lbB017756:
                     dc.l     lbB017768
-                    dc.b     16,1,26,4,6,1
-                    dc.l     lbC01F790
-                    dc.l     lbC01F788
+                    dc.w     %1000000000001
+                    dc.b     26,4,6,1
+                    dc.l     lbC01F790,lbC01F788
 lbB017768:
                     dc.l     lbB01777A
-                    dc.b     16,1,33,4,6,1
-                    dc.l     lbC01F7BA
-                    dc.l     lbC01F7B2
+                    dc.w     %1000000000001
+                    dc.b     33,4,6,1
+                    dc.l     lbC01F7BA,lbC01F7B2
 lbB01777A:
                     dc.l     lbB01778C
-                    dc.b     16,1,26,5,6,1
-                    dc.l     lbC01F7DE
-                    dc.l     lbC01F7D6
+                    dc.w     %1000000000001
+                    dc.b     26,5,6,1
+                    dc.l     lbC01F7DE,lbC01F7D6
 lbB01778C:
                     dc.l     lbB01779E
-                    dc.b     16,1,33,5,6,1
-                    dc.l     lbC01F80A
-                    dc.l     lbC01F802
+                    dc.w     %1000000000001
+                    dc.b     33,5,6,1
+                    dc.l     lbC01F80A,lbC01F802
 lbB01779E:
                     dc.l     lbB0177B0
-                    dc.b     0,1,26,6,6,1
-                    dc.l     lbC01F88E
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     26,6,6,1
+                    dc.l     lbC01F88E,0
 lbB0177B0:
                     dc.l     lbB0177C2
-                    dc.b     0,1,33,6,6,1
-                    dc.l     lbC01F8E8
-                    dc.l     lbC01E0B6
+                    dc.w     %1
+                    dc.b     33,6,6,1
+                    dc.l     lbC01F8E8,lbC01E0B6
 lbB0177C2:
                     dc.l     lbB0177D4
-                    dc.b     0,1,40,1,26,1
-                    dc.l     lbC021E38
-                    dc.l     lbC021E54
+                    dc.w     %1
+                    dc.b     40,1,26,1
+                    dc.l     lbC021E38,lbC021E54
 lbB0177D4:
                     dc.l     lbB0177E6
-                    dc.b     0,1,40,5,8,1
-                    dc.l     lbC021E6C
-                    dc.l     lbC021E88
+                    dc.w     %1
+                    dc.b     40,5,8,1
+                    dc.l     lbC021E6C,lbC021E88
 lbB0177E6:
                     dc.l     lbB0177F8
-                    dc.b     0,1,40,6,7,1
-                    dc.l     lbC021EA2
-                    dc.l     lbC021EF4
+                    dc.w     %1
+                    dc.b     40,6,7,1
+                    dc.l     lbC021EA2,lbC021EF4
 lbB0177F8:
                     dc.l     lbB01780A
-                    dc.b     0,1,54,2,4,1
+                    dc.w     %1
+                    dc.b     54,2,4,1
                     dc.l     lbC02191E,0
 lbB01780A:
                     dc.l     lbB01781C
-                    dc.b     0,1,54,3,4,1
-                    dc.l     lbC021C72
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     54,3,4,1
+                    dc.l     lbC021C72,0
 lbB01781C:
                     dc.l     lbB01782E
-                    dc.b     0,1,54,4,4,1
-                    dc.l     lbC01E09E
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     54,4,4,1
+                    dc.l     lbC01E09E,0
 lbB01782E:
                     dc.l     lbB017840
-                    dc.b     0,1,54,5,4,1
-                    dc.l     lbC0216DC
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     54,5,4,1
+                    dc.l     lbC0216DC,0
 lbB017840:
                     dc.l     lbB017852
-                    dc.b     0,1,54,6,4,1
-                    dc.l     lbC02189C
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     54,6,4,1
+                    dc.l     lbC02189C,0
 lbB017852:
                     dc.l     lbB017864
-                    dc.b     0,1,60,2,5,1
-                    dc.l     lbC02168E
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     60,2,5,1
+                    dc.l     lbC02168E,0
 lbB017864:
                     dc.l     lbB017876
-                    dc.b     0,1,60,3,5,2
-                    dc.l     lbC02163C
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     60,3,5,2
+                    dc.l     lbC02163C,0
 lbB017876:
                     dc.l     lbB017888
-                    dc.b     0,1,60,5,5,1
-                    dc.l     lbC02177E
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     60,5,5,1
+                    dc.l     lbC02177E,0
 lbB017888:
                     dc.l     lbB01789A
-                    dc.b     0,1,60,6,5,1
-                    dc.l     lbC01E096
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     60,6,5,1
+                    dc.l     lbC01E096,0
 lbB01789A:
                     dc.l     lbL0178AC
-                    dc.b     16,1,67,5,3,1
-                    dc.l     increase_replay_type
-                    dc.l     decrease_replay_type
+                    dc.w     %1000000000001
+                    dc.b     67,5,3,1
+                    dc.l     increase_replay_type,decrease_replay_type
 lbL0178AC:
                     dc.l     lbB0178BE
-                    dc.b     16,1,71,5,1,2
-                    dc.l     lbC022202
-                    dc.l     lbC02220C
+                    dc.w     %1000000000001
+                    dc.b     71,5,1,2
+                    dc.l     lbC022202,lbC02220C
 lbB0178BE:
                     dc.l     lbB0178D0
-                    dc.b     16,1,72,5,1,2
-                    dc.l     lbC022220
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     72,5,1,2
+                    dc.l     lbC022220,0
 lbB0178D0:
                     dc.l     lbB0178E2
-                    dc.b     16,1,73,5,1,2
-                    dc.l     lbC022224
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     73,5,1,2
+                    dc.l     lbC022224,0
 lbB0178E2:
                     dc.l     lbB0178F4
-                    dc.b     16,1,74,5,1,2
-                    dc.l     lbC022228
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     74,5,1,2
+                    dc.l     lbC022228,0
 lbB0178F4:
                     dc.l     lbB017906
-                    dc.b     16,1,75,5,1,2
-                    dc.l     lbC02222C
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     75,5,1,2
+                    dc.l     lbC02222C,0
 lbB017906:
                     dc.l     lbB017918
-                    dc.b     16,1,76,5,1,2
-                    dc.l     lbC022230
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     76,5,1,2
+                    dc.l     lbC022230,0
 lbB017918:
                     dc.l     lbB01792A
-                    dc.b     16,1,77,5,1,2
-                    dc.l     lbC022234
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     77,5,1,2
+                    dc.l     lbC022234,0
 lbB01792A:
                     dc.l     lbB01793C
-                    dc.b     16,1,78,5,1,2
-                    dc.l     lbC022238
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     78,5,1,2
+                    dc.l     lbC022238,0
 lbB01793C:
                     dc.l     lbB01794E
-                    dc.b     16,1,79,5,1,2
-                    dc.l     lbC02223C
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     79,5,1,2
+                    dc.l     lbC02223C,0
 lbB01794E:
                     dc.l     lbB017960
-                    dc.b     16,1,67,1,13,2
-                    dc.l     lbC01FE26
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     67,1,13,2
+                    dc.l     lbC01FE26,0
 lbB017960:
                     dc.l     lbL017972
-                    dc.b     16,1,67,3,13,1
-                    dc.l     lbC01FE86
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     67,3,13,1
+                    dc.l     lbC01FE86,0
 lbL017972:
                     dc.l     0
-                    dc.b     32,1,0,7,80,24
-                    dc.l     lbC01E9DC
-                    dc.l     0
+                    dc.w     %10000000000001
+                    dc.b     0,7,80,24
+                    dc.l     lbC01E9DC,0
 lbW017984:
                     dc.w     10,0
                     dc.l     lbW0179BE
@@ -19608,9 +19645,11 @@ effects_help_text:
                     dc.b     CMD_TEXT,41,30,'7x:Vol Up   Once (VO)',0
                     dc.b     CMD_END
                     even
-lbW018516:
-                    dc.w     0,0,0,0,639,0,0,0,0
-                    dc.l     lbC01E37C
+input_device_int:
+                    dc.l     0
+                    dc.l     0
+                    dc.b     NT_INTERRUPT,127
+                    dc.l     0,0,input_device_handler
 fullscreen_copperlist_ntsc_struct:
                     dc.l     copperlist
                     dc.l     -1,main_menu_copper_jump
@@ -19704,78 +19743,79 @@ files_sel_text:
                     even
 lbW018706:
                     dc.l     lbW018718
-                    dc.w     $2801,$110,$260E
-                    dc.l     lbC026D32
-                    dc.l     lbC026DA6
+                    dc.w     %10100000000001
+                    dc.b     1,16,38,14
+                    dc.l     lbC026D32,lbC026DA6
 lbW018718:
                     dc.l     lbW01872A
-                    dc.w     $2801,$2910,$260E
-                    dc.l     lbC026D32
-                    dc.l     lbC026D64
+                    dc.w     %10100000000001
+                    dc.b     41,16,38,14
+                    dc.l     lbC026D32,lbC026D64
 lbW01872A:
                     dc.l     lbW01873C
-                    dc.w     $1001,$20A,$2401
-                    dc.l     lbC027674
-                    dc.w     0,0
+                    dc.w     %1000000000001
+                    dc.b     2,10,36,1
+                    dc.l     lbC027674,0
 lbW01873C:
                     dc.l     lbW01874E
-                    dc.w     $1001,$20B,$2401
-                    dc.l     lbC027698
-                    dc.w     0,0
+                    dc.w     %1000000000001
+                    dc.b     2,11,36,1
+                    dc.l     lbC027698,0
 lbW01874E:
                     dc.l     lbW018760
-                    dc.w     $1001,$20C,$601
-                    dc.l     lbC026BBC
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     2,12,6,1
+                    dc.l     lbC026BBC,0
 lbW018760:
                     dc.l     lbW018772
-                    dc.w     $1001,$90C,$601
-                    dc.l     lbC026F18
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     9,12,6,1
+                    dc.l     lbC026F18,0
 lbW018772:
                     dc.l     lbW018784
-                    dc.w     $1001,$100C,$601
-                    dc.l     lbC0276BC
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     16,12,6,1
+                    dc.l     lbC0276BC,0
 lbW018784:
                     dc.l     lbW018796
-                    dc.w     $1001,$170C,$601
-                    dc.l     lbC0276DC
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     23,12,6,1
+                    dc.l     lbC0276DC,0
 lbW018796:
                     dc.l     lbW0187A8
-                    dc.w     $1001,$1E0C,$601
-                    dc.l     lbC026BAC
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     30,12,6,1
+                    dc.l     lbC026BAC,0
 lbW0187A8:
                     dc.l     lbW0187BA
-                    dc.w     $1001,$400C,$701
-                    dc.l     lbC027CF4
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     64,12,7,1
+                    dc.l     lbC027CF4,0
 lbW0187BA:
                     dc.l     lbW0187CC
-                    dc.w     $1001,$480C,$601
-                    dc.l     lbC027DDA
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     72,12,6,1
+                    dc.l     lbC027DDA,0
 lbW0187CC:
                     dc.l     lbW0187DE
-                    dc.b     0,1,42,10,11,1
-                    dc.l     increase_trackdisk_unit_number
-                    dc.l     decrease_trackdisk_unit_number
+                    dc.w     %1
+                    dc.b     42,10,11,1
+                    dc.l     increase_trackdisk_unit_number,decrease_trackdisk_unit_number
 lbW0187DE:
                     dc.l     lbW0187F0
-                    dc.w     $1001,$2A0B,$B01
-                    dc.l     switch_verify_mode
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     42,11,11,1
+                    dc.l     switch_verify_mode,0
 lbW0187F0:
                     dc.l     lbW018802
-                    dc.w     $1001,$2A0C,$B01
-                    dc.l     switch_clear_mode
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     42,12,11,1
+                    dc.l     switch_clear_mode,0
 lbW018802:
-                    dc.w     0,0,$1001,$360A,$603
-                    dc.l     format_disk
                     dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     54,10,6,3
+                    dc.l     format_disk,0
 lbW018814:
                     dc.w     10,0
                     dc.l     lbW01881E
@@ -19808,134 +19848,134 @@ samples_ed_text:
                     even
 lbW01892C:
                     dc.l     lbW01893E
-                    dc.w     $1001,$1A01,$D01
-                    dc.l     lbC01F9BC
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     26,1,13,1
+                    dc.l     lbC01F9BC,0
 lbW01893E:
                     dc.l     lbW018950
-                    dc.w     1,$2801,$1A01
-                    dc.l     lbC028E0E
-                    dc.l     lbC028E1C
+                    dc.w     %1
+                    dc.b     40,1,26,1
+                    dc.l     lbC028E0E,lbC028E1C
 lbW018950:
                     dc.l     lbW018962
-                    dc.w     $1001,$2806,$701
-                    dc.l     lbC028E2A
-                    dc.l     lbC028E38
+                    dc.w     %1000000000001
+                    dc.b     40,6,7,1
+                    dc.l     lbC028E2A,lbC028E38
 lbW018962:
                     dc.l     lbW018974
-                    dc.w     $1001,$3602,$401
-                    dc.l     lbC028E50
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     54,2,4,1
+                    dc.l     lbC028E50,0
 lbW018974:
                     dc.l     lbW018986
-                    dc.w     $1001,$3603,$401
-                    dc.l     lbC028E58
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     54,3,4,1
+                    dc.l     lbC028E58,0
 lbW018986:
                     dc.l     lbW018998
-                    dc.w     $1001,$3605,$401
-                    dc.l     lbC028E8E
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     54,5,4,1
+                    dc.l     lbC028E8E,0
 lbW018998:
                     dc.l     lbW0189AA
-                    dc.w     $1001,$3606,$401
-                    dc.l     lbC028E60
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     54,6,4,1
+                    dc.l     lbC028E60,0
 lbW0189AA:
                     dc.l     lbW0189BC
-                    dc.w     $1001,$3C02,$501
-                    dc.l     lbC028E6A
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     60,2,5,1
+                    dc.l     lbC028E6A,0
 lbW0189BC:
                     dc.l     lbW0189CE
-                    dc.w     $1001,$3C03,$502
-                    dc.l     lbC028E74
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     60,3,5,2
+                    dc.l     lbC028E74,0
 lbW0189CE:
                     dc.l     lbW0189E0
-                    dc.w     $1001,$3C05,$501
-                    dc.l     lbC028E7E
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     60,5,5,1
+                    dc.l     lbC028E7E,0
 lbW0189E0:
                     dc.l     lbW0189F2
-                    dc.w     $1001,$3C06,$501
-                    dc.l     lbC028E88
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     60,6,5,1
+                    dc.l     lbC028E88,0
 lbW0189F2:
                     dc.l     lbW018A04
-                    dc.w     $1001,$10A,$2201
-                    dc.l     lbC02852A
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     1,10,34,1
+                    dc.l     lbC02852A,0
 lbW018A04:
                     dc.l     lbW018A16
-                    dc.w     $1001,$100,$401
-                    dc.l     lbC0281FE
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     1,0,4,1
+                    dc.l     lbC0281FE,0
 lbW018A16:
                     dc.l     lbW018A28
-                    dc.w     $1001,$101,$401
-                    dc.l     lbC02855C
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     1,1,4,1
+                    dc.l     lbC02855C,0
 lbW018A28:
                     dc.l     lbW018A3A
-                    dc.w     $1001,$700,$402
-                    dc.l     lbC02860A
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     7,0,4,2
+                    dc.l     lbC02860A,0
 lbW018A3A:
                     dc.l     lbW018A4C
-                    dc.w     $1001,$D00,$401
-                    dc.l     lbC028614
-                    dc.l     lbC02862C
+                    dc.w     %1000000000001
+                    dc.b     13,0,4,1
+                    dc.l     lbC028614,lbC02862C
 lbW018A4C:
                     dc.l     lbW018A5E
-                    dc.w     $1001,$D01,$401
-                    dc.l     lbC028692
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     13,1,4,1
+                    dc.l     lbC028692,0
 lbW018A5E:
                     dc.l     lbW018A70
-                    dc.w     $1001,$1300,$701
-                    dc.l     lbC0286F4
-                    dc.l     lbC02879C
+                    dc.w     %1000000000001
+                    dc.b     19,0,7,1
+                    dc.l     lbC0286F4,lbC02879C
 lbW018A70:
                     dc.l     lbW018A82
-                    dc.w     $1001,$1301,$701
-                    dc.l     lbC028868
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     19,1,7,1
+                    dc.l     lbC028868,0
 lbW018A82:
                     dc.l     lbW018A94
-                    dc.w     $1001,$1C00,$602
-                    dc.l     lbC028F10
-                    dc.l     lbC0290FC
+                    dc.w     %1000000000001
+                    dc.b     28,0,6,2
+                    dc.l     lbC028F10,lbC0290FC
 lbW018A94:
                     dc.l     lbW018AA6
-                    dc.w     $1001,$2400,$602
-                    dc.l     lbC029330
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     36,0,6,2
+                    dc.l     lbC029330,0
 lbW018AA6:
                     dc.l     lbL018AB8
-                    dc.w     $1001,$2C00,$602
-                    dc.l     lbC02997C
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     44,0,6,2
+                    dc.l     lbC02997C,0
 lbL018AB8:
-                    dc.l     lbL018ACA,$10013A00
-                    dc.w     $701
-                    dc.l     lbC029AE6
-                    dc.l     0
+                    dc.l     lbL018ACA
+                    dc.w     %1000000000001
+                    dc.b     58,0,7,1
+                    dc.l     lbC029AE6,0
 lbL018ACA:
-                    dc.l     lbL018ADC,$10013A01
-                    dc.w     $701
-                    dc.l     lbC029B5A
-                    dc.l     0
+                    dc.l     lbL018ADC
+                    dc.w     %1000000000001
+                    dc.b     58,1,7,1
+                    dc.l     lbC029B5A,0
 lbL018ADC:
-                    dc.l     lbL018AEE,$14300
-                    dc.w     $901
-                    dc.l     lbC029DF2
-                    dc.l     lbC029DE0
+                    dc.l     lbL018AEE
+                    dc.w     %1
+                    dc.b     67,0,9,1
+                    dc.l     lbC029DF2,lbC029DE0
 lbL018AEE:
-                    dc.l     0,$10014301
-                    dc.w     $901
-                    dc.l     lbC029E04
                     dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     67,1,9,1
+                    dc.l     lbC029E04,0
 lbW018B00:
                     dc.w     10,0
                     dc.l     lbW018B22
@@ -20076,297 +20116,300 @@ prefs_help_text:
                     even
 lbW019080:
                     dc.l     lbW019092
-                    dc.w     $1001,$E0C,$201
-                    dc.l     lbC02AA68
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     14,12,2,1
+                    dc.l     lbC02AA68,0
 lbW019092:
                     dc.l     lbW0190A4
-                    dc.w     $1001,$110C,$201
-                    dc.l     lbC02AA6C
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     17,12,2,1
+                    dc.l     lbC02AA6C,0
 lbW0190A4:
                     dc.l     lbW0190B6
-                    dc.w     $1001,$140C,$201
-                    dc.l     lbC02AA70
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     20,12,2,1
+                    dc.l     lbC02AA70,0
 lbW0190B6:
                     dc.l     lbW0190C8
-                    dc.w     $1001,$170C,$201
-                    dc.l     lbC02AA74
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     23,12,2,1
+                    dc.l     lbC02AA74,0
 lbW0190C8:
                     dc.l     lbW0190DA
-                    dc.w     1,$20D,$1701
-                    dc.l     lbC02AAB2
-                    dc.l     lbC02AAC4
+                    dc.w     %1
+                    dc.b     2,13,23,1
+                    dc.l     lbC02AAB2,lbC02AAC4
 lbW0190DA:
                     dc.l     lbW0190EC
-                    dc.w     1,$20F,$1701
-                    dc.l     lbC02AAE6
-                    dc.l     lbC02AAF8
+                    dc.w     %1
+                    dc.b     2,15,23,1
+                    dc.l     lbC02AAE6,lbC02AAF8
 lbW0190EC:
                     dc.l     lbW0190FE
-                    dc.w     $1001,$210,$1701
-                    dc.l     lbC02AB24
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     2,16,23,1
+                    dc.l     lbC02AB24,0
 lbW0190FE:
                     dc.l     lbW019110
-                    dc.w     1,$212,$1701
-                    dc.l     lbC02AB54
-                    dc.l     lbC02AB66
+                    dc.w     %1
+                    dc.b     2,18,23,1
+                    dc.l     lbC02AB54,lbC02AB66
 lbW019110:
                     dc.l     lbW019122
-                    dc.w     1,$213,$1701
-                    dc.l     lbC02AB88
-                    dc.l     lbC02AB9A
+                    dc.w     %1
+                    dc.b     2,19,23,1
+                    dc.l     lbC02AB88,lbC02AB9A
 lbW019122:
                     dc.l     lbW019134
-                    dc.w     1,$215,$F01
-                    dc.l     lbC02ABBC
-                    dc.l     lbC02ABCE
+                    dc.w     %1
+                    dc.b     2,21,15,1
+                    dc.l     lbC02ABBC,lbC02ABCE
 lbW019134:
                     dc.l     lbW019146
-                    dc.w     1,$1215,$102
-                    dc.l     lbC02AC42
-                    dc.l     lbC02AC76
+                    dc.w     %1
+                    dc.b     18,21,1,2
+                    dc.l     lbC02AC42,lbC02AC76
 lbW019146:
                     dc.l     lbW019158
-                    dc.w     1,$1315,$102
-                    dc.l     lbC02AC46
-                    dc.l     lbC02AC7A
+                    dc.w     %1
+                    dc.b     19,21,1,2
+                    dc.l     lbC02AC46,lbC02AC7A
 lbW019158:
                     dc.l     lbW01916A
-                    dc.w     1,$1415,$102
-                    dc.l     lbC02AC4A
-                    dc.l     lbC02AC7E
+                    dc.w     %1
+                    dc.b     20,21,1,2
+                    dc.l     lbC02AC4A,lbC02AC7E
 lbW01916A:
                     dc.l     lbW01917C
-                    dc.w     1,$1615,$102
-                    dc.l     lbC02ABDE
-                    dc.l     lbC02AC12
+                    dc.w     %1
+                    dc.b     22,21,1,2
+                    dc.l     lbC02ABDE,lbC02AC12
 lbW01917C:
                     dc.l     lbW01918E
-                    dc.w     1,$1715,$102
-                    dc.l     lbC02ABE2
-                    dc.l     lbC02AC16
+                    dc.w     %1
+                    dc.b     23,21,1,2
+                    dc.l     lbC02ABE2,lbC02AC16
 lbW01918E:
                     dc.l     lbW0191A0
-                    dc.w     1,$1815,$102
-                    dc.l     lbC02ABE6
-                    dc.l     lbC02AC1A
+                    dc.w     %1
+                    dc.b     24,21,1,2
+                    dc.l     lbC02ABE6,lbC02AC1A
 lbW0191A0:
                     dc.l     lbW0191B2
-                    dc.w     1,$1D0C,$101
-                    dc.l     lbC02ACF2
-                    dc.l     lbC02AD22
+                    dc.w     %1
+                    dc.b     29,12,1,1
+                    dc.l     lbC02ACF2,lbC02AD22
 lbW0191B2:
                     dc.l     lbW0191C4
-                    dc.w     1,$1D0D,$101
-                    dc.l     lbC02ACF6
-                    dc.l     lbC02AD26
+                    dc.w     %1
+                    dc.b     29,13,1,1
+                    dc.l     lbC02ACF6,lbC02AD26
 lbW0191C4:
                     dc.l     lbW0191D6
-                    dc.w     1,$1D0E,$101
-                    dc.l     lbC02ACFA
-                    dc.l     lbC02AD2A
+                    dc.w     %1
+                    dc.b     29,14,1,1
+                    dc.l     lbC02ACFA,lbC02AD2A
 lbW0191D6:
                     dc.l     lbW0191E8
-                    dc.w     1,$1D0F,$101
-                    dc.l     lbC02ACFE
-                    dc.l     lbC02AD2E
+                    dc.w     %1
+                    dc.b     29,15,1,1
+                    dc.l     lbC02ACFE,lbC02AD2E
 lbW0191E8:
                     dc.l     lbW0191FA
-                    dc.w     1,$1D10,$101
-                    dc.l     lbC02AD02
-                    dc.l     lbC02AD32
+                    dc.w     %1
+                    dc.b     29,16,1,1
+                    dc.l     lbC02AD02,lbC02AD32
 lbW0191FA:
                     dc.l     lbW01920C
-                    dc.w     1,$1D11,$101
-                    dc.l     lbC02AD06
-                    dc.l     lbC02AD36
+                    dc.w     %1
+                    dc.b     29,17,1,1
+                    dc.l     lbC02AD06,lbC02AD36
 lbW01920C:
                     dc.l     lbW01921E
-                    dc.w     1,$1D12,$101
-                    dc.l     lbC02AD0A
-                    dc.l     lbC02AD3A
+                    dc.w     %1
+                    dc.b     29,18,1,1
+                    dc.l     lbC02AD0A,lbC02AD3A
 lbW01921E:
                     dc.l     lbW019230
-                    dc.w     1,$1D13,$101
-                    dc.l     lbC02AD0E
-                    dc.l     lbC02AD3E
+                    dc.w     %1
+                    dc.b     29,19,1,1
+                    dc.l     lbC02AD0E,lbC02AD3E
 lbW019230:
                     dc.l     lbW019242
-                    dc.w     1,$260C,$101
-                    dc.l     lbC02AD22
-                    dc.l     lbC02ACF2
+                    dc.w     %1
+                    dc.b     38,12,1,1
+                    dc.l     lbC02AD22,lbC02ACF2
 lbW019242:
                     dc.l     lbW019254
-                    dc.w     1,$260D,$101
-                    dc.l     lbC02AD26
-                    dc.l     lbC02ACF6
+                    dc.w     %1
+                    dc.b     38,13,1,1
+                    dc.l     lbC02AD26,lbC02ACF6
 lbW019254:
                     dc.l     lbW019266
-                    dc.w     1,$260E,$101
-                    dc.l     lbC02AD2A
-                    dc.l     lbC02ACFA
+                    dc.w     %1
+                    dc.b     38,14,1,1
+                    dc.l     lbC02AD2A,lbC02ACFA
 lbW019266:
                     dc.l     lbW019278
-                    dc.w     1,$260F,$101
-                    dc.l     lbC02AD2E
-                    dc.l     lbC02ACFE
+                    dc.w     %1
+                    dc.b     38,15,1,1
+                    dc.l     lbC02AD2E,lbC02ACFE
 lbW019278:
                     dc.l     lbW01928A
-                    dc.w     1,$2610,$101
-                    dc.l     lbC02AD32
-                    dc.l     lbC02AD02
+                    dc.w     %1
+                    dc.b     38,16,1,1
+                    dc.l     lbC02AD32,lbC02AD02
 lbW01928A:
                     dc.l     lbW01929C
-                    dc.w     1,$2611,$101
-                    dc.l     lbC02AD36
-                    dc.l     lbC02AD06
+                    dc.w     %1
+                    dc.b     38,17,1,1
+                    dc.l     lbC02AD36,lbC02AD06
 lbW01929C:
                     dc.l     lbW0192AE
-                    dc.w     1,$2612,$101
-                    dc.l     lbC02AD3A
-                    dc.l     lbC02AD0A
+                    dc.w     %1
+                    dc.b     38,18,1,1
+                    dc.l     lbC02AD3A,lbC02AD0A
 lbW0192AE:
                     dc.l     lbW0192C0
-                    dc.w     1,$2613,$101
-                    dc.l     lbC02AD3E
-                    dc.l     lbC02AD0E
+                    dc.w     %1
+                    dc.b     38,19,1,1
+                    dc.l     lbC02AD3E,lbC02AD0E
 lbW0192C0:
                     dc.l     lbW0192D2
-                    dc.w     $1001,$1D16,$A01
-                    dc.l     lbC02AD42
-                    dc.l     lbC02AD56
+                    dc.w     %1000000000001
+                    dc.b     29,22,10,1
+                    dc.l     lbC02AD42,lbC02AD56
 lbW0192D2:
                     dc.l     lbW0192E4
-                    dc.w     1,$2B0D,$601
-                    dc.l     increase_f6_key_line_jump_value
-                    dc.l     decrease_f6_key_line_jump_value
+                    dc.w     %1
+                    dc.b     43,13,6,1
+                    dc.l     increase_f6_key_line_jump_value,decrease_f6_key_line_jump_value
 lbW0192E4:
                     dc.l     lbW0192F6
-                    dc.w     1,$2B0F,$601
-                    dc.l     increase_f7_key_line_jump_value
-                    dc.l     decrease_f7_key_line_jump_value
+                    dc.w     %1
+                    dc.b     43,15,6,1
+                    dc.l     increase_f7_key_line_jump_value,decrease_f7_key_line_jump_value
 lbW0192F6:
                     dc.l     lbW019308
-                    dc.w     1,$2B11,$601
-                    dc.l     increase_f8_key_line_jump_value
-                    dc.l     decrease_f8_key_line_jump_value
+                    dc.w     %1
+                    dc.b     43,17,6,1
+                    dc.l     increase_f8_key_line_jump_value,decrease_f8_key_line_jump_value
 lbW019308:
                     dc.l     lbW01931A
-                    dc.w     1,$2B13,$601
-                    dc.l     increase_f9_key_line_jump_value
-                    dc.l     decrease_f9_key_line_jump_value
+                    dc.w     %1
+                    dc.b     43,19,6,1
+                    dc.l     increase_f9_key_line_jump_value,decrease_f9_key_line_jump_value
 lbW01931A:
                     dc.l     lbW01932C
-                    dc.w     1,$2B15,$601
-                    dc.l     increase_f10_key_line_jump_value
-                    dc.l     decrease_f10_key_line_jump_value
+                    dc.w     %1
+                    dc.b     43,21,6,1
+                    dc.l     increase_f10_key_line_jump_value,decrease_f10_key_line_jump_value
 lbW01932C:
                     dc.l     lbW01933E
-                    dc.w     $2001,$350C,$807
+                    dc.w     %10000000000001
+                    dc.b     53,12,8,7
                     dc.l     lbC02B1A8
                     dc.l     lbC02B1B0
 lbW01933E:
                     dc.l     lbW019350
-                    dc.w     1,$3514,$801
-                    dc.l     lbC02AF0C
-                    dc.l     lbC02AF1E
+                    dc.w     %1
+                    dc.b     53,20,8,1
+                    dc.l     lbC02AF0C,lbC02AF1E
 lbW019350:
                     dc.l     lbW019362
-                    dc.w     1,$3B16,$101
-                    dc.l     move_char_up
-                    dc.l     move_char_down
+                    dc.w     %1
+                    dc.b     59,22,1,1
+                    dc.l     move_char_up,move_char_down
 lbW019362:
                     dc.l     lbW019374
-                    dc.w     1,$3A17,$101
-                    dc.l     move_char_left
-                    dc.l     move_char_right
+                    dc.w     %1
+                    dc.b     58,23,1,1
+                    dc.l     move_char_left,move_char_right
 lbW019374:
                     dc.l     lbW019386
-                    dc.w     1,$3C17,$101
-                    dc.l     move_char_right
-                    dc.l     move_char_left
+                    dc.w     %1
+                    dc.b     60,23,1,1
+                    dc.l     move_char_right,move_char_left
 lbW019386:
                     dc.l     lbW019398
-                    dc.w     1,$3B18,$101
-                    dc.l     move_char_down
-                    dc.l     move_char_up
+                    dc.w     %1
+                    dc.b     59,24,1,1
+                    dc.l     move_char_down,move_char_up
 lbW019398:
                     dc.l     lbW0193AA
-                    dc.w     $1001,$3516,$501
-                    dc.l     outline_char
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     53,22,5,1
+                    dc.l     outline_char,0
 lbW0193AA:
                     dc.l     lbW0193BC
-                    dc.w     $1001,$3517,$401
-                    dc.l     lbC02AFAA
-                    dc.l     lbC02AFBE
+                    dc.w     %1000000000001
+                    dc.b     53,23,4,1
+                    dc.l     lbC02AFAA,lbC02AFBE
 lbW0193BC:
                     dc.l     lbW0193CE
-                    dc.w     $1001,$3518,$501
-                    dc.l     lbC02AFD2
-                    dc.l     lbC02AFE6
+                    dc.w     %1000000000001
+                    dc.b     53,24,5,1
+                    dc.l     lbC02AFD2,lbC02AFE6
 lbW0193CE:
                     dc.l     lbW0193E0
-                    dc.w     $1001,$3519,$301
-                    dc.l     lbC02B00E
-                    dc.l     lbC02B02C
+                    dc.w     %1000000000001
+                    dc.b     53,25,3,1
+                    dc.l     lbC02B00E,lbC02B02C
 lbW0193E0:
                     dc.l     lbW0193F2
-                    dc.w     $1001,$3919,$401
+                    dc.w     %1000000000001
+                    dc.b     57,25,4,1
                     dc.l     lbC02AFFA,0
 lbW0193F2:
                     dc.l     lbW019404
-                    dc.b     16,1,53,26,8,1
-                    dc.l     mirror_char_x
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     53,26,8,1
+                    dc.l     mirror_char_x,0
 lbW019404:
                     dc.l     lbW019416
-                    dc.b     16,1,53,27,8,1
-                    dc.l     mirror_char_y
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     53,27,8,1
+                    dc.l     mirror_char_y,0
 lbW019416:
                     dc.l     lbW019428
-                    dc.w     $2001,$3E0C,$1010
-                    dc.l     lbC02AF7E
-                    dc.l     0
+                    dc.w     %10000000000001
+                    dc.b     62,12,16,16
+                    dc.l     lbC02AF7E,0
 lbW019428:
                     dc.l     lbW01943A
-                    dc.w     $1001,$11A,$603
-                    dc.l     load_prefs
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     1,26,6,3
+                    dc.l     load_prefs,0
 lbW01943A:
                     dc.l     lbW01944C
-                    dc.w     $1001,$71A,$603
-                    dc.l     save_prefs
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     7,26,6,3
+                    dc.l     save_prefs,0
 lbW01944C:
                     dc.l     lbW01945E
-                    dc.w     $1001,$D1A,$503
-                    dc.l     lbC02A966
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     13,26,5,3
+                    dc.l     lbC02A966,0
 lbW01945E:
                     dc.l     lbW019470
-                    dc.w     $1001,$121A,$503
-                    dc.l     lbC02A972
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     18,26,5,3
+                    dc.l     lbC02A972,0
 lbW019470:
                     dc.l     lbW019482
-                    dc.w     $1001,$171A,$803
-                    dc.l     lbC02A97A
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     23,26,8,3
+                    dc.l     lbC02A97A,0
 lbW019482:
                     dc.l     lbW019494
-                    dc.w     $1001,$221B,$701
-                    dc.l     lbC02AA14
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     34,27,7,1
+                    dc.l     lbC02AA14,0
 lbW019494:
-                    dc.w     0,0,$1001,$2A1B,$701
-                    dc.l     lbC02AA1E
                     dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     42,27,7,1
+                    dc.l     lbC02AA1E,0
 lbW0194A6:
                     dc.w     10,0
                     dc.l     lbW0194C0
@@ -20421,73 +20464,74 @@ effects_ed_text:
                     dc.b     CMD_END
 lbW0195F4:
                     dc.l     lbW019606
-                    dc.w     1,$30A,$503
-                    dc.l     lbC02B780
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     3,10,5,3
+                    dc.l     lbC02B780,0
 lbW019606:
                     dc.l     lbW019618
-                    dc.w     1,$80A,$503
-                    dc.l     lbC02B7A4
-                    dc.l     0
+                    dc.w     %1
+                    dc.b     8,10,5,3
+                    dc.l     lbC02B7A4,0
 lbW019618:
                     dc.l     lbW01962A
-                    dc.w     $1001,$D0A,$603
-                    dc.l     lbC02B8FE
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     13,10,6,3
+                    dc.l     lbC02B8FE,0
 lbW01962A:
                     dc.l     lbW01963C
-                    dc.w     $1001,$130A,$503
-                    dc.l     lbC02B866
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     19,10,5,3
+                    dc.l     lbC02B866,0
 lbW01963C:
                     dc.l     lbW01964E
-                    dc.w     $1001,$180A,$703
-                    dc.l     lbC02B9BA
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     24,10,7,3
+                    dc.l     lbC02B9BA,0
 lbW01964E:
                     dc.l     lbW019660
-                    dc.w     $1001,$1F0A,$603
-                    dc.l     lbC02BB16
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     31,10,6,3
+                    dc.l     lbC02BB16,0
 lbW019660:
                     dc.l     lbW019672
-                    dc.w     $1001,$250A,$603
-                    dc.l     lbC02BC20
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     37,10,6,3
+                    dc.l     lbC02BC20,0
 lbW019672:
                     dc.l     lbW019684
-                    dc.w     $1001,$2B0A,$603
-                    dc.l     lbC02C2E4
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     43,10,6,3
+                    dc.l     lbC02C2E4,0
 lbW019684:
                     dc.l     lbW019696
-                    dc.w     $1001,$310A,$603
-                    dc.l     lbC02B7DE
-                    dc.l     0
+                    dc.w     %1000000000001
+                    dc.b     49,10,6,3
+                    dc.l     lbC02B7DE,0
 lbW019696:
                     dc.l     lbW0196A8
-                    dc.w     $2001,$210,$40E
-                    dc.l     lbC02B7E6
-                    dc.l     lbC02B7EA
+                    dc.w     %10000000000001
+                    dc.b     2,16,4,14
+                    dc.l     lbC02B7E6,lbC02B7EA
 lbW0196A8:
                     dc.l     lbW0196BA
-                    dc.w     $2001,$910,$50E
-                    dc.l     lbC02BCE6
-                    dc.l     0
+                    dc.w     %10000000000001
+                    dc.b     9,16,5,14
+                    dc.l     lbC02BCE6,0
 lbW0196BA:
                     dc.l     lbW0196CC
-                    dc.w     $2001,$E10,$50E
-                    dc.l     lbC02BCFE
-                    dc.l     0
+                    dc.w     %10000000000001
+                    dc.b     14,16,5,14
+                    dc.l     lbC02BCFE,0
 lbW0196CC:
                     dc.l     lbW0196DE
-                    dc.w     $2001,$1410,$190E
-                    dc.l     lbC02BD16
-                    dc.l     0
+                    dc.w     %10000000000001
+                    dc.b     20,16,25,14
+                    dc.l     lbC02BD16,0
 lbW0196DE:
-                    dc.w     0,0,$2001,$3410,$190E
-                    dc.l     lbC02BD2E
                     dc.l     0
+                    dc.w     %10000000000001
+                    dc.b     52,16,25,14
+                    dc.l     lbC02BD2E,0
 lbW0196F0:
                     dc.w     10,0
                     dc.l     lbW019712
@@ -20671,11 +20715,11 @@ lbW01B2BA:
                     dc.w     0
 trackdisk_device:
                     dcb.b    IOTD_SIZE,0
-lbL01B30C:
-                    dcb.l    256,0
-lbW01B70C:
+events_buffer:
+                    dcb.w    512,0
+current_event_index:
                     dc.w     0
-lbW01B70E:
+previous_event_index:
                     dc.w     0
 lbL01B710:
                     dcb.l    2,0
