@@ -4035,7 +4035,7 @@ do_load_song:
                     bgt.b   .confirmed
                     rts
 .confirmed:
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     jsr     (open_file_for_reading)
                     bmi     .error
                     lea     (song_chunk_header_loaded_data),a0
@@ -4561,7 +4561,7 @@ lbC02146A:
                     moveq   #DIR_SONGS,d0
                     jsr     (display_file_requester)
                     bmi.b   lbC0214AE
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     jsr     (open_file_for_writing)
                     bmi.b   lbC0214AA
                     lea     (OKTASONG_MSG,pc),a0
@@ -5243,7 +5243,7 @@ lbC021C92:
 lbC021CDA:
                     tst.w   (samples_save_format)
                     bne     lbC021D88
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     jsr     (open_file_for_writing)
                     bmi     lbC021DB0
                     move.l  (lbL01A134),d0
@@ -5289,7 +5289,7 @@ lbC021D64:
                     bmi.b   lbC021DB0
                     bra.b   lbC021DA2
 lbC021D88:
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     move.l  (lbL01A130),a1
                     move.l  (lbL01A134),d0
                     jsr     (save_file)
@@ -10915,12 +10915,12 @@ lbC026BBC:
                     rts
 lbC026BDA:
                     lea     (curent_dir_name),a0
-                    lea     (lbB01BEE8),a1
-                    lea     (filename_to_load),a2
+                    lea     (curent_dir_name+80),a1
+                    lea     (current_file_name),a2
                     move.w  #160,d0
-                    bsr     construct_filename
+                    bsr     construct_file_name
                     bmi.b   lbC026C0C
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     jsr     (file_exist_get_file_size)
                     bmi.b   lbC026C0C
                     move.l  d0,(lbL027FDC)
@@ -10953,19 +10953,19 @@ lbC026C58:
                     rts
 lbC026C5C:
                     lea     (curent_dir_name),a0
-                    lea     (lbB01BEE8),a1
-                    lea     (filename_to_load),a2
+                    lea     (curent_dir_name+80),a1
+                    lea     (current_file_name),a2
                     move.w  #160,d0
-                    bsr     construct_filename
+                    bsr     construct_file_name
                     bmi.b   lbC026C58
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     jsr     (file_exist_get_file_size)
                     bmi.b   lbC026C58
                     moveq   #32,d0
                     lea     (lbL026CAC,pc),a0
                     jsr     (alloc_mem_block_from_struct)
                     bmi.b   lbC026C58
-                    lea     (lbB01BEE8),a0
+                    lea     (curent_dir_name+80),a0
                     move.l  (lbL026CAC,pc),a1
                     moveq   #32,d0
                     jsr     (lbC025DB2)
@@ -11002,13 +11002,13 @@ lbC026CF2:
                     move.l  (lbL026CAC,pc),a1
                     adda.l  d0,a1
                     lea     (curent_dir_name),a0
-                    lea     (filename_to_load),a2
+                    lea     (current_file_name),a2
                     move.w  #160,d0
                     move.l  a1,-(a7)
-                    bsr     construct_filename
+                    bsr     construct_file_name
                     move.l  (a7)+,a1
                     bmi.b   lbC026D20
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     moveq   #OK,d0
                     rts
 lbC026D20:
@@ -11123,7 +11123,7 @@ curent_dir_ptr:
 
 ; ===========================================================================
 lbC026E36:
-                    lea     (lbL01C0C8),a1
+                    lea     (dir_samples+80),a1
                     tst.b   (a0)
                     beq.b   lbC026E44
 lbC026E40:
@@ -11711,7 +11711,7 @@ lbC027516:
                     rts
 lbC027518:
                     lea     (10,a0),a0
-                    lea     (lbB01BEE8),a1
+                    lea     (curent_dir_name+80),a1
                     moveq   #80,d0
                     jsr     (lbC025DB2)
                     bsr     lbC027738
@@ -11817,7 +11817,7 @@ lbC027652:
                     lea     (curent_dir_name),a0
                     move.l  a0,a2
                     moveq   #80,d0
-                    bsr     construct_filename
+                    bsr     construct_file_name
                     bmi.b   lbC02766E
 lbC027666:
                     bsr     lbC027724
@@ -11842,7 +11842,7 @@ lbC027674:
 lbC027696:
                     rts
 lbC027698:
-                    lea     (lbB01BEE8),a0
+                    lea     (curent_dir_name+80),a0
                     moveq   #9,d0
                     moveq   #11,d1
                     moveq   #80,d2
@@ -11867,17 +11867,17 @@ lbC0276BC:
 lbC0276D6:
                     bra     lbC027724
 lbC0276DC:
-                    tst.b   (lbB01BEE8)
+                    tst.b   (curent_dir_name+80)
                     beq.b   lbC02771C
                     jsr     (ask_are_you_sure_requester)
                     bne.b   lbC02771A
                     lea     (curent_dir_name),a0
-                    lea     (lbB01BEE8),a1
-                    lea     (filename_to_load),a2
+                    lea     (curent_dir_name+80),a1
+                    lea     (current_file_name),a2
                     move.w  #160,d0
-                    bsr     construct_filename
+                    bsr     construct_file_name
                     bmi.b   lbC02771A
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     jsr     (delete_file)
                     bmi.b   lbC02771A
                     bra     lbC026F18
@@ -11892,7 +11892,7 @@ lbC027724:
                     moveq   #29,d2
                     jmp     (draw_text_with_blanks)
 lbC027738:
-                    lea     (lbB01BEE8),a0
+                    lea     (curent_dir_name+80),a0
                     moveq   #9,d0
                     moveq   #11,d1
                     moveq   #29,d2
@@ -12229,7 +12229,7 @@ lbC027B5C:
 lbC027B6A:
                     bsr     lbC027E12
                     bmi.b   lbC027B82
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     jsr     (file_exist)
                     bmi.b   lbC027B82
                     moveq   #OK,d0
@@ -12240,11 +12240,11 @@ lbC027B82:
 lbC027B86:
                     bsr     lbC027E12
                     bmi     lbC027C84
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     jsr     (file_exist_get_file_size)
                     bmi     lbC027C84
                     move.l  d0,(lbL027C9E)
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     jsr     (open_file_for_reading)
                     bmi     lbC027C84
                     lea     (lbW027FD0,pc),a0
@@ -12352,7 +12352,7 @@ lbC027CF4:
 lbC027D04:
                     bsr     lbC027E12
                     bmi     lbC027DCC
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     jsr     (open_file_for_writing)
                     bmi     lbC027DCC
                     lea     (lbW027FD0,pc),a0
@@ -12415,7 +12415,7 @@ lbC027DDA:
 lbC027DEA:
                     bsr     lbC027E12
                     bmi     lbC027E0E
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     jsr     (delete_file)
                     bmi.b   lbC027E0E
                     sf      (lbB027FDA)
@@ -12428,9 +12428,9 @@ lbC027E0E:
 lbC027E12:
                     lea     (curent_dir_name),a0
                     lea     (okdir_MSG,pc),a1
-                    lea     (filename_to_load),a2
+                    lea     (current_file_name),a2
                     move.w  #160,d0
-                    bra     construct_filename
+                    bra     construct_file_name
 lbC027E2A:
                     lea     (On_MSG0,pc),a0
                     tst.b   (lbB027FDA)
@@ -12446,7 +12446,7 @@ Off_MSG0:
                     dc.b    'Off',0
 
 ; ===========================================================================
-construct_filename:
+construct_file_name:
                     move.w  d0,d2
                     moveq   #0,d1
 lbC027E52:
@@ -15260,11 +15260,13 @@ load_prefs:
                     move.l  #do_load_prefs,(current_cmd_ptr)
                     rts
 do_load_prefs:
+                    lea     (prefs_filename,pc),a0
+                    jsr     (get_prefs_file_name)
                     lea     (load_prefs_text,pc),a0
                     moveq   #DIR_PREFS,d0
                     jsr     (display_file_requester)
                     ble.b   .cancelled
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     bsr     load_prefs_file
                     bmi.b   .load_error
 .cancelled:
@@ -15281,11 +15283,13 @@ save_prefs:
                     move.l  #do_save_prefs,(current_cmd_ptr)
                     rts
 do_save_prefs:
+                    lea     (prefs_filename,pc),a0
+                    jsr     (get_prefs_file_name)
                     lea     (save_prefs_text,pc),a0
                     moveq   #DIR_PREFS,d0
                     jsr     (display_file_requester)
                     bmi.b   .cancelled
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     lea     (prefs_data,pc),a1
                     move.l  #PREFS_FILE_LEN,d0
                     jsr     (save_file)
@@ -15297,6 +15301,19 @@ do_save_prefs:
 save_prefs_text:
                     dc.b    'Save Preferences',0
                     even
+
+; ===========================================================================
+get_prefs_file_name:
+                    lea      (dir_prefs+80),a1
+                    tst.b    (a0)
+                    beq.b    .empty
+                    tst.b    (a1)
+                    bne.b    .empty
+.loop:
+                    move.b   (a0)+,(a1)+
+                    bne.b    .loop
+.empty:
+                    rts
 
 ; ===========================================================================
 lbC02A966:
@@ -15345,7 +15362,6 @@ lbC02A9DA:
                     move.b  d7,d0
                     movem.l (a7)+,d7/a2
                     rts
-
 ; ===========================================================================
 lbC02A9E2:
                     bsr     lbC02AA86
@@ -17081,7 +17097,7 @@ lbC02BB22:
                     bgt.b   lbC02BB32
                     rts
 lbC02BB32:
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     jsr     (file_exist_get_file_size)
                     bmi     lbC02BBD8
                     subq.l  #4,d0
@@ -17091,7 +17107,7 @@ lbC02BB32:
                     bne     lbC02BBD0
                     swap    d0
                     move.w  d0,(lbW02BC12)
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     jsr     (open_file_for_reading)
                     bmi.b   lbC02BBD8
                     lea     (lbL02BC0E,pc),a0
@@ -17170,7 +17186,7 @@ lbC02BC4A:
                     lea     (lbL01D89C),a0
                     move.w  (lbW02B710,pc),d0
                     bsr     lbC02B984
-                    lea     (filename_to_load),a0
+                    lea     (current_file_name),a0
                     jsr     (open_file_for_writing)
                     bmi.b   lbC02BCA0
                     lea     (OK_E_MSG,pc),a0
@@ -20702,19 +20718,15 @@ disk_info_data:
                     dcb.l   9,0
 ; ---
 curent_dir_name:
-                    dcb.b   80,0
-lbB01BEE8:
-                    dcb.b   80,0
-filename_to_load:
+                    dcb.b   160,0
+current_file_name:
                     dcb.b   160,0
 dir_songs:
                     dcb.b   160,0
 dir_samples:
-                    dcb.b   80,0
-lbL01C0C8:
-                    dcb.b   80,0
+                    dcb.b   160,0
 dir_prefs:
-                    dcb.b   80,0
+                    dcb.b   160,0
 dir_effects:
                     dcb.b   160,0
 ; ---
