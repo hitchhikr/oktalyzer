@@ -359,7 +359,7 @@ copper_int_name:
 
 ; ===========================================================================
 vbi_int_code:
-                    tst.w   (lbW01E5E8)
+                    tst.w   (main_spinlock)
                     bne.b   lbC01E326
                     movem.l d0-d3/a0/a1,-(a7)
                     moveq   #EVT_VBI,d0
@@ -404,7 +404,7 @@ mouse_buttons_status:
 
 ; ===========================================================================
 input_device_handler:
-                    tst.w   (lbW01E5E8)
+                    tst.w   (main_spinlock)
                     bne.b   lbC01E3A4
                     move.b  (ie_Class,a0),d0
                     cmpi.b  #IECLASS_RAWKEY,d0
@@ -515,7 +515,7 @@ reinstall_midi_ints:
 ; ===========================================================================
 patch_sys_requesters_function:
                     EXEC    Disable
-                    lea     (lbW01E5E8,pc),a0
+                    lea     (main_spinlock,pc),a0
                     tst.w   (a0)
                     beq.b   lbC01E4CC
                     subq.w  #1,(a0)
@@ -536,7 +536,7 @@ lbC01E4CC:
 restore_sys_requesters_function:
                     move.l  d2,-(a7)
                     EXEC    Disable
-                    addq.w  #1,(lbW01E5E8)
+                    addq.w  #1,(main_spinlock)
                     move.l  (IntBase),a1
                     move.w  #_LVOAutoRequest,a0
                     cmpi.w  #36,(LIB_VERSION,a1)
@@ -554,40 +554,40 @@ our_sys_requesters_function:
                     tst.b   (copper_int_installed_flag)
                     bne.b   .installed
                     tst.b   (workbench_opened_flag)
-                    bne.b   lbC01E56A
+                    bne.b   .apply_patch
 .installed:
                     moveq   #0,d0
                     rts
-lbC01E56A:
+.apply_patch:
                     movem.l d0-d7/a0-a6,-(a7)
                     EXEC    Disable
-                    lea     (lbW01E5E8,pc),a0
+                    lea     (main_spinlock,pc),a0
                     addq.w  #1,(a0)
                     cmpi.w  #1,(a0)
-                    bne.b   lbC01E58E
+                    bne.b   .already_done
                     jsr     (remove_midi_ints)
                     jsr     (restore_screen)
-lbC01E58E:
+.already_done:
                     EXEC    Enable
                     movem.l (a7)+,d0-d7/a0-a6
-                    pea     (lbC01E5A8,pc)
+                    pea     (return_from_sys_requesters,pc)
                     move.l  (old_sys_requesters_function,pc),-(a7)
                     rts
-lbC01E5A8:
+return_from_sys_requesters:
                     movem.l d0-d7/a0-a6,-(a7)
                     EXEC    Disable
-                    subq.w  #1,(lbW01E5E8)
-                    bne.b   lbC01E5D6
+                    subq.w  #1,(main_spinlock)
+                    bne.b   .already_done
                     bsr     reinstall_midi_ints
                     EXEC    Enable
                     bsr     install_our_copperlist
-                    bra.b   lbC01E5E2
-lbC01E5D6:
+                    bra.b   .done
+.already_done:
                     EXEC    Enable
-lbC01E5E2:
+.done:
                     movem.l (a7)+,d0-d7/a0-a6
                     rts
-lbW01E5E8:
+main_spinlock:
                     dc.w    0
 
 ; ===========================================================================
