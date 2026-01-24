@@ -78,7 +78,7 @@ SRCA	    equ   $800
 ASHIFTSHIFT equ   12 ; bits to right align ashift value
 BSHIFTSHIFT equ   12 ; bits to right align bshift value
 
-* definations for blitter control register 1 */
+* definitions for blitter control register 1 */
 LINEMODE    equ   $1
 FILL_OR     equ   $8
 FILL_XOR    equ   $10

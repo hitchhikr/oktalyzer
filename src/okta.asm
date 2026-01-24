@@ -10,68 +10,7 @@
                     opt     all+
 
 ; ===========================================================================
-                    include "exec/execbase.i"
-                    include "exec/memory.i"
-                    include "dos/dos.i"
-                    include "dos/dosextens.i"
-                    include "graphics/gfxbase.i"
-                    include "graphics/view.i"
-                    include "intuition/screens.i"
-                    include "resources/disk.i"
-                    include "workbench/startup.i"
-                    include "devices/trackdisk.i"
-                    include "devices/bootblock.i"
-                    include "devices/input.i"
-                    include "devices/inputevent.i"
-                    include "exec/io.i"
-                    include "lvo/exec_lib.i"
-                    include "lvo/dos_lib.i"
-                    include "lvo/graphics_lib.i"
-                    include "lvo/intuition_lib.i"
-                    include "lvo/disk_lib.i"
-                    include "hardware/custom.i"
-                    include "hardware/dmabits.i"
-                    include "hardware/intbits.i"
-                    include "hardware/cia.i"
-
-; ===========================================================================
                     include "okta.i"
-
-; ===========================================================================
-EXEC                MACRO
-                    move.l  a6,-(a7)
-                    move.l  (4).w,a6
-                    jsr     (_LVO\1,a6)
-                    move.l  (a7)+,a6
-                    ENDM
-
-DOS                 MACRO
-                    move.l  a6,-(a7)
-                    move.l  DOSBase,a6
-                    jsr     (_LVO\1,a6)
-                    move.l  (a7)+,a6
-                    ENDM
-
-INT                 MACRO
-                    move.l  a6,-(a7)
-                    move.l  IntBase,a6
-                    jsr     (_LVO\1,a6)
-                    move.l  (a7)+,a6
-                    ENDM
-
-GFX                 MACRO
-                    move.l  a6,-(a7)
-                    move.l  GFXBase,a6
-                    jsr     (_LVO\1,a6)
-                    move.l  (a7)+,a6
-                    ENDM
-
-DISK                MACRO
-                    move.l  a6,-(a7)
-                    move.l  DiskBase,a6
-                    jsr     (_LVO\1,a6)
-                    move.l  (a7)+,a6
-                    ENDM
 
 ; ===========================================================================
                     section prog,code
@@ -104,6 +43,7 @@ start:
                     DOS     CurrentDir
                     move.l  (a7)+,d1
 .from_WB:
+                    move.l  d1,(current_dir)
                     DOS     DupLock
                     move.l  d0,(current_dir_lock)
                     move.l  #oktalyzer_name,d1
@@ -123,7 +63,7 @@ start:
 .no_message:
                     moveq   #0,d0
                     rts
-                    dc.b    0,'$VER: version 1.151',0
+                    dc.b    0,'$VER: version 1.152',0
                     even
 workbench_message:
                     dc.l    0
@@ -133,12 +73,16 @@ started_from_CLI:
 
 ; ===========================================================================
                     section main,code
-begin:
+main:
                     move.l  a7,(save_stack)
                     bsr.b   init_all
                     jsr     (auto_load_prefs)
                     bsr     main_loop
                     bsr     free_resources
+                    lea     (main-4,pc),a0
+                    move.l  a0,d1
+                    lsr.l   #2,d1
+                    DOS     UnLoadSeg
                     moveq   #0,d0
                     rts
 
@@ -183,6 +127,8 @@ init_all:
                     bsr     install_our_copperlist
                     bra     construct_main_copperlist
 our_task:
+                    dc.l    0
+current_dir:
                     dc.l    0
 current_dir_lock:
                     dc.l    0
@@ -235,11 +181,15 @@ free_resources:
                     bsr     stop_audio_channels
                     jsr     (lbC028914)
                     jsr     (lbC02B732)
-                    bsr     free_all_samples
+                    bsr     free_all_samples_and_song
                     bsr     restore_sys_requesters_function
                     bsr     remove_ints
                     jsr     (open_workbench)
                     jsr     restore_screen
+                    move.l  current_dir_lock,d1
+                    DOS     UnLock
+                    move.l  current_dir,d1
+                    DOS     UnLock
                     bra     close_libraries
 
 ; ===========================================================================
@@ -252,7 +202,7 @@ main_loop:
                     lea     (main_screen_sequence),a0
                     bsr     process_commands_sequence
                     bsr     draw_main_menu
-                    bsr     lbC0202A8
+                    bsr     display_pattern
                     bsr     display_pattern_caret
                     lea     (lbW01737C),a0
                     bsr     stop_audio_and_process_event
@@ -698,10 +648,16 @@ open_libraries:
 
 ; ===========================================================================
 close_libraries:
-                    move.l  (IntBase,pc),a1
+                    move.l  (IntBase,pc),d0
+                    beq.b   .no_intuition
+                    move.l  d0,a1
                     EXEC    CloseLibrary
-                    move.l  (GFXBase,pc),a1
+.no_intuition:
+                    move.l  (GFXBase,pc),d0
+                    beq.b   .no_graphics
+                    move.l  d0,a1
                     EXEC    CloseLibrary
+.no_graphics:
                     rts
 dos_name:
                     DOSNAME
@@ -1606,7 +1562,7 @@ lbC01F23C:
                     cmp.w   (current_viewed_pattern),d0
                     beq.b   lbC01F24E
                     move.w  d0,(current_viewed_pattern)
-                    bra     lbC0202A8
+                    bra     display_pattern
 lbC01F24E:
                     rts
 GotoPattern_MSG:
@@ -1619,7 +1575,7 @@ lbC01F262:
                     tst.w   (current_viewed_pattern)
                     beq.b   lbC01F274
                     subq.w  #1,(current_viewed_pattern)
-                    bra     lbC0202A8
+                    bra     display_pattern
 lbC01F274:
                     rts
 lbC01F276:
@@ -1627,12 +1583,12 @@ lbC01F276:
                     addq.w  #1,d0
                     cmp.w   (OK_SLen),d0
                     bne.b   lbC01F28E
-                    bsr     lbC020112
+                    bsr     inc_song_positions
                     beq.b   lbC01F28E
                     rts
 lbC01F28E:
                     addq.w  #1,(current_viewed_pattern)
-                    bra     lbC0202A8
+                    bra     display_pattern
 lbC01F298:
                     bsr     stop_audio_channels
 lbC01F29C:
@@ -1988,7 +1944,7 @@ lbC01F674:
                     add.w   (current_channels_size),d5
                     cmp.w   d5,d7
                     bge.b   lbC01F670
-                    bra     lbC0202A8
+                    bra     display_pattern
 lbW01F692:
                     dc.w    0
 lbC01F694:
@@ -2023,7 +1979,7 @@ lbC01F6D6:
                     add.w   (current_channels_size),d5
                     cmp.w   d5,d7
                     bge.b   lbC01F6C8
-                    bra     lbC0202A8
+                    bra     display_pattern
 lbC01F6F2:
                     lea     (lbC01F6FA,pc),a0
                     bra     lbC01F702
@@ -2076,7 +2032,7 @@ lbC01F760:
                     add.w   (current_channels_size),d5
                     cmp.w   d5,d7
                     bge.b   lbC01F752
-                    bra     lbC0202A8
+                    bra     display_pattern
 lbC01F786:
                     rts
 lbC01F788:
@@ -2806,12 +2762,12 @@ get_samples_metrics:
 lbC01FF8C:
                     bsr     stop_audio_channels
                     move.l  (lbL01A130),d0
-                    beq.b   lbC01FFB2
+                    beq.b   .empty
                     move.l  d0,a1
                     move.l  (lbL01A134),d0
                     EXEC    FreeMem
                     clr.l   (lbL01A130)
-lbC01FFB2:
+.empty:
                     clr.l   (lbL01A134)
                     clr.l   (lbL029ECE)
                     rts
@@ -2922,7 +2878,7 @@ get_given_pattern_rows:
                     rts
 
 ; ===========================================================================
-lbC020112:
+inc_song_positions:
                     cmpi.w  #64,(OK_SLen)
                     beq     error_no_more_patterns
                     move.l  (current_default_patterns_size),d0
@@ -2931,7 +2887,7 @@ lbC020112:
                     move.l  #MEMF_CLEAR|MEMF_ANY,d1
                     EXEC    AllocMem
                     tst.l   d0
-                    beq     lbC020168
+                    beq     .error
                     move.l  d0,a1
                     move.w  (default_pattern_length),(a1)
                     lea     (OK_PatternList),a0
@@ -2943,8 +2899,10 @@ lbC020112:
                     bsr     draw_main_menu
                     moveq   #0,d0
                     rts
-lbC020168:
+.error:
                     bra     error_no_memory
+
+; ===========================================================================
 lbC02016E:
                     movem.l d2/a2,-(a7)
                     move.w  d0,d2
@@ -2953,10 +2911,10 @@ lbC02016E:
                     move.l  #MEMF_CLEAR|MEMF_ANY,d1
                     EXEC    AllocMem
                     tst.l   d0
-                    beq.b   lbC0201B6
+                    beq.b   .error
                     move.l  d0,a2
                     bsr.b   lbC0201C0
-                    bsr     lbC020232
+                    bsr     free_current_pattern
                     move.l  a2,a1
                     move.w  d2,(a1)
                     lea     (OK_PatternList),a0
@@ -2965,10 +2923,10 @@ lbC02016E:
                     add.w   d0,d0
                     move.l  a2,(a0,d0.w)
                     moveq   #0,d0
-                    bra.b   lbC0201BA
-lbC0201B6:
+                    bra.b   .done
+.error:
                     bsr     error_no_memory
-lbC0201BA:
+.done:
                     movem.l (a7)+,d2/a2
                     rts
 lbC0201C0:
@@ -2982,14 +2940,16 @@ lbC0201CA:
                     lea     (2,a1),a1
                     EXEC    CopyMem
                     rts
-lbC0201E4:
-                    bsr     lbC020266
-                    bne.b   lbC0201E4
+
+; ===========================================================================
+free_song:
+                    bsr     dec_song_position
+                    bne.b   free_song
                     lea     (OK_Patterns),a0
                     moveq   #128-1,d0
-lbC0201F2:
+.loop:
                     sf      (a0)+
-                    dbra    d0,lbC0201F2
+                    dbra    d0,.loop
                     move.w  #6,(OK_Speed)
                     move.w  #1,(OK_PLen)
                     st      (channels_mute_flags)
@@ -3000,24 +2960,28 @@ lbC0201F2:
                     moveq   #-1,d0
                     move.l  d0,(lbW01F5C4)
                     bra     lbC01F430
-lbC020232:
+
+; ===========================================================================
+free_current_pattern:
                     move.w  (current_viewed_pattern),d0
                     add.w   d0,d0
                     add.w   d0,d0
                     lea     (OK_PatternList),a0
                     move.l  (a0,d0.w),d1
-                    beq.b   lbC020264
+                    beq.b   .empty
                     clr.l   (a0,d0.w)
                     move.l  d1,a1
                     move.w  (a1),d0
                     mulu.w  (current_channels_size),d0
                     addq.l  #2,d0
                     EXEC    FreeMem
-lbC020264:
+.empty:
                     rts
-lbC020266:
+
+; ===========================================================================
+dec_song_position:
                     tst.w   (OK_SLen)
-                    beq.b   lbC0202A6
+                    beq.b   .empty
                     move.w  (OK_SLen),d0
                     subq.w  #1,d0
                     add.w   d0,d0
@@ -3031,13 +2995,15 @@ lbC020266:
                     addq.l  #2,d0
                     EXEC    FreeMem
                     subq.w  #1,(OK_SLen)
-lbC0202A6:
+.empty:
                     rts
-lbC0202A8:
+
+; ===========================================================================
+display_pattern:
                     move.w  #$200,(main_bplcon0+2)
                     bsr     set_pattern_bitplane
                     bsr     get_current_pattern_rows
-                    move.w  d0,(lbW01B788)
+                    move.w  d0,(pattern_rows_to_display)
                     bsr     erase_pattern_caret
                     jsr     (clear_1_line_blitter)
                     moveq   #0,d7
@@ -3045,7 +3011,7 @@ lbC0202A8:
 lbC0202CC:
                     bsr.b   lbC02031E
                     addq.w  #1,d7
-                    cmp.w   (lbW01B788),d7
+                    cmp.w   (pattern_rows_to_display),d7
                     bne.b   lbC0202CC
                     bsr     lbC01F200
                     bsr     lbC01F1D8
@@ -3146,7 +3112,7 @@ lbC0203DC:
                     bsr     lbC01F508
                     jsr     (own_blitter)
                     ; clear 1 char line
-                    move.l  #$1000000,(BLTCON0,a6)
+                    move.l  #(BC0F_DEST<<16),(BLTCON0,a6)
                     move.w  #0,(BLTDMOD,a6)
                     lea     (main_screen+(56*80)),a0
                     move.w  (a7)+,d0
@@ -4011,7 +3977,7 @@ lbC020D70:
                     move.l  a0,a3
                     exg     d1,d2
                     move.w  d1,d3
-                    moveq   #$5A,d4
+                    moveq   #ABNC|ANBNC|NABC|NANBC,d4
                     jsr     (draw_filled_box_with_minterms)
 lbC020D7E:
                     movem.l (a7)+,d0-d7/a0-a6
@@ -4041,25 +4007,25 @@ lbC020DB2:
                     move.l  a0,a3
                     move.w  d2,d3
                     move.w  d0,d2
-                    moveq   #$5A,d4
+                    moveq   #ABNC|ANBNC|NABC|NANBC,d4
                     jsr     (draw_filled_box_with_minterms)
 lbC020DC0:
                     movem.l (a7)+,d0-d7/a0-a6
                     rts
 
 ; ===========================================================================
-free_all_samples:
-                    bsr     do_free_all_samples
-                    bra     lbC0201E4
+free_all_samples_and_song:
+                    bsr     do_free_all_samples_and_song
+                    bra     free_song
 
 ; ===========================================================================
 lbC020DCE:
                     bsr     ask_are_you_sure_requester
                     bne.b   lbC020DE4
-                    bsr     lbC0201E4
-                    bsr     lbC020112
+                    bsr     free_song
+                    bsr     inc_song_positions
                     bmi     exit
-                    bra     lbC0202A8
+                    bra     display_pattern
 lbC020DE4:
                     rts
 
@@ -4092,7 +4058,7 @@ do_load_song:
 ; ===========================================================================
 .load_okta_mod:
                     jsr     (backup_prefs)
-                    bsr     free_all_samples
+                    bsr     free_all_samples_and_song
                     lea     (CMOD_MSG,pc),a0
                     bsr     lbC021342
                     lea     (SAMP_MSG,pc),a0
@@ -4101,7 +4067,7 @@ do_load_song:
                     bsr     lbC021364
                     bmi.b   lbC020EA2
                     jsr     (lbC02B354)
-                    bsr     lbC0201E4
+                    bsr     free_song
                     lea     (SAMP_MSG,pc),a0
                     bsr     lbC021364
                     bmi.b   lbC020EA6
@@ -4121,8 +4087,8 @@ lbC020EA2:
                     bsr     display_dos_error
 lbC020EA6:
                     jsr     (close_file)
-                    bsr     free_all_samples
-                    bsr     lbC020112
+                    bsr     free_all_samples_and_song
+                    bsr     inc_song_positions
                     bmi     exit
                     rts
 LoadSong_MSG:
@@ -4131,7 +4097,7 @@ LoadSong_MSG:
 ; ===========================================================================
 load_st_mod:
                     jsr     (backup_prefs)
-                    bsr     free_all_samples
+                    bsr     free_all_samples_and_song
                     lea     (OK_ChannelsModes),a0
                     clr.l   (a0)
                     clr.l   (4,a0)
@@ -4142,7 +4108,7 @@ load_st_mod:
                     move.l  #$10001,(4,a0)
 lbC020EF0:
                     jsr     (lbC02B354)
-                    bsr     lbC0201E4
+                    bsr     free_song
                     bsr.b   lbC020F2C
                     bmi.b   lbC020F18
                     bsr     lbC02103C
@@ -4154,8 +4120,8 @@ lbC020EF0:
                     bra     draw_main_menu
 lbC020F18:
                     jsr     (close_file)
-                    bsr     free_all_samples
-                    bsr     lbC020112
+                    bsr     free_all_samples_and_song
+                    bsr     inc_song_positions
                     bmi     exit
                     rts
 lbC020F2C:
@@ -4267,7 +4233,7 @@ lbC021048:
                     move.w  (default_pattern_length),d0
                     mulu.w  (current_channels_size),d0
                     move.l  d0,(current_default_patterns_size)
-                    bsr     lbC020112
+                    bsr     inc_song_positions
                     bmi.b   lbC0210BE
                     move.w  (OK_SLen),d0
                     subq.w  #1,d0
@@ -4424,7 +4390,7 @@ lbC021202:
                     move.w  d0,(default_pattern_length)
                     mulu.w  (current_channels_size),d0
                     move.l  d0,(current_default_patterns_size)
-                    bsr     lbC020112
+                    bsr     inc_song_positions
                     bmi.b   lbC021292
                     move.w  (OK_SLen),d0
                     subq.w  #1,d0
@@ -4751,7 +4717,7 @@ lbC02163C:
                     bsr     lbC021650
                     beq.b   lbC02164A
                     bsr     ask_are_you_sure_requester
-                    beq.b   do_free_all_samples
+                    beq.b   do_free_all_samples_and_song
                     rts
 lbC02164A:
                     bra     error_what_samples
@@ -4771,7 +4737,7 @@ lbC021668:
                     rts
 
 ; ===========================================================================
-do_free_all_samples:
+do_free_all_samples_and_song:
                     clr.w   (current_sample)
 .loop:
                     bsr.b   do_free_sample
@@ -5656,12 +5622,12 @@ lbC022144:
                     cmp.w   (current_viewed_pattern),d0
                     bne.b   lbC022160
                     subq.w  #1,(current_viewed_pattern)
-                    bsr     lbC0202A8
+                    bsr     display_pattern
 lbC022160:
-                    bsr     lbC020266
+                    bsr     dec_song_position
                     bra     draw_main_menu
 lbC022168:
-                    bra     lbC020112
+                    bra     inc_song_positions
 lbC02216C:
                     moveq   #-1,d0
                     bra.b   lbC022172
@@ -5792,6 +5758,7 @@ go_play:
                     lea     (replay_int,pc),a0
                     bsr     install_copper_int
                     bsr     lbC022A2C
+                    ; wait loop
                     lea     (lbW022318,pc),a0
                     bsr     process_event
                     bsr     lbC022A2C
@@ -6165,7 +6132,6 @@ lbC022A32:
                     clr.w   (4,a0)
                     lea     (6,a0),a0
                     dbra    d0,lbC022A32
-                    bra     lbC022A44
 lbC022A44:
                     movem.l d2/a2,-(a7)
                     lea     (lbL022A76,pc),a2
@@ -8927,7 +8893,7 @@ error_only_in_pal:
 
 ; ===========================================================================
 lbC025132:
-                    moveq   #$A,d4
+                    moveq   #NABC|NANBC,d4
                     jmp     (draw_filled_box_with_minterms)
 
 ; ===========================================================================
@@ -9081,7 +9047,7 @@ lbC02555C:
 ; ===========================================================================
 clear_main_menu_blitter:
                     bsr     own_blitter
-                    move.l  #$1000000,(BLTCON0,a6)
+                    move.l  #(BC0F_DEST<<16),(BLTCON0,a6)
                     move.w  #0,(BLTDMOD,a6)
                     lea     (main_screen),a0
                     move.l  a0,(BLTDPTH,a6)
@@ -9091,7 +9057,7 @@ clear_main_menu_blitter:
 ; ===========================================================================
 clear_1_line_blitter:
                     bsr     own_blitter
-                    move.l  #$1000000,(BLTCON0,a6)
+                    move.l  #(BC0F_DEST<<16),(BLTCON0,a6)
                     move.w  #0,(BLTDMOD,a6)
                     move.l  #main_screen+(56*80),(BLTDPTH,a6)
                     move.w  #(SCREEN_BYTES/2),(BLTSIZE,a6)
@@ -9113,7 +9079,7 @@ disown_blitter:
 ; ===========================================================================
 draw_filled_box:
                     lea     (main_screen),a3
-                    moveq   #$5A,d4
+                    moveq   #ABNC|ANBNC|NABC|NANBC,d4
 draw_filled_box_with_minterms:
                     move.w  d4,d6
                     cmp.w   d1,d3
@@ -9151,7 +9117,7 @@ draw_filled_box_with_minterms:
                     addq.w  #1,d3
                     moveq   #0,d0
                     move.w  d6,d0
-                    ori.w   #$300,d0
+                    ori.w   #BC0F_SRCC|BC0F_DEST,d0
                     swap    d0
                     bsr     own_blitter
                     move.l  d0,(BLTCON0,a6)
@@ -9217,7 +9183,6 @@ release_after_line_drawing:
 ; ===========================================================================
 lbC0256DA:
                     movem.l d4-d6,-(a7)
-                    move.w  #$CA,d6
                     cmp.w   d1,d3
                     bgt.b   lbC0256EA
                     exg     d1,d3
@@ -9226,7 +9191,7 @@ lbC0256EA:
                     move.l  a0,a1
                     move.w  d1,d4
                     mulu.w  #SCREEN_BYTES,d4
-                    moveq   #-16,d5
+                    moveq   #-$10,d5
                     and.w   d0,d5
                     lsr.w   #3,d5
                     add.w   d5,d4
@@ -9245,21 +9210,20 @@ lbC02570A:
                     exg     d2,d3
 lbC025712:
                     addx.b  d5,d5
-                    move.b  (lbB025768,pc,d5.w),d5
+                    move.b  (octants_table,pc,d5.w),d5
                     add.w   d2,d2
                     GFX     WaitBlit
                     move.w  d2,(BLTBMOD,a6)
                     sub.w   d3,d2
                     bge.b   lbC025734
-                    ori.b   #$40,d5
+                    ori.b   #SIGNFLAG,d5
 lbC025734:
                     move.w  d2,(BLTAPTL,a6)
                     sub.w   d3,d2
                     move.w  d2,(BLTAMOD,a6)
                     andi.w  #$F,d0
                     ror.w   #4,d0
-                    ori.w   #$B00,d0
-                    or.w    d6,d0
+                    ori.w   #BC0F_SRCA|BC0F_SRCC|BC0F_DEST|ABC|ABNC|NABC|NANBC,d0
                     movem.w d0/d5,(BLTCON0,a6)
                     move.l  a1,(BLTCPTH,a6)
                     move.l  a1,(BLTDPTH,a6)
@@ -9269,8 +9233,8 @@ lbC025734:
                     move.w  d3,(BLTSIZE,a6)
                     movem.l (a7)+,d4-d6
                     rts
-lbB025768:
-                    dc.b    1,17,9,21
+octants_table:
+                    dc.b    OCTANT2|LINEMODE,OCTANT1|LINEMODE,OCTANT3|LINEMODE,OCTANT4|LINEMODE
 lbC02576C:
                     move.w  #314-1,d0
                     bsr.b   lbC025794
@@ -10716,7 +10680,7 @@ display_messagebox:
                     adda.l  d0,a0
                     move.l  a0,(requester_screen_pos)
                     bsr     own_blitter
-                    move.l  #$9F00000,(BLTCON0,a6)
+                    move.l  #((SRCA|BC0F_DEST|ABC|ABNC|ANBC|ANBNC)<<16),(BLTCON0,a6)
                     moveq   #-1,d0
                     move.l  d0,(BLTAFWM,a6)
                     move.l  #60<<16,(BLTAMOD,a6)
@@ -10724,7 +10688,7 @@ display_messagebox:
                     move.l  #requesters_save_buffer,(BLTDPTH,a6)
                     move.w  #(24*64)+(20/2),(BLTSIZE,a6)
                     GFX     WaitBlit
-                    move.l  #$1FF0000,(BLTCON0,a6)
+                    move.l  #((BC0F_DEST|ABC|ABNC|ANBC|ANBNC|NABC|NABNC|NANBC|NANBNC)<<16),(BLTCON0,a6)
                     move.w  #60,(BLTDMOD,a6)
                     move.l  (requester_screen_pos,pc),(BLTDPTH,a6)
                     move.w  #(24*64)+(20/2),(BLTSIZE,a6)
@@ -10734,7 +10698,7 @@ display_messagebox:
                     moveq   #1,d1
                     move.w  #157,d2
                     moveq   #22,d3
-                    moveq   #$A,d4
+                    moveq   #NABC|NANBC,d4
                     bsr     draw_filled_box_with_minterms
                     move.l  (a7)+,a0
                     move.l  (requester_screen_pos,pc),a1
@@ -10746,7 +10710,7 @@ lbW026954:
 ; ===========================================================================
 remove_messagebox:
                     bsr     own_blitter
-                    move.l  #$9F00000,(BLTCON0,a6)
+                    move.l  #((SRCA|BC0F_DEST|ABC|ABNC|ANBC|ANBNC)<<16),(BLTCON0,a6)
                     move.l  #$FFFFFFFF,(BLTAFWM,a6)
                     move.l  #60,(BLTAMOD,a6)
                     move.l  #requesters_save_buffer,(BLTAPTH,a6)
@@ -10779,7 +10743,7 @@ lbC0269A4:
                     sub.w   d3,d1
                     sub.w   d3,d1
                     bsr     own_blitter
-                    move.l  #$9F00000,(BLTCON0,a6)
+                    move.l  #((SRCA|BC0F_DEST|ABC|ABNC|ANBC|ANBNC)<<16),(BLTCON0,a6)
                     move.l  d0,(BLTAFWM,a6)
                     move.w  d1,(BLTAMOD,a6)
                     move.w  d1,(BLTDMOD,a6)
@@ -10816,7 +10780,7 @@ lbC026A0C:
                     sub.w   d3,d1
                     sub.w   d3,d1
                     bsr     own_blitter
-                    move.l  #$9F00002,(BLTCON0,a6)
+                    move.l  #((SRCA|BC0F_DEST|ABC|ABNC|ANBC|ANBNC)<<16)|BLITREVERSE,(BLTCON0,a6)
                     move.l  d0,(BLTAFWM,a6)
                     move.w  d1,(BLTAMOD,a6)
                     move.w  d1,(BLTDMOD,a6)
@@ -13078,7 +13042,7 @@ lbC0284DE:
                     bra     lbC02895C
 lbC0284F6:
                     bsr     own_blitter
-                    move.l  #$1000000,(BLTCON0,a6)
+                    move.l  #(BC0F_DEST<<16),(BLTCON0,a6)
                     move.w  #0,(BLTDMOD,a6)
                     move.l  #main_screen+(96*80),(BLTDPTH,a6)
                     move.w  #(64*64)+(SCREEN_BYTES/2),d0
@@ -14681,7 +14645,7 @@ lbC0298A8:
                     rts
 lbC0298CC:
                     jsr     (own_blitter)
-                    move.l  #$1000000,(BLTCON0,a6)
+                    move.l  #(BC0F_DEST<<16),(BLTCON0,a6)
                     clr.w   (BLTDMOD,a6)
                     lea     (main_screen+(192*80)),a0
                     tst.b   (ntsc_flag)
@@ -16420,7 +16384,7 @@ lbC02B38C:
                     bsr     lbC02B590
                     tst.l   (OK_PatternList)
                     bne.b   lbC02B3AA
-                    jsr     (lbC020112)
+                    jsr     (inc_song_positions)
                     beq.b   lbC02B3AA
                     jmp     (exit)
 lbC02B3AA:
@@ -17647,7 +17611,7 @@ xxFROMxTOxIFx_MSG:
 lbC02C1D4:
                     move.w  d0,-(a7)
                     jsr     (own_blitter)
-                    move.l  #$1000000,(BLTCON0,a6)
+                    move.l  #(BC0F_DEST<<16),(BLTCON0,a6)
                     move.w  #4,(BLTDMOD,a6)
                     lea     (main_screen+2),a0
                     move.w  (a7)+,d0
@@ -17672,7 +17636,7 @@ lbC02C21A:
                     bls.b   lbC02C276
                     lea     (main_screen+((136*80)+2)),a0
                     jsr     (own_blitter)
-                    move.l  #$9F00000,(BLTCON0,a6)
+                    move.l  #((SRCA|BC0F_DEST|ABC|ABNC|ANBC|ANBNC)<<16),(BLTCON0,a6)
                     moveq   #-1,d0
                     move.l  d0,(BLTAFWM,a6)
                     move.l  #$40004,(BLTAMOD,a6)
@@ -17693,7 +17657,7 @@ lbC02C278:
                     beq.b   lbC02C2CA
                     lea     (main_screen+17916),a0
                     jsr     (own_blitter)
-                    move.l  #$9F00002,(BLTCON0,a6)
+                    move.l  #((SRCA|BC0F_DEST|ABC|ABNC|ANBC|ANBNC)<<16)|BLITREVERSE,(BLTCON0,a6)
                     moveq   #-1,d0
                     move.l  d0,(BLTAFWM,a6)
                     move.l  #$40004,(BLTAMOD,a6)
@@ -20699,7 +20663,7 @@ lbL01B732:
                     dc.l    0
 lbW01B736:
                     dcb.w   41,0
-lbW01B788:
+pattern_rows_to_display:
                     dc.w    0
 vumeters_levels:
                     dc.b    32,0

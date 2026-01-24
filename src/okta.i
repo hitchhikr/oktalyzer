@@ -6,6 +6,32 @@
 ; ===========================================================================
 
 ; ===========================================================================
+                    include "exec/execbase.i"
+                    include "exec/memory.i"
+                    include "dos/dos.i"
+                    include "dos/dosextens.i"
+                    include "graphics/gfxbase.i"
+                    include "graphics/view.i"
+                    include "intuition/screens.i"
+                    include "resources/disk.i"
+                    include "workbench/startup.i"
+                    include "devices/trackdisk.i"
+                    include "devices/bootblock.i"
+                    include "devices/input.i"
+                    include "devices/inputevent.i"
+                    include "exec/io.i"
+                    include "lvo/exec_lib.i"
+                    include "lvo/dos_lib.i"
+                    include "lvo/graphics_lib.i"
+                    include "lvo/intuition_lib.i"
+                    include "lvo/disk_lib.i"
+                    include "hardware/custom.i"
+                    include "hardware/dmabits.i"
+                    include "hardware/intbits.i"
+                    include "hardware/cia.i"
+                    include "hardware/blit.i"
+
+; ===========================================================================
 SCREEN_WIDTH        equ     640
 SCREEN_BYTES        equ     (SCREEN_WIDTH/8)
 
@@ -99,3 +125,39 @@ EVT_KEY_RELEASED    equ     14
 
 RESP_EVT_ROUT_1     equ     10
 RESP_EVT_ROUT_2     equ     14
+
+; ===========================================================================
+EXEC                MACRO
+                    move.l  a6,-(a7)
+                    move.l  (4).w,a6
+                    jsr     (_LVO\1,a6)
+                    move.l  (a7)+,a6
+                    ENDM
+
+DOS                 MACRO
+                    move.l  a6,-(a7)
+                    move.l  DOSBase,a6
+                    jsr     (_LVO\1,a6)
+                    move.l  (a7)+,a6
+                    ENDM
+
+INT                 MACRO
+                    move.l  a6,-(a7)
+                    move.l  IntBase,a6
+                    jsr     (_LVO\1,a6)
+                    move.l  (a7)+,a6
+                    ENDM
+
+GFX                 MACRO
+                    move.l  a6,-(a7)
+                    move.l  GFXBase,a6
+                    jsr     (_LVO\1,a6)
+                    move.l  (a7)+,a6
+                    ENDM
+
+DISK                MACRO
+                    move.l  a6,-(a7)
+                    move.l  DiskBase,a6
+                    jsr     (_LVO\1,a6)
+                    move.l  (a7)+,a6
+                    ENDM
