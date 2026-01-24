@@ -109,6 +109,7 @@ ERROR_ONLY_IN_PAL   equ      ERROR_EF_STRUCT+1
 
 EVT_LIST_END        equ      0
 EVT_KEY_PRESSED     equ      1
+EVT_BYTE_FROM_SER   equ      2
 EVT_MOUSE_MOVED     equ      3
 EVT_LEFT_PRESSED    equ      4
 EVT_LEFT_RELEASED   equ      5
@@ -117,6 +118,7 @@ EVT_RIGHT_PRESSED   equ      7
 EVT_RIGHT_RELEASED  equ      8
 EVT_MOUSE_DELAY_R   equ      9
 EVT_VBI             equ      10
+EVT_MORE_EVENTS     equ      11
 EVT_MOUSE_MOVED_HID equ      12
 EVT_DISK_CHANGE     equ      13
 EVT_KEY_RELEASED    equ      14
@@ -251,7 +253,7 @@ init_all:
                     jsr      (close_workbench)
                     bsr      set_copper_bitplanes
                     bsr      set_pal_ntsc_context
-                    bsr      set_chipset_aga
+                    bsr      set_aga_context
                     bsr      install_vbi_int
                     bsr      patch_sys_requesters_function
                     bset     #1,(CIAB)
@@ -296,7 +298,7 @@ ntsc_flag:
                     even
 
 ; ===========================================================================
-set_chipset_aga:
+set_aga_context:
                     move.w   _CUSTOM+DENISEID,d0
                     moveq    #31-1,d2
                     and.w    #$FF,d0
@@ -333,9 +335,9 @@ main_loop:
                     lea      (main_menu_text),a0
                     moveq    #0,d0
                     moveq    #0,d1
-                    jsr      (process_command)
+                    jsr      (process_commands)
 .loop:
-                    lea      (lbW017396),a0
+                    lea      (main_screen_sequence),a0
                     bsr      process_commands_sequence
                     bsr      lbC01FBF2
                     bsr      lbC0202A8
@@ -361,12 +363,12 @@ lbC01E04A:
                     lea      (patterns_ed_help_text_1),a0
                     moveq    #0,d0
                     moveq    #0,d1
-                    jsr      (process_command)
+                    jsr      (process_commands)
                     bsr      lbC0246B8
                     lea      (patterns_ed_help_text_2),a0
                     moveq    #0,d0
                     moveq    #0,d1
-                    jsr      (process_command)
+                    jsr      (process_commands)
                     bra      lbC0246B8
 lbC01E074:
                     move.l   #lbC01E080,(current_cmd_ptr)
@@ -375,7 +377,7 @@ lbC01E080:
                     lea      (effects_help_text),a0
                     moveq    #0,d0
                     moveq    #0,d1
-                    jsr      (process_command)
+                    jsr      (process_commands)
                     bra      lbC0246B8
 lbC01E096:
                     jmp      (lbC028904)
@@ -568,7 +570,7 @@ lbC01E3A4:
 input_event_raw_key:
                     move.w   (ie_Code,a0),d0
                     move.w   (ie_Qualifier,a0),d1
-                    bsr      lbC02048C
+                    bsr      decode_input_raw_key
                     moveq    #0,d0
                     rts
 
@@ -2657,34 +2659,34 @@ lbC01FCE0:
                     moveq    #1,d1
                     jsr      (draw_text)
                     move.l   (sp),a0
-                    move.l   ($14,a0),d2
+                    move.l   (20,a0),d2
                     moveq    #$2E,d0
                     moveq    #2,d1
                     jsr      (lbC025DF0)
                     move.l   (sp),a0
-                    tst.w    ($1E,a0)
+                    tst.w    (30,a0)
                     beq.b    lbC01FD80
                     lea      (ascii_MSG7,pc),a0
                     moveq    #40,d0
                     moveq    #3,d1
-                    jsr      (process_command)
+                    jsr      (process_commands)
                     jsr      (lbC028EB2)
                     move.l   (sp),a0
                     moveq    #0,d2
-                    move.w   ($18,a0),d2
+                    move.w   (24,a0),d2
                     add.l    d2,d2
                     moveq    #$2E,d0
                     moveq    #3,d1
                     jsr      (lbC025DF0)
                     move.l   (sp),a0
                     moveq    #0,d2
-                    move.w   ($1A,a0),d2
+                    move.w   (26,a0),d2
                     add.l    d2,d2
                     moveq    #$2E,d0
                     moveq    #4,d1
                     jsr      (lbC025DF0)
                     move.l   (sp),a0
-                    move.w   ($1C,a0),d2
+                    move.w   (28,a0),d2
                     moveq    #$2E,d0
                     moveq    #5,d1
                     jsr      (lbC025E20)
@@ -2695,7 +2697,7 @@ lbC01FD80:
                     lea      (ascii_MSG59,pc),a0
                     moveq    #40,d0
                     moveq    #3,d1
-                    jsr      (process_command)
+                    jsr      (process_commands)
                     lea      (lbB0177D4),a0
                     bsr      lbC020C92
 lbC01FD98:
@@ -2746,7 +2748,7 @@ lbC01FE40:
                     move.l   a0,(lbL01FE5A)
                     moveq    #0,d0
                     moveq    #0,d1
-                    jsr      (process_command)
+                    jsr      (process_commands)
                     bra      lbC01FEE2
 lbL01FE56:
                     dc.l     0
@@ -2774,7 +2776,7 @@ lbC01FE94:
                     move.l   a0,(lbL01FEC0)
                     moveq    #0,d0
                     moveq    #0,d1
-                    jsr      (process_command)
+                    jsr      (process_commands)
                     bra      lbC01FEE2
 lbL01FEB2:
                     dc.l     CSong_MSG
@@ -3244,7 +3246,7 @@ old_caret_pos:
 ; ===========================================================================
 ; d0 = ie_Code
 ; d1 = ie_Qualifier
-lbC02048C:
+decode_input_raw_key:
                     movem.l  d0-d3/a0,-(sp)
                     tst.b    (in_key_repeat_flag)
                     beq.b    .not_in_key_repeat
@@ -3382,12 +3384,12 @@ process_event:
 .loop:
                     move.w   (a0)+,d4
                     beq.b    .reset
-                    cmpi.w   #11,d4
-                    beq.b    .execute_command
+                    cmpi.w   #EVT_MORE_EVENTS,d4
+                    beq.b    .execute_event_response
                     ; check against retrieved event code
                     cmp.w    d0,d4
-                    bne.b    .next_command
-.execute_command:
+                    bne.b    .next_event
+.execute_event_response:
                     move.l   (a0),a1
                     clr.l    (current_cmd_ptr)
                     sf       (quit_flag)
@@ -3399,7 +3401,7 @@ process_event:
                     bne.b    .done
                     tst.b    (quit_flag)
                     bne.b    .done
-.next_command:
+.next_event:
                     addq.w   #4,a0
                     bra.b    .loop
 .event_already_processed:
@@ -3556,7 +3558,7 @@ process_commands_sequence:
                     move.w   (a0)+,d0
                     beq.b    .done
                     cmpi.w   #1,d0
-                    beq.b    .sequence_1
+                    beq.b    .sequence_commands
                     cmpi.w   #2,d0
                     beq.b    .sequence_2
                     cmpi.w   #3,d0
@@ -3564,7 +3566,7 @@ process_commands_sequence:
                     ; wrong sequence index
                     move.w   #$F00,(_CUSTOM|COLOR00)
                     bra.b    .done
-.sequence_1:
+.sequence_commands:
                     move.l   (a0)+,a1
                     bra.b    .loop
 .sequence_2:
@@ -3583,7 +3585,7 @@ process_commands_sequence:
                     move.l   d0,a0
                     moveq    #0,d0
                     moveq    #0,d1
-                    jsr      (process_command)
+                    jsr      (process_commands)
 .no_command:
                     movem.l  (sp)+,a2/a3
                     rts
@@ -3613,7 +3615,7 @@ lbC0208F4:
 lbC0208FA:
                     tst.l    (current_sequence_ptr)
                     beq      lbC020A1C
-                    cmpi.w   #1,d0
+                    cmpi.w   #EVT_KEY_PRESSED,d0
                     beq.b    lbC020950
                     tst.b    (pointer_visible_flag)
                     bne      lbC0209FC
@@ -5863,7 +5865,7 @@ lbC022310:
 lbW022318:
                     dc.w     EVT_KEY_PRESSED
                     dc.l     lbC0225F6
-                    dc.w     2
+                    dc.w     EVT_BYTE_FROM_SER
                     dc.l     lbC02262A
                     dc.w     EVT_LEFT_PRESSED
                     dc.l     lbC022612
@@ -5908,7 +5910,7 @@ lbC0223A4:
                     lea      (play_help_text),a0
                     moveq    #0,d0
                     moveq    #0,d1
-                    jsr      (process_command)
+                    jsr      (process_commands)
                     bra      lbC0246B8
 lbC0225F6:
                     btst     #15,d1
@@ -9857,7 +9859,7 @@ decimal_table:
                     dc.l     1000000000,100000000,10000000,1000000,100000,10000,1000,100,10,0
 
 ; ===========================================================================
-process_command:
+process_commands:
                     movem.l  d2/d3/a2,-(sp)
                     sf       (current_draw_x)
                     sf       (current_draw_y)
@@ -9947,7 +9949,7 @@ cmd_process_sub_command:
                     move.l   (a0),a0
                     move.w   d2,d0
                     move.w   d3,d1
-                    bsr      process_command
+                    bsr      process_commands
                     bra      next_command
 
 ; ===========================================================================
@@ -10923,7 +10925,7 @@ lbC026ACE:
 
 ; ===========================================================================
 lbW026B0C:
-                    dc.w     11
+                    dc.w     EVT_MORE_EVENTS
                     dc.l     lbC0208FA
                     dc.w     EVT_DISK_CHANGE
                     dc.l     handle_disk_changed
@@ -12747,13 +12749,13 @@ lbC028066:
                     beq.b    lbC02801A
                     bra      lbC0280FE
 lbW028074:
-                    dc.w     11
+                    dc.w     EVT_MORE_EVENTS
                     dc.l     lbC0208FA
-                    dc.w     11
+                    dc.w     EVT_MORE_EVENTS
                     dc.l     lbC0282B8
                     dc.w     EVT_KEY_PRESSED
                     dc.l     lbC02814E
-                    dc.w     2
+                    dc.w     EVT_BYTE_FROM_SER
                     dc.l     lbC0281AE
                     dc.w     EVT_KEY_RELEASED
                     dc.l     lbC029E1A
@@ -12896,7 +12898,7 @@ lbC02826C:
                     lea      (samples_ed_help_text),a0
                     moveq    #0,d0
                     moveq    #0,d1
-                    jsr      (process_command)
+                    jsr      (process_commands)
                     jmp      (lbC0246B8)
 lbC028284:
                     moveq    #-1,d0
@@ -12907,7 +12909,7 @@ lbC028292:
                     lea      (lbW0282A8,pc),a0
                     moveq    #0,d0
                     moveq    #0,d1
-                    jmp      (process_command)
+                    jmp      (process_commands)
 lbW0282A8:
                     dc.b     CMD_MOVE_TO_LINE,0
                     dc.l     max_lines
@@ -12918,9 +12920,9 @@ lbW0282A8:
                     even
 lbC0282B8:
                     move.l   d4,-(sp)
-                    cmpi.w   #4,d0
+                    cmpi.w   #EVT_LEFT_PRESSED,d0
                     beq.b    lbC0282CE
-                    cmpi.w   #3,d0
+                    cmpi.w   #EVT_MOUSE_MOVED,d0
                     bne.b    lbC028306
                     tst.b    d3
                     beq.b    lbC028306
@@ -13901,11 +13903,11 @@ lbC028F3E:
                     lea      (lbW028F60,pc),a0
                     jmp      (stop_audio_and_process_event)
 lbW028F60:
-                    dc.w     11
+                    dc.w     EVT_MORE_EVENTS
                     dc.l     lbC0208FA
                     dc.w     EVT_KEY_PRESSED
                     dc.l     lbC02814E
-                    dc.w     2
+                    dc.w     EVT_BYTE_FROM_SER
                     dc.l     lbC0281AE
                     dc.w     EVT_KEY_RELEASED
                     dc.l     lbC029E1A
@@ -14054,13 +14056,13 @@ lbC02912A:
                     jsr      (stop_audio_and_process_event)
                     bra      lbC0298CC
 lbW029148:
-                    dc.w     11
+                    dc.w     EVT_MORE_EVENTS
                     dc.l     lbC0208FA
-                    dc.w     11
+                    dc.w     EVT_MORE_EVENTS
                     dc.l     lbC0297AC
                     dc.w     EVT_KEY_PRESSED
                     dc.l     lbC02814E
-                    dc.w     2
+                    dc.w     EVT_BYTE_FROM_SER
                     dc.l     lbC0281AE
                     dc.w     EVT_KEY_RELEASED
                     dc.l     lbC029E1A
@@ -14259,11 +14261,11 @@ lbC029372:
                     lea      (lbW029394,pc),a0
                     jmp      (stop_audio_and_process_event)
 lbW029394:
-                    dc.w     11
+                    dc.w     EVT_MORE_EVENTS
                     dc.l     lbC0208FA
                     dc.w     EVT_KEY_PRESSED
                     dc.l     lbC02814E
-                    dc.w     2
+                    dc.w     EVT_BYTE_FROM_SER
                     dc.l     lbC0281AE
                     dc.w     EVT_KEY_RELEASED
                     dc.l     lbC029E1A
@@ -14602,9 +14604,9 @@ lbC029788:
 lbC0297A8:
                     bra      lbC029892
 lbC0297AC:
-                    cmpi.w   #4,d0
+                    cmpi.w   #EVT_LEFT_PRESSED,d0
                     beq      lbC0297C0
-                    cmpi.w   #3,d0
+                    cmpi.w   #EVT_MOUSE_MOVED,d0
                     beq      lbC0297C4
                     bra      lbC02988E
 lbC0297C0:
@@ -14617,22 +14619,22 @@ lbC0297C4:
 lbC0297CC:
                     move.w   d1,d0
                     move.w   d2,d1
-                    move.w   #$B8,d5
+                    move.w   #184,d5
                     tst.b    (ntsc_flag)
                     beq.b    lbC0297E0
-                    subi.w   #$20,d5
+                    subi.w   #32,d5
 lbC0297E0:
                     sub.w    d5,d1
                     bmi      lbC02988E
-                    cmpi.w   #$30,d1
+                    cmpi.w   #48,d1
                     bgt      lbC02988E
                     subq.w   #8,d1
                     bpl.b    lbC0297F4
                     moveq    #0,d1
 lbC0297F4:
-                    cmpi.w   #$20,d1
+                    cmpi.w   #32,d1
                     ble.b    lbC0297FE
-                    move.w   #$20,d1
+                    move.w   #32,d1
 lbC0297FE:
                     movem.w  (lbB029F1C),d2/d3
                     cmp.w    d2,d0
@@ -14782,11 +14784,11 @@ lbC0299AA:
                     lea      (lbW0299C0,pc),a0
                     jmp      (stop_audio_and_process_event)
 lbW0299C0:
-                    dc.w     11
+                    dc.w     EVT_MORE_EVENTS
                     dc.l     lbC0208FA
                     dc.w     EVT_KEY_PRESSED
                     dc.l     lbC02814E
-                    dc.w     2
+                    dc.w     EVT_BYTE_FROM_SER
                     dc.l     lbC0281AE
                     dc.w     EVT_KEY_RELEASED
                     dc.l     lbC029E1A
@@ -15158,7 +15160,7 @@ lbC029E84:
                     move.w   #1,(a1)+
                     rts
 lbL029E92:
-                    dc.l     0
+                    dcb.b    4,0
 lbC029E96:
                     jmp      (error_what_sample)
 lbC029E9E:
@@ -15302,9 +15304,9 @@ lbC02A772:
                     beq.b    .loop
                     rts
 lbW02A7AA:
-                    dc.w     11
+                    dc.w     EVT_MORE_EVENTS
                     dc.l     lbC0208FA
-                    dc.w     0
+                    dc.w     EVT_LIST_END
 lbW02A7BA:
                     dc.w     1
                     dc.l     prefs_text
@@ -15321,7 +15323,7 @@ lbC02A7E6:
                     lea      (prefs_help_text),a0
                     moveq    #0,d0
                     moveq    #0,d1
-                    jsr      (process_command)
+                    jsr      (process_commands)
                     jmp      (lbC0246B8)
 
 ; ===========================================================================
@@ -16753,9 +16755,9 @@ lbC02B6F2:
                     lea      (lbL02C53C,pc),a0
                     jmp      (free_mem_block_from_struct)
 lbW02B706:
-                    dc.w     11
+                    dc.w     EVT_MORE_EVENTS
                     dc.l     lbC0208FA
-                    dc.w     0
+                    dc.w     EVT_LIST_END
 lbW02B70E:
                     dc.w     0
 lbW02B710:
@@ -16778,7 +16780,7 @@ lbC02B744:
                     lea      (effects_ed_help_text),a0
                     moveq    #0,d0
                     moveq    #0,d1
-                    jsr      (process_command)
+                    jsr      (process_commands)
                     jmp      (lbC0246B8)
 lbC02B75C:
                     move.l   #lbC02B768,(current_cmd_ptr)
@@ -16787,7 +16789,7 @@ lbC02B768:
                     lea      (compute_help_text),a0
                     moveq    #0,d0
                     moveq    #0,d1
-                    jsr      (process_command)
+                    jsr      (process_commands)
                     jmp      (lbC0246B8)
 lbC02B780:
                     bsr      lbC02BF88
@@ -19081,16 +19083,16 @@ workbench_name:
 ; ===========================================================================
                     section  data,data
 lbW01737C:
-                    dc.w     11
+                    dc.w     EVT_MORE_EVENTS
                     dc.l     lbC0208FA
-                    dc.w     2
+                    dc.w     EVT_BYTE_FROM_SER
                     dc.l     lbC01EA3E
                     dc.w     EVT_KEY_PRESSED
                     dc.l     lbC01EA32
                     dc.w     EVT_KEY_RELEASED
                     dc.l     lbC029E1A
                     dc.w     EVT_LIST_END
-lbW017396:
+main_screen_sequence:
                     dc.w     2
                     dc.l     lbW017984
                     dc.w     1
