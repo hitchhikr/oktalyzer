@@ -11,6 +11,7 @@
 
 ; ===========================================================================
                     include  "exec/execbase.i"
+                    include  "exec/memory.i"
                     include  "dos/dos.i"
                     include  "dos/dosextens.i"
                     include  "graphics/gfxbase.i"
@@ -212,7 +213,7 @@ start:
 .no_message:
                     moveq    #0,d0
                     rts
-                    dc.b     0,'$VER: version 1.150',0
+                    dc.b     0,'$VER: version 1.151',0
                     even
 workbench_message:
                     dc.l     0
@@ -316,6 +317,7 @@ set_aga_context:
 .machine_is_aga:
                     move.w   #$2C,copper_ddfstrt+2
                     move.w   #$B4,copper_ddfstop+2
+                    move.w   #%11,copper_fmode+2
                     rts
 
 ; ===========================================================================
@@ -2879,7 +2881,7 @@ lbC01FFC0:
                     bgt      error_sample_too_long
                     cmpi.l   #2,d0
                     blt      error_sample_too_short
-                    move.l   #$10002,d1
+                    move.l   #MEMF_CLEAR|MEMF_CHIP,d1
                     EXEC     AllocMem
                     move.l   d0,(lbL01A130)
                     beq      error_no_memory
@@ -2899,7 +2901,7 @@ lbC02001C:
                     move.l   (a0),d2
                     beq.b    lbC020072
                     move.l   d2,d0
-                    moveq    #2,d1
+                    moveq    #MEMF_CHIP,d1
                     EXEC     AllocMem
                     move.l   d0,(lbL01A130)
                     bne.b    lbC020050
@@ -2981,7 +2983,7 @@ lbC020112:
                     beq      error_no_more_patterns
                     move.l   (lbL02A75C),d0
                     addq.l   #2,d0
-                    move.l   #$10000,d1
+                    move.l   #MEMF_CLEAR|MEMF_ANY,d1
                     EXEC     AllocMem
                     tst.l    d0
                     beq      lbC020168
@@ -3003,7 +3005,7 @@ lbC02016E:
                     move.w   d0,d2
                     mulu.w   (lbW02A75A),d0
                     addq.l   #2,d0
-                    move.l   #$10000,d1
+                    move.l   #MEMF_CLEAR|MEMF_ANY,d1
                     EXEC     AllocMem
                     tst.l    d0
                     beq.b    lbC0201B6
@@ -5579,12 +5581,12 @@ lbC021F9E:
                     lsl.w    #5,d2
                     adda.w   d2,a0
                     move.l   a0,(lbL021FFC)
-                    moveq    #2,d1
+                    moveq    #MEMF_CHIP,d1
                     tst.w    (30,a0)
                     bne.b    lbC021FC4
-                    moveq    #0,d1
+                    moveq    #MEMF_ANY,d1
 lbC021FC4:
-                    ori.l    #$10000,d1
+                    ori.l    #MEMF_CLEAR,d1
                     EXEC     AllocMem
                     move.l   (sp)+,d1
                     tst.l    d0
@@ -5882,7 +5884,7 @@ lbW022336:
                     dc.w     lbC02236A-lbW022336,lbC022396-lbW022336
 lbC02233A:
                     move.l   #43252,d0
-                    moveq    #0,d1
+                    moveq    #MEMF_ANY,d1
                     EXEC     AllocMem
                     tst.l    d0
                     bne.b    lbC022356
@@ -11051,7 +11053,7 @@ lbC026C5C:
 lbW026CAA:
                     dc.w     0
 lbL026CAC:
-                    dc.l     0,0,$10000
+                    dc.l     0,0,MEMF_CLEAR|MEMF_ANY
 lbC026CB8:
                     movem.l  a2,-(sp)
                     bra.b    lbC026CE8
@@ -11534,7 +11536,7 @@ lbC027262:
                     bra.b    lbC02725C
 lbC027266:
                     moveq    #42,d0
-                    move.l   #$10000,d1
+                    move.l   #MEMF_CLEAR|MEMF_ANY,d1
                     EXEC     AllocMem
                     move.l   d0,a0
                     tst.l    d0
@@ -12063,7 +12065,7 @@ format_disk:
                     lea      (trackdisk_device),a1
                     move.l   #trackdisk_message_port,(MN_REPLYPORT,a1)
                     move.l   #TRACK_LEN,d0
-                    move.l   #$10002,d1
+                    move.l   #MEMF_CLEAR|MEMF_CHIP,d1
                     EXEC     AllocMem
                     move.l   d0,(track_buffer)
                     bne.b    .no_memory_error
@@ -12399,7 +12401,7 @@ lbL027C9E:
                     dc.l     0
 lbC027CA2:
                     move.l   d0,(lbL027CF0)
-                    move.l   #$10000,d1
+                    move.l   #MEMF_CLEAR|MEMF_ANY,d1
                     EXEC     AllocMem
                     move.l   d0,(lbL027CEC)
                     beq.b    lbC027CC6
@@ -12623,7 +12625,7 @@ lbC027F1A:
                     add.l    d0,d0
                     add.l    d0,d0
                     move.l   d0,d2
-                    move.l   #$10000,d1
+                    move.l   #MEMF_CLEAR|MEMF_ANY,d1
                     EXEC     AllocMem
                     move.l   d0,a0
                     tst.l    d0
@@ -13143,7 +13145,7 @@ lbC02855C:
                     beq      lbC029E9E
                     move.l   (lbL029EE0),(lbL029EEA)
                     move.l   (lbL029EEA),d0
-                    move.l   #$10002,d1
+                    move.l   #MEMF_CLEAR|MEMF_CHIP,d1
                     EXEC     AllocMem
                     move.l   d0,(lbL029EEE)
                     beq      lbC029EA6
@@ -13337,7 +13339,7 @@ lbC0288CA:
                     move.l   d0,(lbL029F04)
                     bsr.b    lbC028914
                     move.l   (lbL029F04),d0
-                    move.l   #$10000,d1
+                    move.l   #MEMF_CLEAR|MEMF_ANY,d1
                     EXEC     AllocMem
                     move.l   d0,(lbL029EDC)
                     beq.b    lbC028900
@@ -15073,7 +15075,7 @@ lbC029D5A:
                     cmpi.l   #2,d0
                     blt      lbC029EA6
                     move.l   d0,(lbL029F08)
-                    moveq    #0,d1
+                    moveq    #MEMF_ANY,d1
                     EXEC     AllocMem
                     move.l   d0,(lbL029EF2)
                     beq      lbC029EA6
@@ -16393,7 +16395,7 @@ restore_prefs:
 ; ===========================================================================
 lbC02B2BC:
                     move.l   #PREFS_FILE_LEN,d0
-                    moveq    #0,d1
+                    moveq    #MEMF_ANY,d1
                     EXEC     AllocMem
                     move.l   d0,(lbL02B34C)
                     beq.b    lbC02B2F6
@@ -16474,7 +16476,7 @@ lbC02B3C8:
                     move.w   d2,d0
                     mulu.w   (lbW02B58E,pc),d0
                     addq.l   #2,d0
-                    move.l   #$10000,d1
+                    move.l   #MEMF_CLEAR|MEMF_ANY,d1
                     EXEC     AllocMem
                     tst.l    d0
                     beq.b    lbC02B432
@@ -17219,7 +17221,7 @@ lbL02BC0E:
 lbW02BC12:
                     dc.w     0
 lbL02BC14:
-                    dc.l     0,0,$10000
+                    dc.l     0,0,MEMF_CLEAR|MEMF_ANY
 lbC02BC20:
                     move.w   (lbW02B710,pc),d0
                     bne.b    lbC02BC2E
@@ -17273,7 +17275,7 @@ SaveEffectTab_MSG:
 OK_E_MSG:
                     dc.b     'OK_E'
 lbL02BCDA:
-                    dc.l     0,0,$10000
+                    dc.l     0,0,MEMF_CLEAR|MEMF_ANY
 lbC02BCE6:
                     bsr      lbC02B82A
                     bmi.b    lbC02BCFC
@@ -17521,7 +17523,7 @@ lbC02BF88:
                     cmpi.w   #100,(lbW02B710)
                     beq.b    lbC02BFCC
                     move.l   #131,d0
-                    move.l   #$10000,d1
+                    move.l   #MEMF_CLEAR|MEMF_ANY,d1
                     EXEC     AllocMem
                     tst.l    d0
                     beq.b    lbC02BFD6
@@ -17929,7 +17931,7 @@ lbB02C53A:
                     dc.b     0
                     even
 lbL02C53C:
-                    dc.l     0,0,$10000
+                    dc.l     0,0,MEMF_CLEAR|MEMF_ANY
 lbC02C548:
                     move.l   sp,(lbL02C568)
                     bsr.b    lbC02C56C
@@ -18898,7 +18900,7 @@ lbC02D1E4:
                     bra      lbC02D266
 lbC02D206:
                     moveq    #34,d0
-                    move.l   #$10001,d1
+                    move.l   #MEMF_CLEAR|MEMF_PUBLIC,d1
                     EXEC     AllocMem
                     move.l   d0,a3
                     tst.l    d0
@@ -18945,7 +18947,7 @@ alloc_standard_io_request:
                     bra.b    .error
 .ok_alloc:
                     move.l   d7,d0
-                    move.l   #$10001,d1
+                    move.l   #MEMF_CLEAR|MEMF_PUBLIC,d1
                     EXEC     AllocMem
                     move.l   d0,a3
                     tst.l    d0
@@ -18965,7 +18967,7 @@ alloc_mem_block:
                     move.l   #$10001,d1
                     movem.l  d2/d3/a2/a6,-(sp)
                     move.l   d1,d3
-                    and.l    #$FFFEFFFF,d1
+                    and.l    #~MEMF_CLEAR,d1
                     addq.l   #4,d0
                     move.l   d0,d2
                     EXEC     AllocMem
@@ -20845,7 +20847,9 @@ copper_ddfstrt:
                     dc.w     DDFSTRT,$3C
 copper_ddfstop:
                     dc.w     DDFSTOP,$D4
-                    dc.w     FMODE,%11,BPLCON3,$C20
+copper_fmode:
+                    dc.w     FMODE,0
+                    dc.w     BPLCON3,$C20
                     ; mouse pointer colors
                     dc.w     COLOR17,$805,COLOR18,$B06,COLOR19,$E08
                     dc.w     BPLCON1,0,BPLCON2,%111111
