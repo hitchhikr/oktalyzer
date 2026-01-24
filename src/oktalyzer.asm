@@ -3424,7 +3424,7 @@ quit_flag:
 get_mouse_coords:
                     movem.l  d2/d3,-(sp)
                     tst.b    (pointer_visible_flag)
-                    bne.b    lbC020774
+                    bne.b    .hidden
                     bsr      install_mouse_pointer
                     move.w   d0,d2
                     move.w   d1,d3
@@ -3435,21 +3435,21 @@ get_mouse_coords:
                     add.w    d2,d0
                     add.w    d3,d1
                     tst.w    d0
-                    bpl.b    lbC02071C
+                    bpl.b    .min_x
                     moveq    #0,d0
-lbC02071C:
+.min_x:
                     tst.w    d1
-                    bpl.b    lbC020722
+                    bpl.b    .min_y
                     moveq    #0,d1
-lbC020722:
+.min_y:
                     cmpi.w   #SCREEN_WIDTH-1,d0
-                    blt.b    lbC02072C
+                    blt.b    .max_x
                     move.w   #SCREEN_WIDTH-1,d0
-lbC02072C:
+.max_x:
                     cmp.w    (max_mouse_pointer_y,pc),d1
-                    blt.b    lbC020736
+                    blt.b    .max_y
                     move.w   (max_mouse_pointer_y,pc),d1
-lbC020736:
+.max_y:
                     movem.w  d0/d1,(a0)
                     lsr.w    #1,d0
                     lsr.w    #1,d1
@@ -3458,40 +3458,44 @@ lbC020736:
                     addi.w   #128,d0
                     addi.w   #44,d1
                     add.w    d1,d2
+                    ; sprite y
                     move.b   d1,(a0)+
                     moveq    #0,d3
                     ror.w    #1,d0
-                    bpl.b    lbC02075A
+                    bpl.b    .extra_x_bit
                     addq.w   #1,d3
-lbC02075A:
+.extra_x_bit:
+                    ; sprite x
                     move.b   d0,(a0)+
+                    ; sprite height
                     move.b   d2,(a0)+
                     btst     #8,d1
-                    beq.b    lbC020766
+                    beq.b    .pal_y
                     addq.w   #4,d3
-lbC020766:
+.pal_y:
                     btst     #8,d2
-                    beq.b    lbC02076E
+                    beq.b    .pal_height
                     addq.w   #2,d3
-lbC02076E:
+.pal_height:
+                    ; sprite flags
                     move.b   d3,(a0)+
-                    bra.b    lbC02077C
-max_mouse_pointer_y:
-                    dc.w     496-1
-lbC020774:
+                    bra.b    .done
+.hidden:
                     move.w   d1,d2
                     move.w   d0,d1
                     moveq    #EVT_MOUSE_MOVED_HID,d0
-                    bra.b    lbC020788
-lbC02077C:
+                    bra.b    .push_event
+.done:
                     moveq    #EVT_MOUSE_MOVED,d0
                     movem.w  (mouse_pointer_coords),d1/d2
                     lsr.w    #1,d2
-lbC020788:
+.push_event:
                     move.w   (mouse_buttons_status,pc),d3
                     bsr      store_event
                     movem.l  (sp)+,d2/d3
                     rts
+max_mouse_pointer_y:
+                    dc.w     496-1
 
 ; ===========================================================================
 install_mouse_pointer:
