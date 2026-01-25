@@ -269,10 +269,10 @@ save_joy0dat:
 install_vbi_int:
                     moveq   #-1,d0
                     EXEC    AllocSignal
-                    move.b  d0,(vbi_signal_number)
+                    move.b  d0,(vbi_signal_mask_bit)
                     moveq   #0,d1
                     bset    d0,d1
-                    move.l  d1,(vbi_signal)
+                    move.l  d1,(vbi_signal_mask)
                     lea     (input_device_int),a0
                     jsr     (install_input_handler)
                     EXEC    Disable
@@ -293,13 +293,13 @@ remove_vbi_int:
                     lea     (input_device_int),a0
                     jsr     (remove_input_handler)
                     moveq   #0,d0
-                    move.b  (vbi_signal_number,pc),d0
+                    move.b  (vbi_signal_mask_bit,pc),d0
                     EXEC    FreeSignal
                     rts
-vbi_signal_number:
+vbi_signal_mask_bit:
                     dc.b    0
                     even
-vbi_signal:
+vbi_signal_mask:
                     dc.l    0
 vbi_int_struct:
                     dc.l    0,0
@@ -3259,7 +3259,7 @@ store_event:
                     move.w  d4,(current_event_index)
 .event_not_processed:
                     move.l  (our_task,pc),a1
-                    move.l  (vbi_signal,pc),d0
+                    move.l  (vbi_signal_mask,pc),d0
                     EXEC    Signal
                     movem.l (a7)+,d4/d5/a0/a1
                     EXEC    Enable
@@ -3273,7 +3273,7 @@ process_event:
                     move.l  a0,a2
                     bra.b   .reset
 .wait:
-                    move.l  (vbi_signal,pc),d0
+                    move.l  (vbi_signal_mask,pc),d0
                     EXEC    Wait
 .reset:
                     move.l  a2,a0
@@ -9466,7 +9466,7 @@ wait_drive_ready:
                     moveq   #-1,d0
                     EXEC    AllocSignal
                     move.b  d0,(.drive_message_port+MP_SIGBIT)
-                    move.b  d0,(.signal_number)
+                    move.b  d0,(.signal_number_mask)
                     moveq   #0,d1
                     bset    d0,d1
                     move.l  d1,d7
@@ -9486,7 +9486,7 @@ wait_drive_ready:
                     bra.b   .retry
 .drive_ready:
                     jsr     (remove_waiting_for_drives_message)
-                    move.b  (.signal_number,pc),d0
+                    move.b  (.signal_number_mask,pc),d0
                     EXEC    FreeSignal
                     lea     (.drive_message_port,pc),a0
                     bsr     remove_port
@@ -9496,7 +9496,7 @@ wait_drive_ready:
                     dcb.b   MP_SIZE,0
 .disk_resource:
                     dcb.b   DRU_SIZE,0
-.signal_number:
+.signal_number_mask:
                     dc.b    0
                     even
 
@@ -18666,7 +18666,7 @@ open_input_device:
                     moveq   #ERROR,d6
                     moveq   #0,d0
                     sub.l   a0,a0
-                    jsr     (lbC02D1E4,pc)
+                    jsr     (create_input_device_port,pc)
                     move.l  d0,a3
                     move.l  a3,d0
                     beq.b   .error_port
@@ -18696,10 +18696,10 @@ open_input_device:
                     EXEC    CloseDevice
 .error_device:
                     move.l  (20,sp),a0
-                    jsr     (lbC02D1B4,pc)
+                    jsr     (remove_input_device_io_request,pc)
 .error_memory:
                     move.l  a3,a0
-                    jsr     (lbC02D170,pc)
+                    jsr     (remove_input_device_port,pc)
 .error_port:
                     move.w  d6,d0
                     movem.l (a7)+,d6/d7/a3/a5/a6
@@ -18730,34 +18730,29 @@ setup_screen:
                     subq.w  #4,sp
                     movem.l a2-a6,-(a7)
                     move.l  a0,a5
-                    moveq   #44,d0
+                    moveq   #8,d0
                     jsr     (alloc_mem_block,pc)
-                    move.l  d0,(20,sp)
+                    move.l  d0,((5*4),sp)
                     tst.l   d0
                     beq     .err_mem
-                    lea     our_screen_struct,a0
-                    INT     OpenScreen
-                    move.l  (20,sp),a0
-                    move.l  d0,(a0)
-                    beq.b   .error_screen
                     moveq   #10,d1
                     DOS     Delay
                     move.l  GFXBase,a0
-                    move.l  (20,sp),a1
-                    move.l  (gb_ActiView,a0),(40,a1)
+                    move.l  ((5*4),sp),a1
+                    move.l  (gb_ActiView,a0),(4,a1)
                     sub.l   a1,a1
                     GFX     LoadView
                     GFX     WaitTOF
                     GFX     WaitTOF
                     move.l  GFXBase,a0
-                    move.l  (20,sp),a1
-                    move.l  (gb_copinit,a0),(36,a1)
+                    move.l  ((5*4),sp),a1
+                    move.l  (gb_copinit,a0),(0,a1)
                     lea     (_CUSTOM|COP1LCH),a0
                     move.l  a5,(a0)
                     move.l  a1,d0
                     bra.b   .all_ok
 .error_screen:
-                    move.l  (20,sp),a0
+                    move.l  ((5*4),sp),a0
                     jsr     (free_mem_block,pc)
 .err_mem:
                     moveq   #0,d0
@@ -18771,19 +18766,17 @@ restore_screen:
                     move.l  (screen_mem_block),a0
                     movem.l a1/a4-a6,-(a7)
                     move.l  a0,a5
-                    movea.l (40,a5),a1
-                    cmpa.w  #0,a1
+                    movea.l (4,a5),a1
+                    cmpa.l  #0,a1
                     beq.b   .no_view
                     GFX     LoadView
                     GFX     WaitTOF
                     GFX     WaitTOF
 .no_view:
                     lea     (_CUSTOM|COP1LCH),a0
-                    move.l  (36,a5),(a0)
+                    move.l  (0,a5),(a0)
                     moveq   #5,d1
                     DOS     Delay
-                    move.l  (a5),a0
-                    INT     CloseScreen
                     move.l  a5,a0
                     jsr     (free_mem_block,pc)
                     movem.l (a7)+,a1/a4-a6
@@ -18822,36 +18815,40 @@ get_screen_metrics:
                     rts
 
 ; ===========================================================================
-lbC02D170:
+remove_input_device_port:
                     movem.l a5/a6,-(a7)
                     move.l  a0,a5
-                    tst.l   (10,a5)
-                    beq.b   lbC02D186
+                    tst.l   (LN_NAME,a5)
+                    beq.b   .no_port
                     move.l  a5,a1
                     EXEC    RemPort
-lbC02D186:
-                    move.b  #$FF,(8,a5)
+.no_port:
+                    move.b  #NT_EXTENDED,(LN_TYPE,a5)
                     moveq   #-1,d0
-                    move.l  d0,(20,a5)
+                    move.l  d0,(MP_MSGLIST+LH_HEAD,a5)
                     moveq   #0,d0
-                    move.b  (15,a5),d0
+                    move.b  (MP_SIGBIT,a5),d0
                     EXEC    FreeSignal
                     move.l  a5,a1
-                    moveq   #34,d0
+                    moveq   #MP_SIZE,d0
                     EXEC    FreeMem
                     movem.l (a7)+,a5/a6
                     rts
-lbC02D1B4:
+
+; ===========================================================================
+remove_input_device_io_request:
                     move.l  a0,a1
-                    move.b  #$FF,(8,a1)
-                    move.w  #$FFFF,a0
-                    move.l  a0,(20,a1)
-                    move.l  a0,(24,a1)
+                    move.b  #NT_EXTENDED,(LN_TYPE,a1)
+                    lea     -1.w,a0
+                    move.l  a0,(IO_DEVICE,a1)
+                    move.l  a0,(IO_UNIT,a1)
                     moveq   #0,d0
-                    move.w  (18,a1),d0
+                    move.w  (MN_LENGTH,a1),d0
                     EXEC    FreeMem
                     rts
-lbC02D1E4:
+
+; ===========================================================================
+create_input_device_port:
                     movem.l d6/d7/a3/a5/a6,-(a7)
                     move.l  d0,d7
                     move.l  a0,a5
@@ -18862,44 +18859,47 @@ lbC02D1E4:
                     ext.l   d6
                     move.l  d6,d0
                     addq.l  #1,d0
-                    bne.b   lbC02D206
+                    bne.b   .ok_signal
                     moveq   #0,d0
-                    bra     lbC02D266
-lbC02D206:
-                    moveq   #34,d0
+                    bra     .error_signal
+.ok_signal:
+                    moveq   #MP_SIZE,d0
                     move.l  #MEMF_CLEAR|MEMF_PUBLIC,d1
                     EXEC    AllocMem
                     move.l  d0,a3
                     tst.l   d0
-                    bne.b   lbC02D220
+                    bne.b   .ok_alloc_port_memory
                     move.l  d6,d0
                     EXEC    FreeSignal
-                    bra.b   lbC02D264
-lbC02D220:
-                    lea     (10,a3),a0
+                    bra.b   .error_memory
+.ok_alloc_port_memory:
+                    lea     (LN_NAME,a3),a0
                     move.l  a5,(a0)+
-                    move.b  d7,(9,a3)
-                    move.b  #4,(8,a3)
+                    move.b  d7,(LN_PRI,a3)
+                    move.b  #NT_MSGPORT,(LN_TYPE,a3)
+                    ;MP_FLAGS
                     clr.b   (a0)+
+                    ;MP_SIGBIT
                     move.b  d6,(a0)+
                     sub.l   a1,a1
                     EXEC    FindTask
-                    move.l  d0,(16,a3)
+                    move.l  d0,(MP_SIGTASK,a3)
                     move.l  a5,d0
-                    beq.b   lbC02D24A
+                    beq.b   .from_interrupt
                     move.l  a3,a1
                     EXEC    AddPort
-                    bra.b   lbC02D264
-lbC02D24A:
-                    lea     (24,a3),a0
-                    move.l  a0,(20,a3)
-                    lea     (20,a3),a0
-                    move.l  a0,(28,a3)
-                    clr.l   (24,a3)
-                    move.b  #2,(32,a3)
-lbC02D264:
+                    bra.b   .port_created
+.from_interrupt:
+                    lea     (MP_MSGLIST+LH_TAIL,a3),a0
+                    move.l  a0,(MP_MSGLIST+LH_HEAD,a3)
+                    lea     (MP_MSGLIST+LH_HEAD,a3),a0
+                    move.l  a0,(MP_MSGLIST+LH_TAILPRED,a3)
+                    clr.l   (MP_MSGLIST+LH_TAIL,a3)
+                    move.b  #NT_INTERRUPT,(MP_MSGLIST+LH_TYPE,a3)
+.port_created:
+.error_memory:
                     move.l  a3,d0
-lbC02D266:
+.error_signal:
                     movem.l (a7)+,d6/d7/a3/a5/a6
                     rts
 
@@ -18909,10 +18909,10 @@ alloc_standard_io_request:
                     move.l  d0,d7
                     move.l  a0,a5
                     move.l  a5,d0
-                    bne.b   .OKT_alloc
+                    bne.b   .ok_alloc
                     moveq   #0,d0
                     bra.b   .error
-.OKT_alloc:
+.ok_alloc:
                     move.l  d7,d0
                     move.l  #MEMF_CLEAR|MEMF_PUBLIC,d1
                     EXEC    AllocMem
@@ -20611,17 +20611,6 @@ play_help_text:
                     dc.b    CMD_TEXT,9,25,'NB_5         Add Poly',0
                     dc.b    CMD_TEXT,9,27,'NB_7         Change MidiMode',0
                     dc.b    CMD_END
-our_screen_struct:
-                    dc.w    0,0
-                    dc.w    SCREEN_WIDTH,11
-                    dc.w    1
-                    dc.b    0,1
-                    dc.w    V_HIRES
-                    dc.w    CUSTOMSCREEN
-                    dc.l    0
-                    dc.l    0
-                    dc.l    0
-                    dc.l    0
 ; related to the replay
 OKT_PattLineBuff:
                     dcb.b   4*8,0
