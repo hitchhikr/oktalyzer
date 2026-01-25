@@ -4016,12 +4016,12 @@ free_all_samples_and_song:
 ; ===========================================================================
 lbC020DCE:
                     bsr     ask_are_you_sure_requester
-                    bne.b   lbC020DE4
+                    bne.b   .cancelled
                     bsr     free_song
                     bsr     inc_song_positions
                     bmi     exit
                     bra     display_pattern
-lbC020DE4:
+.cancelled:
                     rts
 
 ; ===========================================================================
@@ -4061,7 +4061,7 @@ do_load_song:
                     lea     (CMOD_MSG,pc),a0
                     bsr     lbC021364
                     bmi.b   lbC020EA2
-                    jsr     (lbC02B354)
+                    jsr     (set_prefs_without_user_validation)
                     bsr     free_song
                     lea     (SAMP_MSG,pc),a0
                     bsr     lbC021364
@@ -4102,7 +4102,7 @@ load_st_mod:
                     move.l  #$10001,(a0)
                     move.l  #$10001,(4,a0)
 lbC020EF0:
-                    jsr     (lbC02B354)
+                    jsr     (set_prefs_without_user_validation)
                     bsr     free_song
                     bsr.b   lbC020F2C
                     bmi.b   lbC020F18
@@ -4793,10 +4793,10 @@ lbC0216DC:
                     move.w  d0,(current_sample)
                     bsr     get_current_sample_ptr_address
                     tst.l   (a0)
-                    beq.b   lbC021720
+                    beq.b   .no_confirm
                     bsr     ask_are_you_sure_requester
                     bne.b   lbC02175A
-lbC021720:
+.no_confirm:
                     lea     (OKT_Samples),a0
                     move.l  a0,a1
                     lsl.w   #5,d1
@@ -4806,9 +4806,9 @@ lbC021720:
                     adda.w  d0,a1
                     move.l  (20,a0),d0
                     moveq   #8-1,d2
-lbC02173A:
+.loop:
                     move.l  (a0)+,(a1)+
-                    dbra    d2,lbC02173A
+                    dbra    d2,.loop
                     bsr     lbC021F9E
                     bmi.b   lbC02175A
                     bsr     get_current_sample_ptr_address
@@ -8353,9 +8353,9 @@ do_go_to_cli_workbench:
 ; ===========================================================================
 lbC0245D0:
                     bsr     ask_are_you_sure_requester
-                    bne.b   lbC0245DC
+                    bne.b   .cancelled
                     st      (quit_flag)
-lbC0245DC:
+.cancelled:
                     rts
 
 ; ===========================================================================
@@ -11874,18 +11874,18 @@ lbC0276DC:
                     tst.b   (curent_dir_name+80)
                     beq.b   lbC02771C
                     jsr     (ask_are_you_sure_requester)
-                    bne.b   lbC02771A
+                    bne.b   .cancelled
                     lea     (curent_dir_name),a0
                     lea     (curent_dir_name+80),a1
                     lea     (current_file_name),a2
                     move.w  #160,d0
                     bsr     construct_file_name
-                    bmi.b   lbC02771A
+                    bmi.b   .cancelled
                     lea     (current_file_name),a0
                     jsr     (delete_file)
-                    bmi.b   lbC02771A
+                    bmi.b   .cancelled
                     bra     lbC026F18
-lbC02771A:
+.cancelled:
                     rts
 lbC02771C:
                     jmp     (error_what_file)
@@ -12793,11 +12793,11 @@ lbC0281F2:
                     rts
 lbC0281FE:
                     tst.b   (lbB028218)
-                    beq.b   lbC028210
+                    beq.b   .approved
                     jsr     (ask_are_you_sure_requester)
-                    beq.b   lbC028210
+                    beq.b   .approved
                     rts
-lbC028210:
+.approved:
                     st      (quit_flag)
                     rts
 lbB028218:
@@ -15321,22 +15321,28 @@ get_prefs_file_name:
                     rts
 
 ; ===========================================================================
-lbC02A966:
-                    bsr     lbC02B350
+use_prefs:
+                    bsr     set_prefs_with_user_validation
                     st      (quit_flag)
                     rts
-lbC02A972:
+
+; ===========================================================================
+old_prefs:
                     bsr     restore_prefs
                     bra     display_prefs_screen
-lbC02A97A:
+
+; ===========================================================================
+cancel_prefs:
                     bsr     restore_prefs
-                    bsr     lbC02B354
+                    bsr     set_prefs_without_user_validation
                     st      (quit_flag)
                     rts
+
+; ===========================================================================
 auto_load_prefs:
                     lea     (prefs_filename,pc),a0
                     bsr     load_prefs_file
-                    bra     lbC02B354
+                    bra     set_prefs_without_user_validation
 prefs_filename:
                     dc.b    'ok.inf',0
                     even
@@ -16405,99 +16411,103 @@ old_prefs_memory_block:
                     dc.l    0
 
 ; ===========================================================================
-lbC02B350:
+set_prefs_with_user_validation:
                     st      d0
-                    bra.b   lbC02B35A
-lbC02B354:
+                    bra.b   go_set_prefs
+set_prefs_without_user_validation:
                     sf      d0
-lbC02B35A:
+go_set_prefs:
                     lea     (OKT_ChannelsModes,pc),a0
                     lea     (OKT_ChannelsModes_backup),a1
                     cmpm.l  (a0)+,(a1)+
-                    bne.b   lbC02B36C
+                    bne.b   .channels_mode_modified
                     cmpm.l  (a0)+,(a1)+
-                    beq.b   lbC02B38C
-lbC02B36C:
+                    beq.b   .proceed
+.channels_mode_modified:
                     tst.b   d0
-                    beq.b   lbC02B378
+                    beq.b   .no_user_validation
                     jsr     (ask_are_you_sure_requester)
-                    bne.b   lbC02B388
-lbC02B378:
+                    bne.b   .cancelled
+.no_user_validation:
                     lea     (OKT_ChannelsModes_backup),a0
                     lea     (OKT_ChannelsModes,pc),a1
-                    bsr     lbC02B3B2
-                    beq.b   lbC02B38C
-lbC02B388:
+                    bsr     convert_patterns
+                    beq.b   .proceed
+.cancelled:
                     bsr     restore_prefs
-lbC02B38C:
+.proceed:
                     lea     (prefs_data,pc),a0
-                    bsr     lbC02B590
+                    bsr     calc_new_channels_and_patterns_size
                     tst.l   (OKT_PatternList)
-                    bne.b   lbC02B3AA
+                    bne.b   .ok
+                    ; create at least one pattern
                     jsr     (inc_song_positions)
-                    beq.b   lbC02B3AA
+                    beq.b   .ok
+                    ; fatal error
                     jmp     (exit)
-lbC02B3AA:
+.ok:
                     bsr     set_colors_palette
                     bra     construct_caret_positions_and_channels_config
-lbC02B3B2:
+
+; ===========================================================================
+convert_patterns:
                     movem.l d2/d3/a2-a5,-(a7)
-                    bsr     lbC02B506
+                    bsr     get_channels_configs
                     lea     (OKT_PatternList),a2
-                    lea     (lbL01CF58),a3
+                    lea     (pattern_list_backup),a3
                     moveq   #64-1,d3
-lbC02B3C8:
+.loop:
                     move.l  (a2),d0
-                    beq.b   lbC02B3FC
+                    beq.b   .empty
                     move.l  d0,a4
                     move.w  (a4),d2
                     move.w  d2,d0
-                    mulu.w  (lbW02B58E,pc),d0
+                    mulu.w  (new_channels_size,pc),d0
                     addq.l  #2,d0
                     move.l  #MEMF_CLEAR|MEMF_ANY,d1
                     EXEC    AllocMem
                     tst.l   d0
-                    beq.b   lbC02B432
+                    beq.b   .error
                     move.l  d0,a5
                     move.l  a5,(a3)
                     move.w  d2,(a5)
                     move.l  a4,a0
                     move.l  a5,a1
-                    bsr     lbC02B452
-lbC02B3FC:
+                    bsr     convert_pattern
+.empty:
                     lea     (4,a2),a2
                     lea     (4,a3),a3
-                    dbra    d3,lbC02B3C8
+                    dbra    d3,.loop
                     lea     (OKT_PatternList),a0
-                    move.w  (lbW02B584),d0
-                    bsr     lbC02B54C
-                    lea     (lbL01CF58),a0
+                    move.w  (old_channels_size),d0
+                    bsr     free_patterns_list
+                    lea     (pattern_list_backup),a0
                     lea     (OKT_PatternList),a1
                     moveq   #64-1,d0
-lbC02B426:
+.copy_new_patterns_pointers:
                     move.l  (a0),(a1)+
                     clr.l   (a0)+
-                    dbra    d0,lbC02B426
-                    moveq   #0,d0
-                    bra.b   lbC02B44C
-lbC02B432:
-                    lea     (lbL01CF58),a0
-                    move.w  (lbW02B58E,pc),d0
-                    bsr     lbC02B54C
+                    dbra    d0,.copy_new_patterns_pointers
+                    moveq   #OK,d0
+                    bra.b   .done
+.error:
+                    lea     (pattern_list_backup),a0
+                    move.w  (new_channels_size,pc),d0
+                    bsr     free_patterns_list
                     jsr     (error_no_memory)
                     jsr     (error_cant_convert_song)
-lbC02B44C:
+.done:
                     movem.l (a7)+,d2/d3/a2-a5
                     rts
-lbC02B452:
+convert_pattern:
                     movem.l d2/d3/a2-a5,-(a7)
                     move.w  (a1),d2
                     lea     (2,a0),a2
                     lea     (2,a1),a3
-                    lea     (lbL02B57C),a4
-                    lea     (lbL02B586),a5
+                    lea     (old_channels_size_data),a4
+                    lea     (new_channels_size_data),a5
                     moveq   #4-1,d3
-lbC02B46E:
+.loop:
                     move.l  a2,a0
                     move.l  a3,a1
                     move.w  d2,d0
@@ -16505,8 +16515,8 @@ lbC02B46E:
                     add.w   d1,d1
                     or.w    (a5),d1
                     add.w   d1,d1
-                    move.w  (lbW02B4A2,pc,d1.w),d1
-                    jsr     (lbW02B4A2,pc,d1.w)
+                    move.w  (.copy_channels_table,pc,d1.w),d1
+                    jsr     (.copy_channels_table,pc,d1.w)
                     move.w  (a4)+,d0
                     addq.w  #1,d0
                     add.w   d0,d0
@@ -16517,68 +16527,67 @@ lbC02B46E:
                     add.w   d0,d0
                     add.w   d0,d0
                     adda.w  d0,a3
-                    dbra    d3,lbC02B46E
+                    dbra    d3,.loop
                     movem.l (a7)+,d2/d3/a2-a5
                     rts
-lbW02B4A2:
-                    dc.w    lbC02B4AA-lbW02B4A2,lbC02B4BC-lbW02B4A2,lbC02B4CE-lbW02B4A2,lbC02B4EE-lbW02B4A2
-lbC02B4AA:
-                    bra.b   lbC02B4B6
-lbC02B4AC:
+                    ; 0 = old:0 new:0
+                    ; 2 = old:0 new:1
+                    ; 4 = old:1 new:0
+                    ; 6 = old:1 new:1
+.copy_channels_table:
+                    dc.w    copy_single_to_single-.copy_channels_table
+                    ; also serves to copy from single to double
+                    dc.w    copy_single_to_single-.copy_channels_table
+                    dc.w    copy_double_to_single-.copy_channels_table
+                    dc.w    copy_double_to_double-.copy_channels_table
+copy_single_to_single:
+                    bra.b   .go
+.loop:
                     move.l  (a0),(a1)
-                    adda.w  (lbW02B584,pc),a0
-                    adda.w  (lbW02B58E,pc),a1
-lbC02B4B6:
-                    dbra    d0,lbC02B4AC
+                    adda.w  (old_channels_size,pc),a0
+                    adda.w  (new_channels_size,pc),a1
+.go:
+                    dbra    d0,.loop
                     rts
-lbC02B4BC:
-                    bra.b   lbC02B4C8
-lbC02B4BE:
-                    move.l  (a0),(a1)
-                    adda.w  (lbW02B584,pc),a0
-                    adda.w  (lbW02B58E,pc),a1
-lbC02B4C8:
-                    dbra    d0,lbC02B4BE
-                    rts
-lbC02B4CE:
-                    bra.b   lbC02B4E8
-lbC02B4D0:
+copy_double_to_single:
+                    bra.b   .go
+.loop:
                     tst.l   (4,a0)
-                    beq.b   lbC02B4DA
+                    beq.b   .empty_second
                     move.l  (4,a0),(a1)
-lbC02B4DA:
+.empty_second:
                     tst.l   (a0)
-                    beq.b   lbC02B4E0
+                    beq.b   .empty_first
                     move.l  (a0),(a1)
-lbC02B4E0:
-                    adda.w  (lbW02B584,pc),a0
-                    adda.w  (lbW02B58E,pc),a1
-lbC02B4E8:
-                    dbra    d0,lbC02B4D0
+.empty_first:
+                    adda.w  (old_channels_size,pc),a0
+                    adda.w  (new_channels_size,pc),a1
+.go:
+                    dbra    d0,.loop
                     rts
-lbC02B4EE:
-                    bra.b   lbC02B500
-lbC02B4F0:
+copy_double_to_double:
+                    bra.b   .go
+.loop:
                     move.l  (a0),(a1)
                     move.l  (4,a0),(4,a1)
-                    adda.w  (lbW02B584,pc),a0
-                    adda.w  (lbW02B58E,pc),a1
-lbC02B500:
-                    dbra    d0,lbC02B4F0
+                    adda.w  (old_channels_size,pc),a0
+                    adda.w  (new_channels_size,pc),a1
+.go:
+                    dbra    d0,.loop
                     rts
-lbC02B506:
-                    move.l  (a0)+,(lbL02B57C)
-                    move.l  (a0)+,(lbL02B580)
-                    move.l  (a1)+,(lbL02B586)
-                    move.l  (a1)+,(lbL02B58A)
-                    lea     (lbL02B57C,pc),a0
-                    bsr     lbC02B53C
-                    move.w  d0,(lbW02B584)
-                    lea     (lbL02B586,pc),a0
-                    bsr     lbC02B53C
-                    move.w  d0,(lbW02B58E)
+get_channels_configs:
+                    move.l  (a0)+,(old_channels_size_data)
+                    move.l  (a0)+,(old_channels_size_data+4)
+                    move.l  (a1)+,(new_channels_size_data)
+                    move.l  (a1)+,(new_channels_size_data+4)
+                    lea     (old_channels_size_data,pc),a0
+                    bsr     calc_channels_size
+                    move.w  d0,(old_channels_size)
+                    lea     (new_channels_size_data,pc),a0
+                    bsr     calc_channels_size
+                    move.w  d0,(new_channels_size)
                     rts
-lbC02B53C:
+calc_channels_size:
                     move.w  (a0)+,d0
                     add.w   (a0)+,d0
                     add.w   (a0)+,d0
@@ -16587,37 +16596,36 @@ lbC02B53C:
                     add.w   d0,d0
                     add.w   d0,d0
                     rts
-lbC02B54C:
+free_patterns_list:
                     movem.l d2/d3/a2,-(a7)
                     move.l  a0,a2
                     move.w  d0,d2
                     moveq   #64-1,d3
-lbC02B556:
+.loop:
                     move.l  (a2)+,d0
-                    beq.b   lbC02B572
+                    beq.b   .empty
                     clr.l   (-4,a2)
                     move.l  d0,a1
                     move.w  (a1),d0
                     mulu.w  d2,d0
                     addq.l  #2,d0
                     EXEC    FreeMem
-lbC02B572:
-                    dbra    d3,lbC02B556
+.empty:
+                    dbra    d3,.loop
                     movem.l (a7)+,d2/d3/a2
                     rts
-lbL02B57C:
-                    dc.l    0
-lbL02B580:
-                    dc.l    0
-lbW02B584:
+old_channels_size_data:
+                    dcb.w   4,0
+old_channels_size:
                     dc.w    0
-lbL02B586:
-                    dc.l    0
-lbL02B58A:
-                    dc.l    0
-lbW02B58E:
+new_channels_size_data:
+                    dcb.w   4,0
+new_channels_size:
                     dc.w    0
-lbC02B590:
+
+; ===========================================================================
+calc_new_channels_and_patterns_size:
+                    ;OK__
                     addq.w  #4,a0
                     move.w  (a0)+,d0
                     add.w   (a0)+,d0
@@ -20356,17 +20364,17 @@ lbW01944C:
                     dc.l    lbW01945E
                     dc.w    %1000000000001
                     dc.b    13,26,5,3
-                    dc.l    lbC02A966,0
+                    dc.l    use_prefs,0
 lbW01945E:
                     dc.l    lbW019470
                     dc.w    %1000000000001
                     dc.b    18,26,5,3
-                    dc.l    lbC02A972,0
+                    dc.l    old_prefs,0
 lbW019470:
                     dc.l    lbW019482
                     dc.w    %1000000000001
                     dc.b    23,26,8,3
-                    dc.l    lbC02A97A,0
+                    dc.l    cancel_prefs,0
 lbW019482:
                     dc.l    lbW019494
                     dc.w    %1000000000001
@@ -20387,7 +20395,7 @@ lbW0194A6:
                     dc.w    0
 lbW0194C0:
                     dc.w    2,5
-                    dc.l    lbC02A97A
+                    dc.l    cancel_prefs
                     dc.w    4,15
                     dc.l    dec_selected_char_key
                     dc.w    4,14
@@ -20771,7 +20779,7 @@ lbL01C958:
                     dcb.l   64,0
 lbL01CA58:
                     dcb.l   320,0
-lbL01CF58:
+pattern_list_backup:
                     dcb.l   64,0
 
 ; ===========================================================================
