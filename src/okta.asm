@@ -139,7 +139,7 @@ set_pal_ntsc_context:
                     move.b  #$EC,(copper_credits_line)
                     move.b  #$F4,(copper_end_line)
                     move.w  #17,(number_of_rows_on_screen)
-                    move.w  #7,(lbW026954)
+                    move.w  #7,(shift_lines_ntsc)
                     move.w  #392-1,(max_mouse_pointer_y)
                     st      (ntsc_flag)
                     move.w  #17,(max_lines)
@@ -360,7 +360,7 @@ copper_int_name:
 ; ===========================================================================
 vbi_int_code:
                     tst.w   (main_spinlock)
-                    bne.b   lbC01E326
+                    bne.b   .spinning
                     movem.l d0-d3/a0/a1,-(a7)
                     moveq   #EVT_VBI,d0
                     moveq   #0,d1
@@ -369,30 +369,30 @@ vbi_int_code:
                     bsr     store_event
                     lea     (mouse_repeat_delay_left,pc),a0
                     moveq   #EVT_MOUSE_DELAY_L,d0
-                    bsr     lbC01E32A
+                    bsr     .store_mouse_delay
                     lea     (mouse_repeat_delay_right,pc),a0
                     moveq   #EVT_MOUSE_DELAY_R,d0
-                    bsr     lbC01E32A
+                    bsr     .store_mouse_delay
                     ; must be 0 as some flag is tested right after that
                     moveq   #0,d0
                     movem.l (a7)+,d0-d3/a0/a1
                     rts
-lbC01E326:
+.spinning:
                     moveq   #0,d0
                     rts
-lbC01E32A:
+.store_mouse_delay:
                     EXEC    Disable
                     tst.w   (a0)
-                    beq.b   lbC01E368
+                    beq.b   .no_data
                     subq.w  #1,(a0)
-                    bne.b   lbC01E368
+                    bne.b   .no_data
                     move.w  (mouse_repeat_speed),(a0)
                     EXEC    Enable
                     movem.w (mouse_pointer_coords,pc),d1/d2
                     lsr.w   #1,d2
                     moveq   #0,d3
                     bra     store_event
-lbC01E368:
+.no_data:
                     EXEC    Enable
                     rts
 mouse_repeat_delay_left:
@@ -405,7 +405,7 @@ mouse_buttons_status:
 ; ===========================================================================
 input_device_handler:
                     tst.w   (main_spinlock)
-                    bne.b   lbC01E3A4
+                    bne.b   .spinning
                     move.b  (ie_Class,a0),d0
                     cmpi.b  #IECLASS_RAWKEY,d0
                     beq.b   input_event_raw_key
@@ -417,7 +417,7 @@ input_device_handler:
                     beq.b   input_event_disk_changed
                     moveq   #0,d0
                     rts
-lbC01E3A4:
+.spinning:
                     move.l  a0,d0
                     rts
 
@@ -517,9 +517,9 @@ patch_sys_requesters_function:
                     EXEC    Disable
                     lea     (main_spinlock,pc),a0
                     tst.w   (a0)
-                    beq.b   lbC01E4CC
+                    beq.b   .decrease
                     subq.w  #1,(a0)
-lbC01E4CC:
+.decrease:
                     move.l  (IntBase),a1
                     move.w  #_LVOAutoRequest,a0
                     cmpi.w  #36,(LIB_VERSION,a1)
@@ -708,13 +708,13 @@ set_full_screen_copperlist_ntsc:
                     beq     .no_ntsc
                     sf      (a0)
                     bsr     construct_full_screen_copperlist_ntsc
-                    move.w  #11,(lbW026954)
-                    move.w  #56,(lbW01E8E8)
+                    move.w  #11,(shift_lines_ntsc)
+                    move.w  #56,(shift_y_mouse_coord_ntsc)
 .no_ntsc:
                     subq.b  #1,(dma_copper_spinlock)
-                    bgt.b   lbC01E7E8
+                    bgt.b   .spinning
                     move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
-lbC01E7E8:
+.spinning:
                     EXEC    Enable
                     rts
 
@@ -727,9 +727,9 @@ construct_full_screen_copperlist_ntsc:
                     lea     (fullscreen_copperlist_ntsc_struct),a0
                     bsr     construct_copperlist
                     subq.b  #1,(dma_copper_spinlock)
-                    bgt.b   lbC01E832
+                    bgt.b   .spinning
                     move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
-lbC01E832:
+.spinning:
                     EXEC    Enable
                     rts
 
@@ -745,13 +745,13 @@ restore_full_screen_copperlist_ntsc:
                     bne.b   .no_ntsc
                     st      (a0)
                     bsr     construct_main_copperlist
-                    move.w  #7,(lbW026954)
-                    clr.w   (lbW01E8E8)
+                    move.w  #7,(shift_lines_ntsc)
+                    clr.w   (shift_y_mouse_coord_ntsc)
 .no_ntsc:
                     subq.b  #1,(dma_copper_spinlock)
-                    bgt.b   lbC01E88E
+                    bgt.b   .spinning
                     move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
-lbC01E88E:
+.spinning:
                     EXEC    Enable
                     rts
 
@@ -764,15 +764,15 @@ construct_main_copperlist:
                     lea     (main_copperlist_struct),a0
                     bsr     construct_copperlist
                     subq.b  #1,(dma_copper_spinlock)
-                    bgt.b   lbC01E8D8
+                    bgt.b   .spinning
                     move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
-lbC01E8D8:
+.spinning:
                     EXEC    Enable
                     rts
 full_screen_copperlist_flag:
                     dc.b    -1
                     even
-lbW01E8E8:
+shift_y_mouse_coord_ntsc:
                     dc.w    0
 
 ; ===========================================================================
@@ -2693,17 +2693,33 @@ do_draw_available_memory_and_song_metrics:
                     moveq   #MEMF_CHIP,d1
                     or.l    (largest_mem_avail,pc),d1
                     EXEC    AvailMem
+                    ; too much memory to display
+                    cmp.l   #9999999,d0
+                    blt     .enough_digits_chip
+                    lea     (plenty_chip_text,pc),a0
+                    jsr     (draw_text_with_coords_struct)
+                    bra     .not_enough_digits_chip
+.enough_digits_chip:
                     move.l  d0,d2
                     moveq   #73,d0
                     moveq   #1,d1
                     jsr     (draw_7_digits_decimal_number_leading_zeroes)
+.not_enough_digits_chip:
                     moveq   #MEMF_FAST,d1
                     or.l    (largest_mem_avail,pc),d1
                     EXEC    AvailMem
+                    ; too much memory to display
+                    cmp.l   #9999999,d0
+                    blt     .enough_digits_fast
+                    lea     (plenty_fast_text,pc),a0
+                    jsr     (draw_text_with_coords_struct)
+                    bra     .not_enough_digits_fast
+.enough_digits_fast:
                     move.l  d0,d2
                     moveq   #73,d0
                     moveq   #2,d1
                     jsr     (draw_7_digits_decimal_number_leading_zeroes)
+.not_enough_digits_fast:
                     move.w  (current_song_metrics_index,pc),d0
                     bne.b   .patterns
                     bsr     get_patterns_metrics
@@ -2752,6 +2768,10 @@ get_samples_metrics:
                     addq.w  #4,a0
                     dbra    d1,.loop
                     rts
+plenty_chip_text:
+                    dc.b    73,1,'Plenty!',0
+plenty_fast_text:
+                    dc.b    73,2,'Plenty!',0
 
 ; ===========================================================================
 lbC01FF8C:
@@ -3546,7 +3566,7 @@ lbC0208FA:
                     beq     lbC0209E2
                     bra     lbC020A18
 lbC02093C:
-                    add.w   (lbW01E8E8,pc),d2
+                    add.w   (shift_y_mouse_coord_ntsc,pc),d2
                     move.w  d1,d0
                     move.w  d2,d1
                     bsr     check_gadget_mouse_coords
@@ -3566,7 +3586,7 @@ lbC020950:
                     bsr     lbC020B7C
                     bra     lbC020A18
 lbC020974:
-                    add.w   (lbW01E8E8,pc),d2
+                    add.w   (shift_y_mouse_coord_ntsc,pc),d2
                     move.w  d1,d0
                     move.w  d2,d1
                     move.w  d3,d2
@@ -3575,7 +3595,7 @@ lbC020974:
                     bsr     lbC020A8C
                     bra     lbC020A18
 lbC02098E:
-                    add.w   (lbW01E8E8,pc),d2
+                    add.w   (shift_y_mouse_coord_ntsc,pc),d2
                     move.w  d1,d0
                     move.w  d2,d1
                     move.w  d3,d2
@@ -3584,7 +3604,7 @@ lbC02098E:
                     bsr     lbC020A60
                     bra     lbC020A18
 lbC0209A8:
-                    add.w   (lbW01E8E8,pc),d2
+                    add.w   (shift_y_mouse_coord_ntsc,pc),d2
                     move.l  (lbL0208D6,pc),d0
                     beq.b   lbC020A18
                     move.l  d0,a0
@@ -3603,7 +3623,7 @@ lbC0209CC:
                     bsr     lbC020A8C
                     bra     lbC020A18
 lbC0209E2:
-                    add.w   (lbW01E8E8,pc),d2
+                    add.w   (shift_y_mouse_coord_ntsc,pc),d2
                     move.w  d1,d0
                     move.w  d2,d1
                     move.w  d3,d2
@@ -8547,7 +8567,7 @@ lbC0247D6:
                     move.l  (pattern_bitplane_offset,pc),d1
                     subi.l  #main_screen,d1
                     divu.w  #(SCREEN_BYTES*8),d1
-                    add.w   (lbW026954),d1
+                    add.w   (shift_lines_ntsc),d1
                     addq.w  #1,d1
                     move.w  d1,(lbW024874)
                     moveq   #2,d2
@@ -8594,7 +8614,7 @@ lbC02487C:
                     move.l  (pattern_bitplane_offset,pc),d1
                     subi.l  #main_screen,d1
                     divu.w  #(SCREEN_BYTES*8),d1
-                    add.w   (lbW026954),d1
+                    add.w   (shift_lines_ntsc),d1
                     addq.w  #1,d1
                     lea     (lbW0248CA,pc),a0
                     clr.w   (a0)
@@ -8635,7 +8655,7 @@ lbC0248CC:
                     move.l  (pattern_bitplane_offset,pc),d1
                     subi.l  #main_screen,d1
                     divu.w  #(SCREEN_BYTES*8),d1
-                    add.w   (lbW026954),d1
+                    add.w   (shift_lines_ntsc),d1
                     addq.w  #1,d1
                     lea     (lbL02494A,pc),a0
                     moveq   #3,d2
@@ -10674,7 +10694,7 @@ display_messagebox:
                     move.l  a0,-(a7)
                     move.l  (pattern_bitplane_offset),a0
                     lea     (30,a0),a0
-                    move.w  (lbW026954,pc),d0
+                    move.w  (shift_lines_ntsc,pc),d0
                     mulu.w  #(SCREEN_BYTES*8),d0
                     adda.l  d0,a0
                     move.l  a0,(requester_screen_pos)
@@ -10703,7 +10723,7 @@ display_messagebox:
                     move.l  (requester_screen_pos,pc),a1
                     lea     (641,a1),a1
                     bra     draw_text_without_coords
-lbW026954:
+shift_lines_ntsc:
                     dc.w    11
 
 ; ===========================================================================
