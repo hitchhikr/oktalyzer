@@ -221,12 +221,12 @@ lbC01E04A:
                     moveq   #0,d0
                     moveq   #0,d1
                     jsr     (process_commands)
-                    bsr     lbC0246B8
+                    bsr     wait_any_key_and_mouse_press
                     lea     (patterns_ed_help_text_2),a0
                     moveq   #0,d0
                     moveq   #0,d1
                     jsr     (process_commands)
-                    bra     lbC0246B8
+                    bra     wait_any_key_and_mouse_press
 lbC01E074:
                     move.l  #lbC01E080,(current_cmd_ptr)
                     rts
@@ -235,7 +235,7 @@ lbC01E080:
                     moveq   #0,d0
                     moveq   #0,d1
                     jsr     (process_commands)
-                    bra     lbC0246B8
+                    bra     wait_any_key_and_mouse_press
 lbC01E096:
                     jmp     (lbC028904)
 lbC01E09E:
@@ -1059,7 +1059,7 @@ lbC01EC48:
                     seq     d2
                     bsr     lbC01F06E
                     bmi     lbC01EC6E
-                    move.l  (lbL01F2D0),a1
+                    move.l  (current_period_table),a1
                     move.b  (a1,d0.w),d0
                     bmi     lbC01EC6E
                     move.b  d2,d1
@@ -1094,7 +1094,7 @@ lbC01ECBC:
                     movem.l (a7)+,d0/a0
                     add.w   d0,d0
                     add.w   d0,d0
-                    lea     (C1C1D1D1E1F1F_MSG),a1
+                    lea     (full_note_table),a1
                     move.l  (a1,d0.w),(2,a0)
                     sf      (6,a0)
                     jsr     (draw_text_with_coords_struct)
@@ -1122,7 +1122,7 @@ lbC01ED12:
                     seq     d2
                     bsr     lbC01F06E
                     bmi.b   lbC01ED34
-                    move.l  (lbL01F2D0),a0
+                    move.l  (current_period_table),a0
                     move.b  (a0,d0.w),d0
                     ble.b   lbC01ED34
                     move.b  d2,d1
@@ -1294,7 +1294,7 @@ lbC01EF1E:
                     cmpi.b  #MIDI_OUT,(midi_mode)
                     bne.b   lbC01EF5A
                     movem.l d2/a2,-(a7)
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -1319,7 +1319,7 @@ lbC01EF5A:
                     move.w  d1,-(a7)
                     jsr     (lbC028E96)
                     move.w  (a7)+,d1
-                    lea     (OK_Samples),a2
+                    lea     (OKT_Samples),a2
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     adda.w  d0,a2
@@ -1332,14 +1332,14 @@ lbC01EF5A:
                     tst.w   (30,a2)
                     bne.b   lbC01EFB6
                     moveq   #64,d3
-                    lea     (OK_EmptyWaveForm),a1
+                    lea     (OKT_EmptyWaveForm),a1
                     moveq   #1,d1
                     bra.b   lbC01EFDA
 lbC01EFB6:
                     move.w  (28,a2),d3
                     move.w  (26,a2),d1
                     bne.b   lbC01EFCA
-                    lea     (OK_EmptyWaveForm),a1
+                    lea     (OKT_EmptyWaveForm),a1
                     moveq   #1,d1
                     bra.b   lbC01EFDA
 lbC01EFCA:
@@ -1394,7 +1394,7 @@ wait_raster:
 ; ===========================================================================
 lbC01F06E:
                     movem.l d2,-(a7)
-                    lea     (zsxdcvgbhnjml_MSG),a0
+                    lea     (note_key_table),a0
                     moveq   #-1,d2
 lbC01F07A:
                     addq.w  #1,d2
@@ -1549,9 +1549,9 @@ lbC01F21A:
                     lea     (GotoPattern_MSG,pc),a0
                     jsr     (lbC0248CC)
                     bmi.b   lbC01F24E
-                    cmp.w   (OK_SLen),d0
+                    cmp.w   (OKT_SLen),d0
                     bcs.b   lbC01F23C
-                    move.w  (OK_SLen),d0
+                    move.w  (OKT_SLen),d0
                     subq.w  #1,d0
 lbC01F23C:
                     cmp.w   (current_viewed_pattern),d0
@@ -1576,7 +1576,7 @@ lbC01F274:
 lbC01F276:
                     move.w  (current_viewed_pattern),d0
                     addq.w  #1,d0
-                    cmp.w   (OK_SLen),d0
+                    cmp.w   (OKT_SLen),d0
                     bne.b   lbC01F28E
                     bsr     inc_song_positions
                     beq.b   lbC01F28E
@@ -1587,19 +1587,19 @@ lbC01F28E:
 lbC01F298:
                     bsr     stop_audio_channels
 lbC01F29C:
-                    move.l  #C1C1D1D1E1F1F_MSG0,(lbL01F2CC)
-                    move.l  #lbB02526B,(lbL01F2D0)
+                    move.l  #note_table_1,(current_note_table)
+                    move.l  #period_table_1,(current_period_table)
                     rts
 lbC01F2B2:
                     bsr     stop_audio_channels
 lbC01F2B6:
-                    move.l  #C2C2D2D2E2F2F_MSG,(lbL01F2CC)
-                    move.l  #lbB02532E,(lbL01F2D0)
+                    move.l  #note_table_2,(current_note_table)
+                    move.l  #period_table_2,(current_period_table)
                     rts
-lbL01F2CC:
-                    dc.l    C1C1D1D1E1F1F_MSG0
-lbL01F2D0:
-                    dc.l    lbB02526B
+current_note_table:
+                    dc.l    note_table_1
+current_period_table:
+                    dc.l    period_table_1
 lbC01F2D4:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
@@ -2447,19 +2447,19 @@ draw_main_menu:
                     moveq   #12,d0
                     moveq   #1,d1
                     jsr     (draw_3_digits_decimal_number_leading_zeroes)
-                    lea     (OK_Patterns),a0
+                    lea     (OKT_Patterns),a0
                     move.w  (current_song_position),d2
                     move.b  (a0,d2.w),d2
                     moveq   #13,d0
                     moveq   #2,d1
                     jsr     (draw_2_digits_decimal_number_leading_zeroes)
-                    move.w  (OK_PLen),d2
+                    move.w  (OKT_PLen),d2
                     moveq   #12,d0
                     moveq   #3,d1
                     jsr     (draw_3_digits_decimal_number_leading_zeroes)
-                    move.w  (OK_Speed),d0
+                    move.w  (OKT_Speed),d0
                     bsr     draw_current_speed
-                    move.w  (OK_SLen),d2
+                    move.w  (OKT_SLen),d2
                     moveq   #13,d0
                     moveq   #6,d1
                     jsr     (draw_2_digits_decimal_number_leading_zeroes)
@@ -2480,7 +2480,7 @@ draw_channels_muted_status:
                     ; x pos
                     moveq   #72,d5
                     move.b  (channels_mute_flags),d6
-                    lea     (OK_ChannelsModes),a4
+                    lea     (OKT_ChannelsModes),a4
                     moveq   #8-1,d7
 .loop:
                     tst.w   (a4)+
@@ -2537,7 +2537,7 @@ draw_current_sample_infos:
                     moveq   #56,d0
                     moveq   #0,d1
                     bsr     draw_one_char_alpha_numeric
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -2725,7 +2725,7 @@ do_draw_available_memory_and_song_metrics:
                     jmp     (draw_7_digits_decimal_number_leading_zeroes)
 get_patterns_metrics:
                     move.l  d2,-(a7)
-                    lea     (OK_PatternList),a0
+                    lea     (OKT_PatternList),a0
                     moveq   #0,d0
                     moveq   #64-1,d1
 .loop:
@@ -2741,7 +2741,7 @@ get_patterns_metrics:
                     move.l  (a7)+,d2
                     rts
 get_samples_metrics:
-                    lea     (OK_SampleTab),a0
+                    lea     (OKT_SampleTab),a0
                     moveq   #0,d0
                     moveq   #36-1,d1
 .loop:
@@ -2865,7 +2865,7 @@ number_of_rows_on_screen:
 get_current_pattern_rows:
                     move.w  (current_viewed_pattern),d0
 get_given_pattern_rows:
-                    lea     (OK_PatternList),a0
+                    lea     (OKT_PatternList),a0
                     add.w   d0,d0
                     add.w   d0,d0
                     move.l  (a0,d0.w),a0
@@ -2874,7 +2874,7 @@ get_given_pattern_rows:
 
 ; ===========================================================================
 inc_song_positions:
-                    cmpi.w  #64,(OK_SLen)
+                    cmpi.w  #64,(OKT_SLen)
                     beq     error_no_more_patterns
                     move.l  (current_default_patterns_size),d0
                     ; +2 to store the rows number
@@ -2885,12 +2885,12 @@ inc_song_positions:
                     beq     .error
                     move.l  d0,a1
                     move.w  (default_pattern_length),(a1)
-                    lea     (OK_PatternList),a0
-                    move.w  (OK_SLen),d0
+                    lea     (OKT_PatternList),a0
+                    move.w  (OKT_SLen),d0
                     add.w   d0,d0
                     add.w   d0,d0
                     move.l  a1,(a0,d0.w)
-                    addq.w  #1,(OK_SLen)
+                    addq.w  #1,(OKT_SLen)
                     bsr     draw_main_menu
                     moveq   #0,d0
                     rts
@@ -2912,7 +2912,7 @@ lbC02016E:
                     bsr     free_current_pattern
                     move.l  a2,a1
                     move.w  d2,(a1)
-                    lea     (OK_PatternList),a0
+                    lea     (OKT_PatternList),a0
                     move.w  (current_viewed_pattern),d0
                     add.w   d0,d0
                     add.w   d0,d0
@@ -2940,13 +2940,13 @@ lbC0201CA:
 free_song:
                     bsr     dec_song_position
                     bne.b   free_song
-                    lea     (OK_Patterns),a0
+                    lea     (OKT_Patterns),a0
                     moveq   #128-1,d0
 .loop:
                     sf      (a0)+
                     dbra    d0,.loop
-                    move.w  #6,(OK_Speed)
-                    move.w  #1,(OK_PLen)
+                    move.w  #6,(OKT_Speed)
+                    move.w  #1,(OKT_PLen)
                     st      (channels_mute_flags)
                     clr.w   (current_song_position)
                     clr.w   (current_viewed_pattern)
@@ -2961,7 +2961,7 @@ free_current_pattern:
                     move.w  (current_viewed_pattern),d0
                     add.w   d0,d0
                     add.w   d0,d0
-                    lea     (OK_PatternList),a0
+                    lea     (OKT_PatternList),a0
                     move.l  (a0,d0.w),d1
                     beq.b   .empty
                     clr.l   (a0,d0.w)
@@ -2975,13 +2975,13 @@ free_current_pattern:
 
 ; ===========================================================================
 dec_song_position:
-                    tst.w   (OK_SLen)
+                    tst.w   (OKT_SLen)
                     beq.b   .empty
-                    move.w  (OK_SLen),d0
+                    move.w  (OKT_SLen),d0
                     subq.w  #1,d0
                     add.w   d0,d0
                     add.w   d0,d0
-                    lea     (OK_PatternList),a0
+                    lea     (OKT_PatternList),a0
                     move.l  (a0,d0.w),a1
                     clr.l   (a0,d0.w)
                     moveq   #0,d0
@@ -2989,7 +2989,7 @@ dec_song_position:
                     mulu.w  (current_channels_size),d0
                     addq.l  #2,d0
                     EXEC    FreeMem
-                    subq.w  #1,(OK_SLen)
+                    subq.w  #1,(OKT_SLen)
 .empty:
                     rts
 
@@ -3031,10 +3031,10 @@ lbC0202F0:
                     rts
 lbC02031E:
                     lea     (alpha_numeric_table),a2
-                    lea     (C1C1D1D1E1F1F_MSG),a3
+                    lea     (full_note_table),a3
                     lea     (lbW01B736),a5
                     move.w  d4,(a5)+
-                    lea     (OK_ChannelsModes),a0
+                    lea     (OKT_ChannelsModes),a0
                     moveq   #2-1,d5
 lbC02033A:
                     move.b  #' ',(a5)+
@@ -4047,7 +4047,7 @@ do_load_song:
                     bne     load_st_mod
                     cmpi.l  #'SONG',(a0)+
                     beq.b   .load_okta_mod
-                    bsr     error_ok_struct_error
+                    bsr     error_OKT_struct_error
                     bra.b   lbC020E96
 
 ; ===========================================================================
@@ -4093,7 +4093,7 @@ LoadSong_MSG:
 load_st_mod:
                     jsr     (backup_prefs)
                     bsr     free_all_samples_and_song
-                    lea     (OK_ChannelsModes),a0
+                    lea     (OKT_ChannelsModes),a0
                     clr.l   (a0)
                     clr.l   (4,a0)
                     tst.b   (st_load_tracks_mode)
@@ -4123,9 +4123,9 @@ lbC020F2C:
                     moveq   #12,d0
                     jsr     (move_in_file)
                     bmi     lbC02102A
-                    lea     (OK_Samples+32),a5
+                    lea     (OKT_Samples+32),a5
                     moveq   #15-1,d7
-                    tst.b   (st_load_tracks_samples)
+                    tst.b   (st_load_samples_mode)
                     beq.b   lbC020F4A
                     moveq   #31-1,d7
 lbC020F4A:
@@ -4155,7 +4155,7 @@ lbC020F96:
 lbC020F9C:
                     lea     (32,a5),a5
                     dbra    d7,lbC020F4A
-                    lea     (OK_PLen,pc),a5
+                    lea     (OKT_PLen,pc),a5
                     move.l  a5,a0
                     move.l  #130,d0
                     jsr     (read_from_file)
@@ -4173,10 +4173,10 @@ lbC020FCC:
                     sf      (a5)+
 lbC020FCE:
                     dbra    d1,lbC020FCC
-                    move.w  #6,(OK_Speed)
+                    move.w  #6,(OKT_Speed)
                     tst.b   (st_load_tracks_mode)
                     beq.b   lbC020FF2
-                    lea     (OK_Patterns,pc),a0
+                    lea     (OKT_Patterns,pc),a0
                     moveq   #128-1,d0
 lbC020FE8:
                     move.b  (a0),d1
@@ -4184,7 +4184,7 @@ lbC020FE8:
                     move.b  d1,(a0)+
                     dbra    d0,lbC020FE8
 lbC020FF2:
-                    lea     (OK_Patterns,pc),a0
+                    lea     (OKT_Patterns,pc),a0
                     moveq   #0,d1
                     moveq   #128-1,d0
 lbC020FFA:
@@ -4195,7 +4195,7 @@ lbC021002:
                     dbra    d0,lbC020FFA
                     addq.w  #1,d1
                     move.w  d1,(lbW01B730)
-                    tst.b   (st_load_tracks_samples)
+                    tst.b   (st_load_samples_mode)
                     beq.b   lbC021020
                     moveq   #4,d0
                     jsr     (move_in_file)
@@ -4222,7 +4222,7 @@ lbC02103C:
                     move.l  (current_default_patterns_size),-(a7)
 lbC021048:
                     move.w  (lbW01B730),d7
-                    cmp.w   (OK_SLen),d7
+                    cmp.w   (OKT_SLen),d7
                     beq.b   lbC0210A4
                     move.w  #$40,(default_pattern_length)
                     move.w  (default_pattern_length),d0
@@ -4230,7 +4230,7 @@ lbC021048:
                     move.l  d0,(current_default_patterns_size)
                     bsr     inc_song_positions
                     bmi.b   lbC0210BE
-                    move.w  (OK_SLen),d0
+                    move.w  (OKT_SLen),d0
                     subq.w  #1,d0
                     bsr     get_given_pattern_rows
                     mulu.w  (current_channels_size),d0
@@ -4257,7 +4257,7 @@ lbC0210BE:
                     moveq   #ERROR,d0
                     rts
 lbC0210CE:
-                    lea     (OK_Samples),a5
+                    lea     (OKT_Samples),a5
                     moveq   #0,d7
 lbC0210D6:
                     move.l  (20,a5),d0
@@ -4344,7 +4344,7 @@ lbC0211B0:
                     andi.w  #$10,d2
                     andi.w  #$EFFF,d0
                     beq.b   lbC0211D0
-                    lea     (OK_FullPeriodTab,pc),a2
+                    lea     (OKT_FullPeriodTab,pc),a2
 lbC0211C6:
                     addq.w  #1,d1
                     tst.w   (a2)
@@ -4368,7 +4368,7 @@ lbC0211F6:
                     move.l  (current_default_patterns_size),-(a7)
 lbC021202:
                     move.w  (lbW01B730),d7
-                    cmp.w   (OK_SLen),d7
+                    cmp.w   (OKT_SLen),d7
                     beq.b   lbC021278
                     lea     (song_chunk_header_loaded_data),a0
                     moveq   #8,d0
@@ -4387,7 +4387,7 @@ lbC021202:
                     move.l  d0,(current_default_patterns_size)
                     bsr     inc_song_positions
                     bmi.b   lbC021292
-                    move.w  (OK_SLen),d0
+                    move.w  (OKT_SLen),d0
                     subq.w  #1,d0
                     bsr     get_given_pattern_rows
                     mulu.w  (current_channels_size),d0
@@ -4400,7 +4400,7 @@ lbC021278:
                     moveq   #OK,d0
                     rts
 lbC021288:
-                    bsr     error_ok_struct_error
+                    bsr     error_OKT_struct_error
                     bra.b   lbC021292
 lbC02128E:
                     bsr     display_dos_error
@@ -4410,7 +4410,7 @@ lbC021292:
                     moveq   #ERROR,d0
                     rts
 lbC0212A2:
-                    lea     (OK_Samples),a5
+                    lea     (OKT_Samples),a5
                     moveq   #0,d7
 lbC0212AA:
                     move.w  d7,(current_sample)
@@ -4448,7 +4448,7 @@ lbC021310:
                     moveq   #OK,d0
                     rts
 lbC02132A:
-                    bsr     error_ok_struct_error
+                    bsr     error_OKT_struct_error
                     bra.b   lbC021334
 lbC021330:
                     bsr     display_dos_error
@@ -4528,17 +4528,17 @@ lbC0213D0:
 CMOD_MSG:
                     dc.b    'CMOD'
                     dc.l    8
-                    dc.l    OK_ChannelsModes
+                    dc.l    OKT_ChannelsModes
                     dc.l    1
                     dc.l    0
 SAMP_MSG:
                     dc.b    'SAMP'
                     dc.l    1152
-                    dc.l    OK_Samples
+                    dc.l    OKT_Samples
                     dc.l    0
                     dc.b    'SPEE'
                     dc.l    2
-                    dc.l    OK_Speed
+                    dc.l    OKT_Speed
                     dc.l    6
                     dc.b    'SLEN'
                     dc.l    2
@@ -4546,11 +4546,11 @@ SAMP_MSG:
                     dc.l    1
                     dc.b    'PLEN'
                     dc.l    2
-                    dc.l    OK_PLen
+                    dc.l    OKT_PLen
                     dc.l    1
                     dc.b    'PATT'
                     dc.l    128
-                    dc.l    OK_Patterns
+                    dc.l    OKT_Patterns
                     dc.l    0
                     dc.l    0
 lbC02145E:
@@ -4608,27 +4608,27 @@ lbC0214F8:
 CMOD_MSG0:
                     dc.b    'CMOD'
                     dc.l    8
-                    dc.l    OK_ChannelsModes
+                    dc.l    OKT_ChannelsModes
                     dc.b    'SAMP'
                     dc.l    1152
-                    dc.l    OK_Samples
+                    dc.l    OKT_Samples
                     dc.b    'SPEE'
                     dc.l    2
-                    dc.l    OK_Speed
+                    dc.l    OKT_Speed
                     dc.b    'SLEN'
                     dc.l    2
-                    dc.l    OK_SLen
+                    dc.l    OKT_SLen
                     dc.b    'PLEN'
                     dc.l    2
-                    dc.l    OK_PLen
+                    dc.l    OKT_PLen
                     dc.b    'PATT'
                     dc.l    128
-                    dc.l    OK_Patterns
+                    dc.l    OKT_Patterns
                     dc.l    0
 lbC021548:
                     moveq   #0,d7
 lbC02154A:
-                    cmp.w   (OK_SLen),d7
+                    cmp.w   (OKT_SLen),d7
                     beq.b   lbC0215A8
                     move.w  d7,d0
                     bsr     get_given_pattern_rows
@@ -4657,8 +4657,8 @@ lbC0215A8:
                     moveq   #OK,d0
                     rts
 lbC0215AC:
-                    lea     (OK_Samples),a4
-                    lea     (OK_SampleTab),a5
+                    lea     (OKT_Samples),a4
+                    lea     (OKT_SampleTab),a5
                     moveq   #36-1,d7
 lbC0215BA:
                     move.l  (a5),d0
@@ -4694,7 +4694,7 @@ lbC021614:
 get_current_sample_ptr_address:
                     move.l  d0,-(a7)
                     move.w  (current_sample,pc),d0
-                    lea     (OK_SampleTab),a0
+                    lea     (OKT_SampleTab),a0
                     lsl.w   #3,d0
                     adda.w  d0,a0
                     move.l  (a7)+,d0
@@ -4702,7 +4702,7 @@ get_current_sample_ptr_address:
 
 ; ===========================================================================
 get_given_sample_ptr_address:
-                    lea     (OK_SampleTab),a0
+                    lea     (OKT_SampleTab),a0
                     lsl.w   #3,d0
                     adda.w   d0,a0
                     rts
@@ -4717,7 +4717,7 @@ lbC02163C:
 lbC02164A:
                     bra     error_what_samples
 lbC021650:
-                    lea     (OK_SampleTab),a0
+                    lea     (OKT_SampleTab),a0
                     moveq   #36-1,d0
 lbC021658:
                     tst.l   (a0)+
@@ -4755,7 +4755,7 @@ lbC02168E:
 do_free_sample:
                     bsr.b   lbC0216BE
                     bsr     lbC01FF8C
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -4797,7 +4797,7 @@ lbC0216DC:
                     bsr     ask_are_you_sure_requester
                     bne.b   lbC02175A
 lbC021720:
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.l  a0,a1
                     lsl.w   #5,d1
                     adda.w  d1,a0
@@ -4832,7 +4832,7 @@ lbL021778:
 lbW02177C:
                     dc.w    0
 lbC02177E:
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -4856,7 +4856,7 @@ lbC02177E:
                     beq     lbC021874
                     tst.l   (a0)+
                     beq     lbC021874
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -4927,7 +4927,7 @@ lbC02189C:
                     move.w  (lbW02190A,pc),d0
                     bsr     get_given_sample_ptr_address
                     move.l  a0,a5
-                    lea     (OK_Samples),a4
+                    lea     (OKT_Samples),a4
                     move.l  a4,a2
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
@@ -5095,7 +5095,7 @@ lbC021AF8:
                     bsr     error_sample_too_short
                     bra     lbC021BA6
 lbC021B08:
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d2
                     lsl.w   #5,d2
                     move.w  (samples_load_mode),(30,a0,d2.w)
@@ -5104,7 +5104,7 @@ lbC021B08:
                     move.l  d0,(lbL021C0E)
                     move.l  d1,(lbL021C12)
                     move.l  (lbL021C1A,pc),a0
-                    lea     (OK_Samples),a1
+                    lea     (OKT_Samples),a1
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     adda.w  d0,a1
@@ -5223,7 +5223,7 @@ lbC021C72:
                     move.l  #lbC021C92,(current_cmd_ptr)
                     rts
 lbC021C92:
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -5232,7 +5232,7 @@ lbC021C92:
                     moveq   #DIR_SAMPLES,d0
                     jsr     (display_file_requester)
                     bmi     lbC021DA2
-                    lea     (OK_Samples+30),a0
+                    lea     (OKT_Samples+30),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     cmpi.w  #1,(a0,d0.w)
@@ -5252,7 +5252,7 @@ lbC021CDA:
                     move.l  d0,(lbL021E1A)
                     addi.l  #96,d0
                     move.l  d0,(ascii_MSG60)
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     lea     (ascii_MSG62,pc),a1
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
@@ -5385,7 +5385,7 @@ lbC021E54:
                     moveq   #0,d0
                     rts
 lbC021E6C:
-                    lea     (OK_Samples+28),a0
+                    lea     (OKT_Samples+28),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -5396,7 +5396,7 @@ lbC021E6C:
 lbC021E86:
                     rts
 lbC021E88:
-                    lea     (OK_Samples+28),a0
+                    lea     (OKT_Samples+28),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -5411,7 +5411,7 @@ lbC021EA2:
                     beq     error_what_sample
                     tst.l   (lbL01A134)
                     beq     error_what_sample
-                    lea     (OK_Samples+30),a5
+                    lea     (OKT_Samples+30),a5
                     move.w  (current_sample,pc),d1
                     lsl.w   #5,d1
                     adda.w  d1,a5
@@ -5435,7 +5435,7 @@ lbC021EF4:
                     beq     error_what_sample
                     tst.l   (lbL01A134)
                     beq     error_what_sample
-                    lea     (OK_Samples+30),a5
+                    lea     (OKT_Samples+30),a5
                     move.w  (current_sample,pc),d1
                     lsl.w   #5,d1
                     adda.w  d1,a5
@@ -5492,7 +5492,7 @@ lbC021F9E:
                     move.l  d0,-(a7)
                     bsr     lbC0216BE
                     move.l  (a7),d0
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d2
                     lsl.w   #5,d2
                     adda.w  d2,a0
@@ -5522,19 +5522,19 @@ lbC021FF0:
 lbL021FFC:
                     dc.l    0
 lbC022000:
-                    cmpi.w  #15,(OK_Speed)
+                    cmpi.w  #15,(OKT_Speed)
                     beq.b   lbC022010
-                    addq.w  #1,(OK_Speed)
+                    addq.w  #1,(OKT_Speed)
 lbC022010:
                     bra     draw_main_menu
 lbC022014:
-                    cmpi.w  #1,(OK_Speed)
+                    cmpi.w  #1,(OKT_Speed)
                     beq.b   lbC022024
-                    subq.w  #1,(OK_Speed)
+                    subq.w  #1,(OKT_Speed)
 lbC022024:
                     bra     draw_main_menu
 lbC022028:
-                    move.w  (OK_PLen),d0
+                    move.w  (OKT_PLen),d0
                     subq.w  #1,d0
                     cmp.w   (current_song_position),d0
                     beq     error_no_more_positions
@@ -5546,43 +5546,43 @@ lbC022044:
                     subq.w  #1,(current_song_position)
                     bra     draw_main_menu
 lbC022058:
-                    lea     (OK_Patterns),a0
+                    lea     (OKT_Patterns),a0
                     move.w  (current_song_position),d0
-                    move.w  (OK_SLen),d1
+                    move.w  (OKT_SLen),d1
                     subq.w  #1,d1
                     cmp.b   (a0,d0.w),d1
                     beq     error_no_more_patterns
                     addq.b  #1,(a0,d0.w)
                     bra     draw_main_menu
 lbC02207C:
-                    lea     (OK_Patterns),a0
+                    lea     (OKT_Patterns),a0
                     move.w  (current_song_position),d0
                     tst.b   (a0,d0.w)
                     beq     error_no_more_patterns
                     subq.b  #1,(a0,d0.w)
                     bra     draw_main_menu
 lbC022098:
-                    cmpi.w  #1,(OK_PLen)
+                    cmpi.w  #1,(OKT_PLen)
                     beq     error_no_more_positions
-                    subq.w  #1,(OK_PLen)
-                    move.w  (OK_PLen),d0
-                    lea     (OK_Patterns),a0
+                    subq.w  #1,(OKT_PLen)
+                    move.w  (OKT_PLen),d0
+                    lea     (OKT_Patterns),a0
                     sf      (a0,d0.w)
                     cmp.w   (current_song_position),d0
                     bne     draw_main_menu
                     subq.w  #1,(current_song_position)
                     bra     draw_main_menu
 lbC0220CE:
-                    cmpi.w  #128,(OK_PLen)
+                    cmpi.w  #128,(OKT_PLen)
                     beq     error_no_more_positions
-                    addq.w  #1,(OK_PLen)
+                    addq.w  #1,(OKT_PLen)
                     bra     draw_main_menu
 lbC0220E4:
-                    cmpi.w  #128,(OK_PLen)
+                    cmpi.w  #128,(OKT_PLen)
                     beq     error_no_more_positions
-                    lea     (OK_Patterns,pc),a0
+                    lea     (OKT_Patterns,pc),a0
                     adda.w  (current_song_position),a0
-                    lea     (OK_Patterns+127,pc),a1
+                    lea     (OKT_Patterns+127,pc),a1
 lbC0220FE:
                     cmpa.l  a0,a1
                     beq.b   lbC022108
@@ -5592,11 +5592,11 @@ lbC022108:
                     sf      (a0)
                     bra.b   lbC0220CE
 lbC02210C:
-                    cmpi.w  #1,(OK_PLen)
+                    cmpi.w  #1,(OKT_PLen)
                     beq     error_no_more_positions
-                    lea     (OK_Patterns,pc),a0
+                    lea     (OKT_Patterns,pc),a0
                     adda.w  (current_song_position),a0
-                    lea     (OK_Patterns+127,pc),a1
+                    lea     (OKT_Patterns+127,pc),a1
 lbC022126:
                     cmpa.l  a1,a0
                     beq.b   lbC022130
@@ -5606,9 +5606,9 @@ lbC022130:
                     sf      (a0)
                     bra     lbC022098
 lbC022136:
-                    move.w  (OK_SLen),d0
+                    move.w  (OKT_SLen),d0
                     subq.w  #1,d0
-                    lea     (OK_Patterns,pc),a0
+                    lea     (OKT_Patterns,pc),a0
                     moveq   #128-1,d1
 lbC022144:
                     cmp.b   (a0)+,d0
@@ -5731,18 +5731,18 @@ lbC02223C:
 ; ===========================================================================
 play_song:
                     st      (pattern_play_flag)
-                    move.w  (current_song_position),(OK_PtPtr)
+                    move.w  (current_song_position),(OKT_PtPtr)
                     bra.b   go_play
 play_pattern:
                     sf      (pattern_play_flag)
-                    move.w  (current_viewed_pattern),(OK_PtPtr)
+                    move.w  (current_viewed_pattern),(OKT_PtPtr)
 go_play:
                     tst.w   (replay_type)
-                    bne.b   .ok_replay_type
+                    bne.b   .OKT_replay_type
                     tst.b   (ntsc_flag)
-                    beq.b   .ok_replay_type
+                    beq.b   .OKT_replay_type
                     bra     error_only_in_pal
-.ok_replay_type:
+.OKT_replay_type:
                     bsr     lbC01FF8C
                     move.w  (replay_type,pc),d0
                     add.w   d0,d0
@@ -5765,10 +5765,10 @@ go_play:
                     add.w   d0,d0
                     move.w  (lbW022336,pc,d0.w),d0
                     jsr     (lbW022336,pc,d0.w)
-                    move.w  (OK_ActSpeed),(OK_Speed)
+                    move.w  (OKT_ActSpeed),(OKT_Speed)
                     tst.b   (pattern_play_flag)
                     beq.b   lbC0222E4
-                    move.w  (OK_PtPtr),(current_song_position)
+                    move.w  (OKT_PtPtr),(current_song_position)
                     bra.b   lbC02230C
 lbC0222E4:
                     cmpi.b  #2,(lbB01BC6B)
@@ -5777,7 +5777,7 @@ lbC0222E4:
                     bmi.b   lbC02230C
                     mulu.w  #5,d0
                     move.w  d0,(caret_pos_x)
-                    move.w  (OK_PattY,pc),d0
+                    move.w  (OKT_PattY,pc),d0
                     bmi.b   lbC02230C
                     move.w  d0,(viewed_pattern_row)
 lbC02230C:
@@ -5834,7 +5834,7 @@ lbC0223A4:
                     moveq   #0,d0
                     moveq   #0,d1
                     jsr     (process_commands)
-                    bra     lbC0246B8
+                    bra     wait_any_key_and_mouse_press
 lbC0225F6:
                     btst    #15,d1
                     bne.b   lbC022608
@@ -5877,7 +5877,7 @@ replay_int:
                     moveq   #0,d0
                     rts
 replay_table:
-                    dc.w    OK_Play_1-replay_table,OK_Play_2-replay_table
+                    dc.w    OKT_Play_1-replay_table,OKT_Play_2-replay_table
 
 ; ===========================================================================
 install_midi_ints:
@@ -6198,7 +6198,7 @@ lbC022B24:
                     moveq   #0,d0
 lbC022B26:
                     bsr     lbC022C3C
-                    lea     (OK_PattLineBuff),a0
+                    lea     (OKT_PattLineBuff),a0
                     move.w  (lbW01B2B6),d2
                     add.w   d2,d2
                     add.w   d2,d2
@@ -6212,7 +6212,7 @@ lbC022B46:
                     ext.w   d0
                     bsr     lbC022D06
                     bsr     lbC01FB24
-                    bsr     OK_GetPatternData
+                    bsr     OKT_GetPatternData
                     bsr     lbC0231DC
                     bra     lbC022C6A
 lbC022B5E:
@@ -6263,12 +6263,12 @@ lbC022BEE:
                     beq     lbC01FAFE
                     bsr     lbC01F06E
                     bmi.b   lbC022C3A
-                    move.l  (lbL01F2D0,pc),a0
+                    move.l  (current_period_table,pc),a0
                     move.b  (a0,d0.w),d0
                     bmi.b   lbC022C3A
                     ext.w   d0
                     bsr.b   lbC022C3C
-                    lea     (OK_PattLineBuff),a0
+                    lea     (OKT_PattLineBuff),a0
                     move.w  (lbW01B2B6),d2
                     add.w   d2,d2
                     add.w   d2,d2
@@ -6282,13 +6282,13 @@ lbC022C24:
 lbC022C28:
                     bsr     lbC022D06
                     bsr     lbC01FB24
-                    bsr     OK_GetPatternData
+                    bsr     OKT_GetPatternData
                     bsr     lbC0231DC
                     bra.b   lbC022C6A
 lbC022C3A:
                     rts
 lbC022C3C:
-                    lea     (OK_PattLineBuff),a0
+                    lea     (OKT_PattLineBuff),a0
                     lea     (lbL01B7B2),a1
                 REPT 8
                     move.l  (a0),(a1)+
@@ -6297,7 +6297,7 @@ lbC022C3C:
                     rts
 lbC022C6A:
                     lea     (lbL01B7B2),a0
-                    lea     (OK_PattLineBuff),a1
+                    lea     (OKT_PattLineBuff),a1
                 REPT 8
                     move.l  (a0)+,(a1)+
                 ENDR
@@ -6355,11 +6355,11 @@ lbC022D06:
                     beq     lbC022DE6
                     tst.b   (pattern_play_flag)
                     bne     lbC022DE6
-                    move.w  (OK_PattY,pc),d2
-                    mulu.w  (OK_ActSpeed),d2
-                    add.w   (OK_ActCyc,pc),d2
+                    move.w  (OKT_PattY,pc),d2
+                    mulu.w  (OKT_ActSpeed),d2
+                    add.w   (OKT_ActCyc,pc),d2
                     move.w  (quantize_amount,pc),d1
-                    mulu.w  (OK_ActSpeed),d1
+                    mulu.w  (OKT_ActSpeed),d1
                     tst.w   d1
                     beq.b   lbC022D54
                     divu.w  d1,d2
@@ -6376,8 +6376,8 @@ lbC022D50:
                     swap    d2
                     mulu.w  d1,d2
 lbC022D54:
-                    divu.w  (OK_ActSpeed),d2
-                    bsr     OK_GetPPatt
+                    divu.w  (OKT_ActSpeed),d2
+                    bsr     OKT_GetPPatt
 lbC022D5E:
                     cmp.w   d0,d2
                     blt.b   lbC022D66
@@ -6398,7 +6398,7 @@ lbC022D66:
 lbC022D88:
                     move.b  (lbB021E53,pc),(a0)+
 lbC022D8C:
-                    lea     (C1C1D1D1E1F1F_MSG),a1
+                    lea     (full_note_table),a1
                     lea     (lbW01B2B0),a0
                     move.w  (lbB01B2B8),d0
                     add.w   d0,d0
@@ -6428,7 +6428,7 @@ lbC022DE6:
 show_pattern_position_bar:
                     tst.b   (pattern_play_flag)
                     bne     lbC022EF8
-                    move.w  (OK_PattY,pc),d2
+                    move.w  (OKT_PattY,pc),d2
                     bmi     lbC022EF8
                     move.w  d2,d0
                     bsr     set_pattern_bitplane_from_given_pos
@@ -6488,135 +6488,135 @@ lbC022EF8:
                     rts
 
 ; ===========================================================================
-OK_ReplayHandler:
+OKT_ReplayHandler:
                     bsr     draw_vumeters
-                    bsr     OK_SetHWRegs
-                    addq.w  #1,(OK_ActCyc)
-                    move.w  (OK_ActSpeed,pc),d0
-                    cmp.w   (OK_ActCyc,pc),d0
-                    bgt.b   .OK_NoCyc
-                    bsr     OK_NewRow
-                    bsr     OK_GetPatternData
-.OK_NoCyc:
+                    bsr     OKT_SetHWRegs
+                    addq.w  #1,(OKT_ActCyc)
+                    move.w  (OKT_ActSpeed,pc),d0
+                    cmp.w   (OKT_ActCyc,pc),d0
+                    bgt.b   .OKT_NoCyc
+                    bsr     OKT_NewRow
+                    bsr     OKT_GetPatternData
+.OKT_NoCyc:
                     bsr     lbC022A44
                     bsr     lbC022AF0
-                    lea     (OK_PattLineBuff+2),a2
-                    lea     (OK_ChannelsData),a5
+                    lea     (OKT_PattLineBuff+2),a2
+                    lea     (OKT_ChannelsData),a5
                     move.b  (channels_mute_flags),d6
                     moveq   #8-1,d7
-.OK_PLoop:
+.OKT_PLoop:
                     tst.b   (a5)
-                    bne.b   .OK_MultiChan
+                    bne.b   .OKT_MultiChan
                     addq.w  #4,a2
                     lea     (28,a5),a5
                     subq.w  #1,d7
-                    dbra    d7,.OK_PLoop
+                    dbra    d7,.OKT_PLoop
                     rts
-.OK_MultiChan:
+.OKT_MultiChan:
                     btst    d7,d6
-                    beq.b   .OK_NoEffect_Multi
+                    beq.b   .OKT_NoEffect_Multi
                     moveq   #0,d0
                     move.b  (a2),d0
                     add.w   d0,d0
-                    move.w  (OK_EffectTab_Tick0,pc,d0.w),d0
-                    beq.b   .OK_NoEffect_Multi
+                    move.w  (OKT_EffectTab_Tick0,pc,d0.w),d0
+                    beq.b   .OKT_NoEffect_Multi
                     moveq   #0,d1
                     move.b  (1,a2),d1
-                    jsr     (OK_EffectTab_Tick0,pc,d0.w)
-.OK_NoEffect_Multi:
+                    jsr     (OKT_EffectTab_Tick0,pc,d0.w)
+.OKT_NoEffect_Multi:
                     addq.w  #4,a2
                     lea     (14,a5),a5
                     subq.w  #1,d7
                     btst    d7,d6
-                    beq.b   .OK_NoEffect_Single
+                    beq.b   .OKT_NoEffect_Single
                     moveq   #0,d0
                     move.b  (a2),d0
                     add.w   d0,d0
-                    move.w  (OK_EffectTab_Tick0,pc,d0.w),d0
-                    beq.b   .OK_NoEffect_Single
+                    move.w  (OKT_EffectTab_Tick0,pc,d0.w),d0
+                    beq.b   .OKT_NoEffect_Single
                     moveq   #0,d1
                     move.b  (1,a2),d1
-                    jsr     (OK_EffectTab_Tick0,pc,d0.w)
-.OK_NoEffect_Single:
+                    jsr     (OKT_EffectTab_Tick0,pc,d0.w)
+.OKT_NoEffect_Single:
                     addq.w  #4,a2
                     lea     (14,a5),a5
-                    dbra    d7,.OK_PLoop
+                    dbra    d7,.OKT_PLoop
                     rts
-OK_EffectTab_Tick0:
+OKT_EffectTab_Tick0:
                     dc.w    0,                                      0,                                  0
                     dc.w    0,                                      0,                                  0
                     dc.w    0,                                      0,                                  0
-                    dc.w    0,                                      OK_Arp_Tick0-OK_EffectTab_Tick0,    OK_Arp2_Tick0-OK_EffectTab_Tick0
-                    dc.w    OK_Arp3_Tick0-OK_EffectTab_Tick0,       OK_SlideD_Tick0-OK_EffectTab_Tick0, 0
-                    dc.w    OK_Filt-OK_EffectTab_Tick0,             0,                                  OK_SlideUTick_Tick0-OK_EffectTab_Tick0
+                    dc.w    0,                                      OKT_Arp_Tick0-OKT_EffectTab_Tick0,    OKT_Arp2_Tick0-OKT_EffectTab_Tick0
+                    dc.w    OKT_Arp3_Tick0-OKT_EffectTab_Tick0,       OKT_SlideD_Tick0-OKT_EffectTab_Tick0, 0
+                    dc.w    OKT_Filt-OKT_EffectTab_Tick0,             0,                                  OKT_SlideUTick_Tick0-OKT_EffectTab_Tick0
                     dc.w    0,                                      0,                                  0
-                    dc.w    OK_SlideDTick_Tick0-OK_EffectTab_Tick0, 0,                                  0
-                    dc.w    0,                                      OK_PosJmp-OK_EffectTab_Tick0,       0
-                    dc.w    0,                                      OK_CSpeed-OK_EffectTab_Tick0,       0
-                    dc.w    OK_SlideU_Tick0-OK_EffectTab_Tick0,     OK_Volume-OK_EffectTab_Tick0,       0
+                    dc.w    OKT_SlideDTick_Tick0-OKT_EffectTab_Tick0, 0,                                  0
+                    dc.w    0,                                      OKT_PosJmp-OKT_EffectTab_Tick0,       0
+                    dc.w    0,                                      OKT_CSpeed-OKT_EffectTab_Tick0,       0
+                    dc.w    OKT_SlideU_Tick0-OKT_EffectTab_Tick0,     OKT_Volume-OKT_EffectTab_Tick0,       0
                     dc.W    0,                                      0,                                  0
 
 ; ===========================================================================
-OK_NewRow:
-                    clr.w   (OK_ActCyc)
-                    move.l  (OK_TrkPos,pc),a1
-                    adda.w  (OK_TrkSize,pc),a1
-                    move.l  a1,(OK_TrkPos)
+OKT_NewRow:
+                    clr.w   (OKT_ActCyc)
+                    move.l  (OKT_TrkPos,pc),a1
+                    adda.w  (OKT_TrkSize,pc),a1
+                    move.l  a1,(OKT_TrkPos)
                     bsr     show_pattern_position_bar
                     move.w  (lbW01B2BA),(lbW01B2B6)
-                    addq.w  #1,(OK_PattY)
-                    bsr     OK_GetPPatt
-                    tst.w   (OK_NextPt)
-                    bpl.b   .OK_PattEnd
-                    cmp.w   (OK_PattY,pc),d0
-                    bgt.b   .OK_NoNew
-.OK_PattEnd:
-                    clr.w   (OK_PattY)
-                    mulu.w  (OK_TrkSize,pc),d0
-                    sub.l   d0,(OK_TrkPos)
+                    addq.w  #1,(OKT_PattY)
+                    bsr     OKT_GetPPatt
+                    tst.w   (OKT_NextPt)
+                    bpl.b   .OKT_PattEnd
+                    cmp.w   (OKT_PattY,pc),d0
+                    bgt.b   .OKT_NoNew
+.OKT_PattEnd:
+                    clr.w   (OKT_PattY)
+                    mulu.w  (OKT_TrkSize,pc),d0
+                    sub.l   d0,(OKT_TrkPos)
                     tst.b   (pattern_play_flag)
-                    beq.b   .OK_NoNew
-                    tst.w   (OK_NextPt)
-                    bmi.b   .OK_NoNextPt
-                    move.w  (OK_NextPt,pc),(OK_PtPtr)
-                    bra.b   .OK_NewPos
-.OK_NoNextPt:
-                    addq.w  #1,(OK_PtPtr)
-.OK_NewPos:
-                    move.w  (OK_PtPtr,pc),d0
-                    cmp.w   (OK_PLen),d0
-                    bne.b   .OK_NoNewInit
-                    clr.w   (OK_PtPtr)
-                    move.w  (OK_Speed),(OK_ActSpeed)
-.OK_NoNewInit:
-                    bsr     OK_GetTrkPos
-.OK_NoNew:
-                    move.l  (OK_TrkPos,pc),a0
+                    beq.b   .OKT_NoNew
+                    tst.w   (OKT_NextPt)
+                    bmi.b   .OKT_NoNextPt
+                    move.w  (OKT_NextPt,pc),(OKT_PtPtr)
+                    bra.b   .OKT_NewPos
+.OKT_NoNextPt:
+                    addq.w  #1,(OKT_PtPtr)
+.OKT_NewPos:
+                    move.w  (OKT_PtPtr,pc),d0
+                    cmp.w   (OKT_PLen),d0
+                    bne.b   .OKT_NoNewInit
+                    clr.w   (OKT_PtPtr)
+                    move.w  (OKT_Speed),(OKT_ActSpeed)
+.OKT_NoNewInit:
+                    bsr     OKT_GetTrkPos
+.OKT_NoNew:
+                    move.l  (OKT_TrkPos,pc),a0
                     movem.l (a0),d0-d7
-                    movem.l d0-d7,(OK_PattLineBuff)
-                    move.w  #-1,(OK_NextPt)
+                    movem.l d0-d7,(OKT_PattLineBuff)
+                    move.w  #-1,(OKT_NextPt)
                     bra     show_pattern_position_bar
 
 ; ===========================================================================
-OK_GetPPatt:
-                    move.w  (OK_PtPtr,pc),d0
+OKT_GetPPatt:
+                    move.w  (OKT_PtPtr,pc),d0
                     tst.b   (pattern_play_flag)
-                    beq.b   .OK_PlayPattern
-                    lea     (OK_Patterns),a0
+                    beq.b   .OKT_PlayPattern
+                    lea     (OKT_Patterns),a0
                     move.b  (a0,d0.w),d0
-.OK_PlayPattern:
-                    bra     OK_GetPattern
+.OKT_PlayPattern:
+                    bra     OKT_GetPattern
 
 ; ===========================================================================
-OK_GetTrkPos:
+OKT_GetTrkPos:
                     tst.b   (pattern_play_flag)
-                    beq.b   .OK_PlayPattern
-                    move.w  (OK_PtPtr,pc),d2
+                    beq.b   .OKT_PlayPattern
+                    move.w  (OKT_PtPtr,pc),d2
                     moveq   #12,d0
                     moveq   #1,d1
                     jsr     (draw_3_digits_decimal_number_leading_zeroes)
-                    lea     (OK_Patterns),a0
-                    move.w  (OK_PtPtr,pc),d2
+                    lea     (OKT_Patterns),a0
+                    move.w  (OKT_PtPtr,pc),d2
                     move.b  (a0,d2.w),d2
                     move.w  d2,-(a7)
                     moveq   #13,d0
@@ -6624,17 +6624,17 @@ OK_GetTrkPos:
                     jsr     (draw_2_digits_decimal_number_leading_zeroes)
                     move.w  (a7)+,d0
                     bra.b   lbC0230D2
-.OK_PlayPattern:
-                    move.w  (OK_PtPtr,pc),d0
+.OKT_PlayPattern:
+                    move.w  (OKT_PtPtr,pc),d0
 lbC0230D2:
-                    bsr     OK_GetPattern
-                    move.l  a0,(OK_TrkPos)
-                    clr.w   (OK_PattY)
+                    bsr     OKT_GetPattern
+                    move.l  a0,(OKT_TrkPos)
+                    clr.w   (OKT_PattY)
                     rts
 
 ; ===========================================================================
-OK_GetPattern:
-                    lea     (OK_PatternList),a0
+OKT_GetPattern:
+                    lea     (OKT_PatternList),a0
                     add.w   d0,d0
                     add.w   d0,d0
                     move.l  (a0,d0.w),a0
@@ -6642,42 +6642,42 @@ OK_GetPattern:
                     rts
 
 ; ===========================================================================
-OK_GetPatternData:
-                    lea     (OK_SampleTab),a0
-                    lea     (OK_Samples),a1
-                    lea     (OK_PattLineBuff),a2
-                    lea     (OK_ChannelsData),a3
+OKT_GetPatternData:
+                    lea     (OKT_SampleTab),a0
+                    lea     (OKT_Samples),a1
+                    lea     (OKT_PattLineBuff),a2
+                    lea     (OKT_ChannelsData),a3
                     move.b  (channels_mute_flags),d6
                     moveq   #8-1,d7
-.OK_Loop:
+.OKT_Loop:
                     tst.b   (a3)
-                    bne.b   .OK_FillData
+                    bne.b   .OKT_FillData
                     addq.w  #4,a2
                     lea     (28,a3),a3
                     subq.w  #1,d7
-                    dbra    d7,.OK_Loop
+                    dbra    d7,.OKT_Loop
                     rts
-.OK_FillData:
-                    bsr.b   .OK_GetChannelData
+.OKT_FillData:
+                    bsr.b   .OKT_GetChannelData
                     subq.w  #1,d7
-                    bsr.b   .OK_GetChannelData
-                    dbra    d7,.OK_Loop
+                    bsr.b   .OKT_GetChannelData
+                    dbra    d7,.OKT_Loop
                     rts
-.OK_GetChannelData:
+.OKT_GetChannelData:
                     btst    d7,d6
-                    beq     .OK_NoData
+                    beq     .OKT_NoData
                     moveq   #0,d3
                     move.b  (a2),d3
-                    beq     .OK_NoData
+                    beq     .OKT_NoData
                     subq.w  #1,d3
                     cmpi.b  #MIDI_OUT,(midi_mode)
-                    bne.b   .OK_Midi_Out
+                    bne.b   .OKT_Midi_Out
                     movem.l d0-d4/a0/a1,-(a7)
                     move.b  d7,d4
                     moveq   #0,d0
                     move.b  (1,a2),d0
                     lsl.w   #5,d0
-                    lea     (OK_Samples),a1
+                    lea     (OKT_Samples),a1
                     adda.w  d0,a1
                     cmpi.w  #1,(30,a1)
                     beq.b   .lbC023194
@@ -6686,50 +6686,50 @@ OK_GetPatternData:
                     addq.b  #1,d1
                     move.b  #64,d2
                     cmpi.b  #31,(2,a2)
-                    bne.b   .OK_Max
+                    bne.b   .OKT_Max
                     cmpi.b  #64,(3,a2)
-                    bhi.b   .OK_Max
+                    bhi.b   .OKT_Max
                     move.b  (3,a2),d2
-.OK_Max:
+.OKT_Max:
                     move.l  (20,a1),d3
                     jsr     (lbC022AA6,pc)
 .lbC023194:
                     movem.l (a7)+,d0-d4/a0/a1
-                    bra.b   .OK_Done_Midi_Out
-.OK_Midi_Out:
+                    bra.b   .OKT_Done_Midi_Out
+.OKT_Midi_Out:
                     moveq   #0,d0
                     move.b  (1,a2),d0
                     lsl.w   #3,d0
                     move.l  (a0,d0.w),d2
-                    beq.b   .OK_NoData
+                    beq.b   .OKT_NoData
                     add.w   d0,d0
                     add.w   d0,d0
                     cmpi.w  #1,(30,a1,d0.w)
-                    beq.b   .OK_NoData
+                    beq.b   .OKT_NoData
                     move.l  d2,(2,a3)
                     move.l  (20,a1,d0.w),(6,a3)
                     move.w  d3,(10,a3)
                     move.w  d3,(12,a3)
-.OK_Done_Midi_Out:
+.OKT_Done_Midi_Out:
                     bsr     trigger_vumeter
-.OK_NoData:
+.OKT_NoData:
                     addq.w  #4,a2
                     lea     (14,a3),a3
                     rts
 
 ; ===========================================================================
-OK_SetHWRegs:
-                    bsr     OK_TurnDMAOn
-                    move.w  (OK_ActCyc,pc),d0
-                    bne.b   OK_NoNewRow
+OKT_SetHWRegs:
+                    bsr     OKT_TurnDMAOn
+                    move.w  (OKT_ActCyc,pc),d0
+                    bne.b   OKT_NoNewRow
 lbC0231DC:
-                    bsr     OK_Set
-                    or.w    d4,(OK_Dmacon)
-OK_NoNewRow:
+                    bsr     OKT_Set
+                    or.w    d4,(OKT_Dmacon)
+OKT_NoNewRow:
                     cmpi.b  #MIDI_OUT,(midi_mode)
-                    beq     .OK_Midi_Out
-                    bsr     OK_HandleEffects_TicksX
-                    lea     (OK_Volume2,pc),a0
+                    beq     .OKT_Midi_Out
+                    bsr     OKT_HandleEffects_TicksX
+                    lea     (OKT_Volume2,pc),a0
                     move.l  (a0)+,(a0)
                     lea     (_CUSTOM|AUD0VOL),a1
                     moveq   #0,d0
@@ -6741,102 +6741,102 @@ OK_NoNewRow:
                     move.w  d0,(AUD2VOL-AUD0VOL,a1)
                     move.b  (3,a0),d0
                     move.w  d0,(AUD3VOL-AUD0VOL,a1)
-                    move.b  (OK_Filter,pc),d0
-                    beq.b   .OK_Blink
+                    move.b  (OKT_Filter,pc),d0
+                    beq.b   .OKT_Blink
                     bclr    #1,(CIAB)
-.OK_Midi_Out:
+.OKT_Midi_Out:
                     rts
-.OK_Blink:
+.OKT_Blink:
                     bset    #1,(CIAB)
                     rts
 
 ; ===========================================================================
-OK_TurnDMAOn:
+OKT_TurnDMAOn:
                     cmpi.b  #MIDI_OUT,(midi_mode)
-                    beq.b   .OK_SetChan4
-                    lea     (OK_Dmacon,pc),a0
+                    beq.b   .OKT_SetChan4
+                    lea     (OKT_Dmacon,pc),a0
                     move.w  (a0),d0
-                    beq.b   .OK_SetChan4
+                    beq.b   .OKT_SetChan4
                     clr.w   (a0)
                     ori.w   #DMAF_SETCLR,d0
                     lea     (_CUSTOM|VHPOSR),a0
                     move.w  d0,(DMACON-VHPOSR,a0)
                     move.b  (a0),d1
-.OK_NextLine:
+.OKT_NextLine:
                     cmp.b   (a0),d1
-                    beq.b   .OK_NextLine
+                    beq.b   .OKT_NextLine
                     move.b  (a0),d1
-.OK_WaitLine:
+.OKT_WaitLine:
                     cmp.b   (a0),d1
-                    beq.b   .OK_WaitLine
-                    lea     (OK_ChannelsData+2),a1
+                    beq.b   .OKT_WaitLine
+                    lea     (OKT_ChannelsData+2),a1
                     btst    #0,d0
-                    beq.b   .OK_SetChan1
+                    beq.b   .OKT_SetChan1
                     move.l  (a1),(AUD0LCH-VHPOSR,a0)
                     move.w  (4,a1),(AUD0LEN-VHPOSR,a0)
-.OK_SetChan1:
+.OKT_SetChan1:
                     btst    #1,d0
-                    beq.b   .OK_SetChan2
+                    beq.b   .OKT_SetChan2
                     move.l  (28,a1),(AUD1LCH-VHPOSR,a0)
                     move.w  (32,a1),(AUD1LEN-VHPOSR,a0)
-.OK_SetChan2:
+.OKT_SetChan2:
                     btst    #2,d0
-                    beq.b   .OK_SetChan3
+                    beq.b   .OKT_SetChan3
                     move.l  (56,a1),(AUD2LCH-VHPOSR,a0)
                     move.w  (60,a1),(AUD2LEN-VHPOSR,a0)
-.OK_SetChan3:
+.OKT_SetChan3:
                     btst    #3,d0
-                    beq.b   .OK_SetChan4
+                    beq.b   .OKT_SetChan4
                     move.l  (84,a1),(AUD3LCH-VHPOSR,a0)
                     move.w  (88,a1),(AUD3LEN-VHPOSR,a0)
-.OK_SetChan4:
+.OKT_SetChan4:
                     rts
 
 ; ===========================================================================
-OK_Set:
-                    lea     (OK_SampleTab),a0
-                    lea     (OK_PattLineBuff),a2
-                    lea     (OK_ChannelsData),a3
+OKT_Set:
+                    lea     (OKT_SampleTab),a0
+                    lea     (OKT_PattLineBuff),a2
+                    lea     (OKT_ChannelsData),a3
                     lea     (_CUSTOM|AUD0LCH),a4
-                    lea     (OK_FullPeriodTab,pc),a6
+                    lea     (OKT_FullPeriodTab,pc),a6
                     moveq   #0,d4
                     moveq   #1,d5
                     move.b  (channels_mute_flags),d6
                     moveq   #8-1,d7
-.OK_Loop:
+.OKT_Loop:
                     tst.b   (a3)
-                    bne.b   .OK_MultiChannel
-                    bsr.b   .OK_Set4
+                    bne.b   .OKT_MultiChannel
+                    bsr.b   .OKT_Set4
                     addq.w  #4,a2
                     lea     (28,a3),a3
                     lea     (16,a4),a4
                     add.w   d5,d5
                     subq.w  #1,d7
-                    dbra    d7,.OK_Loop
+                    dbra    d7,.OKT_Loop
                     rts
-.OK_MultiChannel:
+.OKT_MultiChannel:
                     addq.w  #8,a2
                     lea     (28,a3),a3
                     lea     (16,a4),a4
                     add.w   d5,d5
                     subq.w  #1,d7
-                    dbra    d7,.OK_Loop
+                    dbra    d7,.OKT_Loop
                     rts
-.OK_Set4:
+.OKT_Set4:
                     btst    d7,d6
-                    beq     .OK_NoSet
+                    beq     .OKT_NoSet
                     moveq   #0,d3
                     move.b  (a2),d3
-                    beq     .OK_NoSet
+                    beq     .OKT_NoSet
                     subq.w  #1,d3
                     cmpi.b  #MIDI_OUT,(midi_mode)
-                    bne.b   .OK_Midi_Out
+                    bne.b   .OKT_Midi_Out
                     movem.l d0-d4/a0/a1,-(a7)
                     move.b  d7,d4
                     moveq   #0,d0
                     move.b  (1,a2),d0
                     lsl.w   #5,d0
-                    lea     (OK_Samples),a1
+                    lea     (OKT_Samples),a1
                     adda.w  d0,a1
                     tst.w   (30,a1)
                     beq.b   .lbC0232EE
@@ -6845,32 +6845,32 @@ OK_Set:
                     addq.b  #1,d1
                     move.b  (29,a1),d2
                     cmpi.b  #31,(2,a2)
-                    bne.b   .OK_Max
+                    bne.b   .OKT_Max
                     cmpi.b  #64,(3,a2)
-                    bhi.b   .OK_Max
+                    bhi.b   .OKT_Max
                     move.b  (3,a2),d2
-.OK_Max:
+.OKT_Max:
                     move.l  (20,a1),d3
                     jsr     (lbC022AA6,pc)
 .lbC0232EE:
                     movem.l (a7)+,d0-d4/a0/a1
-                    bra.b   .OK_Done_Midi_Out
-.OK_Midi_Out:
+                    bra.b   .OKT_Done_Midi_Out
+.OKT_Midi_Out:
                     moveq   #0,d0
                     move.b  (1,a2),d0
                     lsl.w   #3,d0
                     move.l  (a0,d0.w),d2
-                    beq     .OK_NoSet
+                    beq     .OKT_NoSet
                     add.w   d0,d0
                     add.w   d0,d0
-                    lea     (OK_Samples),a1
+                    lea     (OKT_Samples),a1
                     adda.w  d0,a1
                     tst.w   (30,a1)
-                    beq     .OK_NoSet
+                    beq     .OKT_NoSet
                     move.l  (20,a1),d1
                     lsr.l   #1,d1
                     tst.w   d1
-                    beq     .OK_NoSet
+                    beq     .OKT_NoSet
                     move.w  d5,(_CUSTOM|DMACON)
                     or.w    d5,d4
                     move.l  d2,(a4)
@@ -6880,23 +6880,23 @@ OK_Set:
                     move.w  d0,(10,a3)
                     move.w  d0,(6,a4)
                     move.l  a0,-(a7)
-                    lea     (OK_Volume2,pc),a0
+                    lea     (OKT_Volume2,pc),a0
                     moveq   #0,d0
                     move.b  (-8,a0,d7.w),d0
                     move.b  (29,a1),(a0,d0.w)
                     move.l  (a7)+,a0
-.OK_Done_Midi_Out:
+.OKT_Done_Midi_Out:
                     bsr     trigger_vumeter
                     cmpi.b  #MIDI_OUT,(midi_mode)
-                    beq.b   .OK_NoSet
+                    beq.b   .OKT_NoSet
                     move.w  (26,a1),d0
-                    bne.b   .OK_RealRep
+                    bne.b   .OKT_RealRep
                     move.w  d1,(4,a4)
-                    move.l  #OK_EmptyWaveForm,(2,a3)
+                    move.l  #OKT_EmptyWaveForm,(2,a3)
                     move.w  #2/2,(6,a3)
-.OK_NoSet:
+.OKT_NoSet:
                     rts
-.OK_RealRep:
+.OKT_RealRep:
                     move.w  d0,(6,a3)
                     moveq   #0,d1
                     move.w  (24,a1),d1
@@ -6908,179 +6908,179 @@ OK_Set:
                     rts
 
 ; ===========================================================================
-OK_HandleEffects_TicksX:
+OKT_HandleEffects_TicksX:
                     cmpi.b  #MIDI_OUT,(midi_mode)
-                    beq.b   .OK_Midi_Out
-                    lea     (OK_PattLineBuff),a2
-                    lea     (OK_ChannelsData),a3
+                    beq.b   .OKT_Midi_Out
+                    lea     (OKT_PattLineBuff),a2
+                    lea     (OKT_ChannelsData),a3
                     lea     (_CUSTOM|AUD0LCH),a4
-                    lea     (OK_FullPeriodTab,pc),a6
+                    lea     (OKT_FullPeriodTab,pc),a6
                     moveq   #1,d5
                     move.b  (channels_mute_flags),d6
                     moveq   #8-1,d7
-.OK_Loop:
+.OKT_Loop:
                     tst.b   (a3)
-                    bne.b   .OK_MultiChannel
-                    bsr.b   .OK_ProcessEffect
+                    bne.b   .OKT_MultiChannel
+                    bsr.b   .OKT_ProcessEffect
                     addq.w  #4,a2
                     lea     (28,a3),a3
                     lea     ($10,a4),a4
                     add.w   d5,d5
                     subq.w  #1,d7
-                    dbra    d7,.OK_Loop
-.OK_Midi_Out:
+                    dbra    d7,.OKT_Loop
+.OKT_Midi_Out:
                     rts
-.OK_MultiChannel:
+.OKT_MultiChannel:
                     addq.w  #8,a2
                     lea     (28,a3),a3
                     lea     ($10,a4),a4
                     add.w   d5,d5
                     subq.w  #1,d7
-                    dbra    d7,.OK_Loop
+                    dbra    d7,.OKT_Loop
                     rts
-.OK_ProcessEffect:
+.OKT_ProcessEffect:
                     btst    d7,d6
-                    beq.b   OK_Nop
+                    beq.b   OKT_Nop
                     moveq   #0,d0
                     move.b  (2,a2),d0
                     add.w   d0,d0
                     moveq   #0,d1
                     move.b  (3,a2),d1
-                    move.w  (OK_EffectTab_TickX,pc,d0.w),d0
-                    jmp     (OK_EffectTab_TickX,pc,d0.w)
-OK_Nop:
+                    move.w  (OKT_EffectTab_TickX,pc,d0.w),d0
+                    jmp     (OKT_EffectTab_TickX,pc,d0.w)
+OKT_Nop:
                     rts
-OK_EffectTab_TickX:
-                    dc.w    OK_Nop-OK_EffectTab_TickX,OK_PortD-OK_EffectTab_TickX,OK_PortU-OK_EffectTab_TickX
-                    dc.w    OK_Nop-OK_EffectTab_TickX,OK_Nop-OK_EffectTab_TickX,OK_Nop-OK_EffectTab_TickX
-                    dc.w    OK_Nop-OK_EffectTab_TickX,OK_Nop-OK_EffectTab_TickX,OK_Nop-OK_EffectTab_TickX
-                    dc.w    OK_Nop-OK_EffectTab_TickX,OK_Arp_TickX-OK_EffectTab_TickX,OK_Arp2_TickX-OK_EffectTab_TickX
-                    dc.w    OK_Arp3_TickX-OK_EffectTab_TickX,OK_SlideD_TickX-OK_EffectTab_TickX,OK_Nop-OK_EffectTab_TickX
-                    dc.w    OK_Filt-OK_EffectTab_TickX,OK_Nop-OK_EffectTab_TickX,OK_SlideUTick_TickX-OK_EffectTab_TickX
-                    dc.w    OK_Nop-OK_EffectTab_TickX,OK_Nop-OK_EffectTab_TickX,OK_Nop-OK_EffectTab_TickX
-                    dc.w    OK_SlideDTick_TickX-OK_EffectTab_TickX,OK_Nop-OK_EffectTab_TickX,OK_Nop-OK_EffectTab_TickX
-                    dc.w    OK_Release-OK_EffectTab_TickX,OK_PosJmp-OK_EffectTab_TickX,OK_Nop-OK_EffectTab_TickX
-                    dc.w    OK_Nop-OK_EffectTab_TickX,OK_CSpeed-OK_EffectTab_TickX,OK_Nop-OK_EffectTab_TickX
-                    dc.w    OK_SlideU_TickX-OK_EffectTab_TickX,OK_Volume-OK_EffectTab_TickX,OK_Nop-OK_EffectTab_TickX
-                    dc.w    OK_Nop-OK_EffectTab_TickX,OK_Nop-OK_EffectTab_TickX,OK_Nop-OK_EffectTab_TickX
+OKT_EffectTab_TickX:
+                    dc.w    OKT_Nop-OKT_EffectTab_TickX,OKT_PortD-OKT_EffectTab_TickX,OKT_PortU-OKT_EffectTab_TickX
+                    dc.w    OKT_Nop-OKT_EffectTab_TickX,OKT_Nop-OKT_EffectTab_TickX,OKT_Nop-OKT_EffectTab_TickX
+                    dc.w    OKT_Nop-OKT_EffectTab_TickX,OKT_Nop-OKT_EffectTab_TickX,OKT_Nop-OKT_EffectTab_TickX
+                    dc.w    OKT_Nop-OKT_EffectTab_TickX,OKT_Arp_TickX-OKT_EffectTab_TickX,OKT_Arp2_TickX-OKT_EffectTab_TickX
+                    dc.w    OKT_Arp3_TickX-OKT_EffectTab_TickX,OKT_SlideD_TickX-OKT_EffectTab_TickX,OKT_Nop-OKT_EffectTab_TickX
+                    dc.w    OKT_Filt-OKT_EffectTab_TickX,OKT_Nop-OKT_EffectTab_TickX,OKT_SlideUTick_TickX-OKT_EffectTab_TickX
+                    dc.w    OKT_Nop-OKT_EffectTab_TickX,OKT_Nop-OKT_EffectTab_TickX,OKT_Nop-OKT_EffectTab_TickX
+                    dc.w    OKT_SlideDTick_TickX-OKT_EffectTab_TickX,OKT_Nop-OKT_EffectTab_TickX,OKT_Nop-OKT_EffectTab_TickX
+                    dc.w    OKT_Release-OKT_EffectTab_TickX,OKT_PosJmp-OKT_EffectTab_TickX,OKT_Nop-OKT_EffectTab_TickX
+                    dc.w    OKT_Nop-OKT_EffectTab_TickX,OKT_CSpeed-OKT_EffectTab_TickX,OKT_Nop-OKT_EffectTab_TickX
+                    dc.w    OKT_SlideU_TickX-OKT_EffectTab_TickX,OKT_Volume-OKT_EffectTab_TickX,OKT_Nop-OKT_EffectTab_TickX
+                    dc.w    OKT_Nop-OKT_EffectTab_TickX,OKT_Nop-OKT_EffectTab_TickX,OKT_Nop-OKT_EffectTab_TickX
 
 ; ===========================================================================
-OK_PortU:
+OKT_PortU:
                     add.w   d1,(10,a3)
                     cmpi.w  #$358,(10,a3)
-                    ble.b   .OK_PortMax
+                    ble.b   .OKT_PortMax
                     move.w  #$358,(10,a3)
-.OK_PortMax:
+.OKT_PortMax:
                     move.w  (10,a3),(6,a4)
                     rts
 
 ; ===========================================================================
-OK_PortD:
+OKT_PortD:
                     sub.w   d1,(10,a3)
                     cmpi.w  #$71,(10,a3)
-                    bge.b   .OK_PortMin
+                    bge.b   .OKT_PortMin
                     move.w  #$71,(10,a3)
-.OK_PortMin:
+.OKT_PortMin:
                     move.w  (10,a3),(6,a4)
                     rts
 
 ; ===========================================================================
-OK_Arp_TickX:
+OKT_Arp_TickX:
                     move.w  (8,a3),d2
-                    move.w  (OK_ActCyc,pc),d0
-                    move.b  (OK_DivTab_TickX,pc,d0.w),d0
-                    bne.b   .OK_Val1
+                    move.w  (OKT_ActCyc,pc),d0
+                    move.b  (OKT_DivTab_TickX,pc,d0.w),d0
+                    bne.b   .OKT_Val1
                     andi.w  #$F0,d1
                     lsr.w   #4,d1
                     sub.w   d1,d2
-                    bra     OK_SetArp
-.OK_Val1:
+                    bra     OKT_SetArp
+.OKT_Val1:
                     subq.b  #1,d0
-                    bne.b   .OK_Val2
-                    bra     OK_SetArp
-.OK_Val2:
+                    bne.b   .OKT_Val2
+                    bra     OKT_SetArp
+.OKT_Val2:
                     andi.w  #$F,d1
                     add.w   d1,d2
-                    bra     OK_SetArp
-OK_DivTab_TickX:
+                    bra     OKT_SetArp
+OKT_DivTab_TickX:
                     dc.b    0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
 
 ; ===========================================================================
-OK_Arp2_TickX:
+OKT_Arp2_TickX:
                     move.w  (8,a3),d2
-                    move.w  (OK_ActCyc,pc),d0
+                    move.w  (OKT_ActCyc,pc),d0
                     andi.w  #3,d0
-                    bne.b   .OK_Val1
-                    bra     OK_SetArp
-.OK_Val1:
+                    bne.b   .OKT_Val1
+                    bra     OKT_SetArp
+.OKT_Val1:
                     subq.b  #1,d0
-                    bne.b   .OK_Val2
+                    bne.b   .OKT_Val2
                     andi.w  #$F,d1
                     add.w   d1,d2
-                    bra.b   OK_SetArp
-.OK_Val2:
+                    bra.b   OKT_SetArp
+.OKT_Val2:
                     subq.b  #1,d0
-                    beq.b   OK_SetArp
+                    beq.b   OKT_SetArp
                     andi.w  #$F0,d1
                     lsr.w   #4,d1
                     sub.w   d1,d2
-                    bra     OK_SetArp
+                    bra     OKT_SetArp
 
 ; ===========================================================================
-OK_Arp3_TickX:
+OKT_Arp3_TickX:
                     move.w  (8,a3),d2
-                    move.w  (OK_ActCyc,pc),d0
-                    move.b  (OK_DivTab3_TickX,pc,d0.w),d0
-                    bne.b   .OK_Val1
+                    move.w  (OKT_ActCyc,pc),d0
+                    move.b  (OKT_DivTab3_TickX,pc,d0.w),d0
+                    bne.b   .OKT_Val1
                     rts
-.OK_Val1:
+.OKT_Val1:
                     subq.b  #1,d0
-                    bne.b   .OK_Val2
+                    bne.b   .OKT_Val2
                     andi.w  #$F0,d1
                     lsr.w   #4,d1
                     add.w   d1,d2
-                    bra.b   OK_SetArp
-.OK_Val2:
+                    bra.b   OKT_SetArp
+.OKT_Val2:
                     subq.b  #1,d0
-                    bne.b   .OK_Val3
+                    bne.b   .OKT_Val3
                     andi.w  #$F,d1
                     add.w   d1,d2
-.OK_Val3:
-                    bra.b   OK_SetArp
-OK_DivTab3_TickX:
+.OKT_Val3:
+                    bra.b   OKT_SetArp
+OKT_DivTab3_TickX:
                     dc.b    0,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3
 
 ; ===========================================================================
-OK_SlideUTick_TickX:
-                    move.w  (OK_ActCyc,pc),d0
-                    beq.b   OK_SlideU_TickX
+OKT_SlideUTick_TickX:
+                    move.w  (OKT_ActCyc,pc),d0
+                    beq.b   OKT_SlideU_TickX
                     rts
-OK_SlideU_TickX:
+OKT_SlideU_TickX:
                     move.w  (8,a3),d2
                     add.w   d1,d2
                     move.w  d2,(8,a3)
-                    bra.b   OK_SetArp
+                    bra.b   OKT_SetArp
 
 ; ===========================================================================
-OK_SlideDTick_TickX:
-                    move.w  (OK_ActCyc,pc),d0
-                    beq.b   OK_SlideD_TickX
+OKT_SlideDTick_TickX:
+                    move.w  (OKT_ActCyc,pc),d0
+                    beq.b   OKT_SlideD_TickX
                     rts
-OK_SlideD_TickX:
+OKT_SlideD_TickX:
                     move.w  (8,a3),d2
                     sub.w   d1,d2
                     move.w  d2,(8,a3)
 
 ; ===========================================================================
-OK_SetArp:
+OKT_SetArp:
                     tst.w   d2
-                    bpl.b   .OK_ArpOk1
+                    bpl.b   .OKT_ArpOk1
                     moveq   #0,d2
-.OK_ArpOk1:
+.OKT_ArpOk1:
                     cmpi.w  #35,d2
-                    ble.b   .OK_ArpOk2
+                    ble.b   .OKT_ArpOk2
                     moveq   #35,d2
-.OK_ArpOk2:
+.OKT_ArpOk2:
                     add.w   d2,d2
                     move.w  (a6,d2.w),d0
                     move.w  d0,(6,a4)
@@ -7088,48 +7088,48 @@ OK_SetArp:
                     rts
 
 ; ===========================================================================
-OK_Arp_Tick0:
+OKT_Arp_Tick0:
                     move.w  (12,a5),d2
-                    move.w  (OK_ActCyc,pc),d0
-                    move.b  (OK_DivTab_Tick0,pc,d0.w),d0
-                    bne.b   .OK_Val1
+                    move.w  (OKT_ActCyc,pc),d0
+                    move.b  (OKT_DivTab_Tick0,pc,d0.w),d0
+                    bne.b   .OKT_Val1
                     andi.w  #$F0,d1
                     lsr.w   #4,d1
                     sub.w   d1,d2
                     move.w  d2,(10,a5)
                     rts
-.OK_Val1:
+.OKT_Val1:
                     subq.b  #1,d0
-                    bne.b   .OK_Val2
+                    bne.b   .OKT_Val2
                     move.w  d2,(10,a5)
                     rts
-.OK_Val2:
+.OKT_Val2:
                     andi.w  #$F,d1
                     add.w   d1,d2
                     move.w  d2,(10,a5)
                     rts
-OK_DivTab_Tick0:
+OKT_DivTab_Tick0:
                     dc.b    0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
 
 ; ===========================================================================
-OK_Arp2_Tick0:
+OKT_Arp2_Tick0:
                     move.w  (12,a5),d2
-                    move.w  (OK_ActCyc,pc),d0
+                    move.w  (OKT_ActCyc,pc),d0
                     andi.w  #3,d0
-                    bne.b   .OK_Val2
-.OK_Val1:
+                    bne.b   .OKT_Val2
+.OKT_Val1:
                     move.w  d2,(10,a5)
                     rts
-.OK_Val2:
+.OKT_Val2:
                     subq.b  #1,d0
-                    bne.b   .OK_Val3
+                    bne.b   .OKT_Val3
                     andi.w  #$F,d1
                     add.w   d1,d2
                     move.w  d2,(10,a5)
                     rts
-.OK_Val3:
+.OKT_Val3:
                     subq.b  #1,d0
-                    beq.b   .OK_Val1
+                    beq.b   .OKT_Val1
                     andi.w  #$F0,d1
                     lsr.w   #4,d1
                     sub.w   d1,d2
@@ -7137,225 +7137,225 @@ OK_Arp2_Tick0:
                     rts
 
 ; ===========================================================================
-OK_Arp3_Tick0:
+OKT_Arp3_Tick0:
                     move.w  (12,a5),d2
-                    move.w  (OK_ActCyc,pc),d0
-                    move.b  (OK_DivTab3_Tick0,pc,d0.w),d0
-                    bne.b   .OK_Val1
+                    move.w  (OKT_ActCyc,pc),d0
+                    move.b  (OKT_DivTab3_Tick0,pc,d0.w),d0
+                    bne.b   .OKT_Val1
                     rts
-.OK_Val1:
+.OKT_Val1:
                     subq.b  #1,d0
-                    bne.b   .OK_Val2
+                    bne.b   .OKT_Val2
                     andi.w  #$F0,d1
                     lsr.w   #4,d1
                     add.w   d1,d2
                     move.w  d2,(10,a5)
                     rts
-.OK_Val2:
+.OKT_Val2:
                     subq.b  #1,d0
-                    bne.b   .OK_Val3
+                    bne.b   .OKT_Val3
                     andi.w  #$F,d1
                     add.w   d1,d2
-.OK_Val3:
+.OKT_Val3:
                     move.w  d2,(10,a5)
                     rts
-OK_DivTab3_Tick0:
+OKT_DivTab3_Tick0:
                     dc.b    0,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3
 
 ; ===========================================================================
-OK_SlideUTick_Tick0:
-                    move.w  (OK_ActCyc,pc),d0
-                    beq.b   OK_SlideU_Tick0
+OKT_SlideUTick_Tick0:
+                    move.w  (OKT_ActCyc,pc),d0
+                    beq.b   OKT_SlideU_Tick0
                     rts
-OK_SlideU_Tick0:
+OKT_SlideU_Tick0:
                     add.w   d1,(12,a5)
                     add.w   d1,(10,a5)
                     rts
 
 ; ===========================================================================
-OK_SlideDTick_Tick0:
-                    move.w  (OK_ActCyc,pc),d0
-                    beq.b   OK_SlideD_Tick0
+OKT_SlideDTick_Tick0:
+                    move.w  (OKT_ActCyc,pc),d0
+                    beq.b   OKT_SlideD_Tick0
                     rts
-OK_SlideD_Tick0:
+OKT_SlideD_Tick0:
                     sub.w   d1,(12,a5)
                     sub.w   d1,(10,a5)
                     rts
 
 ; ===========================================================================
-OK_PosJmp:
-                    move.w  (OK_ActCyc,pc),d0
-                    bne.b   .OK_NoJmp
+OKT_PosJmp:
+                    move.w  (OKT_ActCyc,pc),d0
+                    bne.b   .OKT_NoJmp
                     tst.b   (pattern_play_flag)
-                    beq.b   .OK_NoJmp
+                    beq.b   .OKT_NoJmp
                     move.w  d1,d0
                     andi.w  #$F,d0
                     lsr.w   #4,d1
                     mulu.w  #10,d1
                     add.w   d1,d0
-                    cmp.w   (OK_PLen,pc),d0
-                    bcc.b   .OK_NoJmp
-                    move.w  d0,(OK_NextPt)
-.OK_NoJmp:
+                    cmp.w   (OKT_PLen,pc),d0
+                    bcc.b   .OKT_NoJmp
+                    move.w  d0,(OKT_NextPt)
+.OKT_NoJmp:
                     rts
 
 ; ===========================================================================
-OK_CSpeed:
-                    move.w  (OK_ActCyc,pc),d0
-                    bne.b   .OK_NoChange
+OKT_CSpeed:
+                    move.w  (OKT_ActCyc,pc),d0
+                    bne.b   .OKT_NoChange
                     andi.w  #$F,d1
                     tst.b   d1
-                    beq.b   .OK_NoChange
-                    move.w  d1,(OK_ActSpeed)
+                    beq.b   .OKT_NoChange
+                    move.w  d1,(OKT_ActSpeed)
                     ; visually update the speed
                     movem.l d0-d7/a0-a6,-(a7)
                     move.w  d1,d0
                     bsr     draw_current_speed
                     movem.l (a7)+,d0-d7/a0-a6
-.OK_NoChange:
+.OKT_NoChange:
                     rts
 
 ; ===========================================================================
-OK_Filt:
-                    move.w  (OK_ActCyc,pc),d0
-                    bne.b   .OK_NoChange
+OKT_Filt:
+                    move.w  (OKT_ActCyc,pc),d0
+                    bne.b   .OKT_NoChange
                     tst.b   d1
-                    sne     (OK_Filter)
-.OK_NoChange:
+                    sne     (OKT_Filter)
+.OKT_NoChange:
                     rts
 
 ; ===========================================================================
-OK_Volume:
+OKT_Volume:
                     move.l  a0,-(a7)
                     moveq   #0,d0
-                    lea     (OK_Volume2,pc),a0
+                    lea     (OKT_Volume2,pc),a0
                     move.b  (-8,a0,d7.w),d0
                     adda.w  d0,a0
                     cmpi.w  #64,d1
-                    bgt.b   OK_ActVolume
+                    bgt.b   OKT_ActVolume
                     move.b  d1,(a0)
-OK_Vex:
+OKT_Vex:
                     move.l  (a7)+,a0
                     rts
-OK_ActVolume:
+OKT_ActVolume:
                     subi.b  #64,d1
                     cmpi.b  #16,d1
-                    blt.b   .OK_Val2
+                    blt.b   .OKT_Val2
                     subi.b  #16,d1
                     cmpi.b  #16,d1
-                    blt.b   .OK_Val4
+                    blt.b   .OKT_Val4
                     subi.b  #16,d1
                     cmpi.b  #16,d1
-                    blt.b   .OK_Val1
+                    blt.b   .OKT_Val1
                     subi.b  #16,d1
                     cmpi.b  #16,d1
-                    blt.b   .OK_Val3
-                    bra.b   OK_Vex
-.OK_Val1:
-                    move.w  (OK_ActCyc,pc),d0
-                    bne.b   OK_Vex
-.OK_Val2:
+                    blt.b   .OKT_Val3
+                    bra.b   OKT_Vex
+.OKT_Val1:
+                    move.w  (OKT_ActCyc,pc),d0
+                    bne.b   OKT_Vex
+.OKT_Val2:
                     sub.b   d1,(a0)
-                    bpl.b   OK_Vex
+                    bpl.b   OKT_Vex
                     sf      (a0)
-                    bra.b   OK_Vex
-.OK_Val3:
-                    move.w  (OK_ActCyc,pc),d0
-                    bne.b   OK_Vex
-.OK_Val4:
+                    bra.b   OKT_Vex
+.OKT_Val3:
+                    move.w  (OKT_ActCyc,pc),d0
+                    bne.b   OKT_Vex
+.OKT_Val4:
                     add.b   d1,(a0)
                     cmpi.b  #64,(a0)
-                    bls.b   OK_Vex
+                    bls.b   OKT_Vex
                     move.b  #64,(a0)
-                    bra.b   OK_Vex
+                    bra.b   OKT_Vex
 
 ; ===========================================================================
-OK_Release:
+OKT_Release:
                     move.l  a0,-(a7)
                     moveq   #0,d0
-                    lea     (OK_Volume2,pc),a0
+                    lea     (OKT_Volume2,pc),a0
                     move.b  (-8,a0,d7.w),d0
                     adda.w  d0,a0
                     move.b  (4,a0),(a0)
                     cmpi.b  #64,d1
-                    bhi.b   OK_ActVolume
+                    bhi.b   OKT_ActVolume
                     move.l  (a7)+,a0
                     rts
 
 ; ===========================================================================
 lbC0237AC:
-                    lea     (OK_ChannelsData),a0
+                    lea     (OKT_ChannelsData),a0
                     move.w  #(28*4)-1,d0
-.OK_ClearChannelsData:
+.OKT_ClearChannelsData:
                     sf      (a0)+
-                    dbra    d0,.OK_ClearChannelsData
-                    lea     (OK_ChannelsModes),a0
-                    lea     (OK_ChannelsData),a1
+                    dbra    d0,.OKT_ClearChannelsData
+                    lea     (OKT_ChannelsModes),a0
+                    lea     (OKT_ChannelsData),a1
                     moveq   #4-1,d0
                     moveq   #0,d1
-.OK_GetTrackSize:
+.OKT_GetTrackSize:
                     tst.w   (a0)
                     sne     (a1)
                     sne     (14,a1)
                     add.w   (a0)+,d1
                     lea     (28,a1),a1
-                    dbra    d0,.OK_GetTrackSize
+                    dbra    d0,.OKT_GetTrackSize
                     addq.w  #4,d1
                     add.w   d1,d1
                     add.w   d1,d1
-                    move.w  d1,(OK_TrkSize)
-                    lea     (OK_PattLineBuff),a0
+                    move.w  d1,(OKT_TrkSize)
+                    lea     (OKT_PattLineBuff),a0
                     moveq   #0,d1
                     moveq   #8-1,d0
-.OK_ClearPattLineBuff:
+.OKT_ClearPattLineBuff:
                     move.l  d1,(a0)+
-                    dbra    d0,.OK_ClearPattLineBuff
-                    lea     (OK_Volume2-8,pc),a0
+                    dbra    d0,.OKT_ClearPattLineBuff
+                    lea     (OKT_Volume2-8,pc),a0
                     move.l  #$3030202,(a0)+
                     move.l  #$1010000,(a0)+
                     ; volumes at max
                     move.l  #$40404040,d0
                     move.l  d0,(a0)+
                     move.l  d0,(a0)+
-                    bsr     OK_GetTrkPos
-                    subq.w  #1,(OK_PattY)
+                    bsr     OKT_GetTrkPos
+                    subq.w  #1,(OKT_PattY)
                     moveq   #0,d0
                     move.w  (caret_pos_x),d0
                     divu.w  #5,d0
                     move.w  d0,(lbW01B2BA)
                     move.w  #-1,(lbW01B2B6)
-                    move.w  #-1,(OK_NextPt)
-                    move.l  (OK_TrkPos,pc),a0
-                    suba.w  (OK_TrkSize,pc),a0
-                    move.l  a0,(OK_TrkPos)
-                    move.w  (OK_Speed),(OK_ActSpeed)
-                    clr.w   (OK_ActCyc)
-                    clr.w   (OK_Filter)
-                    clr.w   (OK_Dmacon)
+                    move.w  #-1,(OKT_NextPt)
+                    move.l  (OKT_TrkPos,pc),a0
+                    suba.w  (OKT_TrkSize,pc),a0
+                    move.l  a0,(OKT_TrkPos)
+                    move.w  (OKT_Speed),(OKT_ActSpeed)
+                    clr.w   (OKT_ActCyc)
+                    clr.w   (OKT_Filter)
+                    clr.w   (OKT_Dmacon)
                     rts
-OK_ActCyc:
+OKT_ActCyc:
                     dc.w    0
-OK_TrkPos:
+OKT_TrkPos:
                     dc.l    0
-OK_TrkSize:
+OKT_TrkSize:
                     dc.w    0
-OK_PattY:
+OKT_PattY:
                     dc.w    0
-OK_ActSpeed:
+OKT_ActSpeed:
                     dc.w    0
-OK_NextPt:
+OKT_NextPt:
                     dc.w    0
-OK_PtPtr:
+OKT_PtPtr:
                     dc.w    0
 ; ====
                     dcb.l   2,0
-OK_Volume2:
+OKT_Volume2:
                     dcb.l   2,0
 ; ====
-OK_Filter:
+OKT_Filter:
                     dc.b    0
                     even
-OK_Dmacon:
+OKT_Dmacon:
                     dc.w    0
 current_song_position:
                     dc.w    0
@@ -7374,7 +7374,7 @@ lbC023892:
                     bsr     lbC023BB0
                     sf      (lbB023940)
                     st      (ascii_MSG8)
-                    lea     (OK_MixBuff_1),a0
+                    lea     (OKT_MixBuff_1),a0
                     moveq   #0,d1
                     move.w  #((MIX_BUFFERS_1*MIX_BUFFERS_LEN_1)/8)-1,d0
 .clear_buffers:
@@ -7383,7 +7383,7 @@ lbC023892:
                     dbra    d0,.clear_buffers
                     lea     (_CUSTOM),a1
                     move.w  #DMAF_AUDIO,(DMACON,a1)
-                    lea     (OK_MixBuff_1),a0
+                    lea     (OKT_MixBuff_1),a0
                     move.l  a0,(AUD0LCH,a1)
                     lea     (MIX_BUFFERS_LEN_1,a0),a0
                     move.l  a0,(AUD1LCH,a1)
@@ -7408,22 +7408,22 @@ lbB023940:
                     dc.b    0
 ascii_MSG8:
                     dc.b    0
-OK_Play_1:
+OKT_Play_1:
                     move.b  (ascii_MSG8,pc),d0
                     beq.b   lbC023956
                     move.w  #DMAF_SETCLR|DMAF_AUDIO,(_CUSTOM|DMACON)
                     sf      (ascii_MSG8)
 lbC023956:
-                    bsr     OK_ReplayHandler
+                    bsr     OKT_ReplayHandler
                     cmpi.b  #MIDI_OUT,(midi_mode)
                     beq.b   lbC0239AA
-                    lea     (OK_ChannelsData),a2
+                    lea     (OKT_ChannelsData),a2
                     moveq   #MIX_BUFFERS_1-1,d7
                     not.b   (lbB023940)
                     bne.b   lbC023960
                     bra.b   lbC0239AC
 lbC023960:
-                    lea     (OK_MixBuff_1+313),a5
+                    lea     (OKT_MixBuff_1+313),a5
 lbC02397C:
                     tst.b   (a2)
                     beq.b   lbC02399E
@@ -7441,7 +7441,7 @@ lbC02399E:
 lbC0239AA:
                     rts
 lbC0239AC:
-                    lea     (OK_MixBuff_1),a5
+                    lea     (OKT_MixBuff_1),a5
 lbC0239C8:
                     tst.b   (a2)
                     beq.b   lbC0239EA
@@ -7793,38 +7793,38 @@ lbL023E20:
 lbL023E24:
                     dc.l    0
 lbC023E28:
-                    lea     (OK_PALTable,pc),a0
+                    lea     (OKT_PALTable,pc),a0
                     tst.b   d0
                     beq.b   lbC023E34
-                    lea     (OK_NTSCTable,pc),a0
+                    lea     (OKT_NTSCTable,pc),a0
 lbC023E34:
                     move.l  a0,(lbL0243B2)
                     bsr     lbC0237AC
                     moveq   #0,d1
-                    lea     (OK_PBuffs),a0
+                    lea     (OKT_PBuffs),a0
                     moveq   #16-1,d0
-.OK_ClearPBuffs:
+.OKT_ClearPBuffs:
                     move.l  d1,(a0)+
-                    dbra    d0,.OK_ClearPBuffs
-                    lea     (OK_MixBuff_2),a0
-                    lea     (OK_MixBuff_2+MIX_BUFFERS_LEN_2),a1
+                    dbra    d0,.OKT_ClearPBuffs
+                    lea     (OKT_MixBuff_2),a0
+                    lea     (OKT_MixBuff_2+MIX_BUFFERS_LEN_2),a1
                     move.w  #(MIX_BUFFERS_LEN_2/4)-1,d0
-.OK_ClearMixBuffs:
+.OKT_ClearMixBuffs:
                     move.l  d1,(a0)+
                     move.l  d1,(a1)+
-                    dbra    d0,.OK_ClearMixBuffs
-                    lea     (OK_ChannelsModes),a0
+                    dbra    d0,.OKT_ClearMixBuffs
+                    lea     (OKT_ChannelsModes),a0
                     moveq   #0,d1
                     moveq   #4-1,d0
-.OK_GetChannelsModes:
+.OKT_GetChannelsModes:
                     or.w    (a0)+,d1
                     ror.w   #1,d1
-                    dbra    d0,.OK_GetChannelsModes
+                    dbra    d0,.OKT_GetChannelsModes
                     ror.w   #5,d1
-                    move.w  d1,(OK_HWChansBits)
+                    move.w  d1,(OKT_HWChansBits)
                     lea     (_CUSTOM),a6
                     move.w  #DMAF_AUDIO,(DMACON,a6)
-                    lea     (OK_OuputBuff_2),a0
+                    lea     (OKT_OuputBuff_2),a0
                     move.l  a0,(AUD0LCH,a6)
                     move.l  a0,(AUD1LCH,a6)
                     move.l  a0,(AUD2LCH,a6)
@@ -7842,51 +7842,51 @@ lbC023E34:
                     move.w  #$FF,(ADKCON,a6)
                     bsr     wait_raster
                     bsr     wait_raster
-                    st      (OK_StartDMAFlg)
+                    st      (OKT_StartDMAFlg)
                     rts
-OK_HWChansBits:
+OKT_HWChansBits:
                     dc.w    0
-OK_StartDMAFlg:
+OKT_StartDMAFlg:
                     dc.w    0
 
 ; ===========================================================================
-OK_Play_2:
+OKT_Play_2:
                     cmpi.b  #MIDI_OUT,(midi_mode)
-                    beq.b   .OK_Midi_Out
-                    move.b  (OK_StartDMAFlg,pc),d0
-                    beq.b   .OK_TurnDMAOn
+                    beq.b   .OKT_Midi_Out
+                    move.b  (OKT_StartDMAFlg,pc),d0
+                    beq.b   .OKT_TurnDMAOn
                     move.w  #DMAF_SETCLR|DMAF_AUDIO,(_CUSTOM|DMACON)
-                    sf      (OK_StartDMAFlg)
-.OK_TurnDMAOn:
-                    bsr     OK_SetPeriods
-.OK_Midi_Out:
-                    bsr     OK_ReplayHandler
+                    sf      (OKT_StartDMAFlg)
+.OKT_TurnDMAOn:
+                    bsr     OKT_SetPeriods
+.OKT_Midi_Out:
+                    bsr     OKT_ReplayHandler
                     cmpi.b  #MIDI_OUT,(midi_mode)
-                    beq.b   .OK_Midi_Out_2
-                    lea     (OK_ChannelsData),a0
-                    lea     (OK_MixBuff1Ptr,pc),a2
+                    beq.b   .OKT_Midi_Out_2
+                    lea     (OKT_ChannelsData),a0
+                    lea     (OKT_MixBuff1Ptr,pc),a2
                     move.l  (a2)+,a1
                     move.l  (a2),-(a2)
                     move.l  a1,(4,a2)
                     moveq   #0,d0
-.OK_MixAllBuffers:
+.OKT_MixAllBuffers:
                     tst.w   (a0)
-                    beq.b   .OK_NothingToMix
+                    beq.b   .OKT_NothingToMix
                     movem.l d0/a0-a2,-(a7)
-                    bsr     OK_MixBuffers
+                    bsr     OKT_MixBuffers
                     movem.l (a7)+,d0/a0-a2
-.OK_NothingToMix:
+.OKT_NothingToMix:
                     lea     (28,a0),a0
                     lea     ((MIX_BUFFERS_LEN_2/4),a1),a1
                     addq.w  #1,d0
                     cmpi.w  #4,d0
-                    bne.b   .OK_MixAllBuffers
-                    bra     OK_AudInt
-.OK_Midi_Out_2:
+                    bne.b   .OKT_MixAllBuffers
+                    bra     OKT_AudInt
+.OKT_Midi_Out_2:
                     rts
 
 ; ===========================================================================
-OK_MixBuffers:
+OKT_MixBuffers:
                     tst.l   (2,a0)
                     beq.b   lbC023F80
                     tst.l   (16,a0)
@@ -7922,12 +7922,12 @@ lbC023F98:
 lbC023FA4:
                     rts
 lbC023FA6:
-                    lea     (OK_PBuffs),a3
+                    lea     (OKT_PBuffs),a3
                     lsl.w   #4,d0
                     adda.w  d0,a3
                     move.w  (10,a1),d0
                     add.w   d0,d0
-                    lea     (OK_FullPeriodTab),a4
+                    lea     (OKT_FullPeriodTab),a4
                     move.w  (a4,d0.w),d2
                     move.w  d2,(4,a3)
                     move.w  (10,a0),d3
@@ -8047,9 +8047,9 @@ lbC024116:
             REPT    16
                 INLINE
                     sub.w   d0,d3
-                    bcc.b   .OK_NoFetch
+                    bcc.b   .OKT_NoFetch
                     move.b  (a0)+,d5
-.OK_NoFetch:
+.OKT_NoFetch:
                     move.b  d5,(a1)+
                 EINLINE
             ENDR
@@ -8061,9 +8061,9 @@ lbC0241A4:
             REPT    2
                 INLINE
                     sub.w   d0,d3
-                    bcc.b   .OK_NoFetch
+                    bcc.b   .OKT_NoFetch
                     move.b  (a0)+,d5
-.OK_NoFetch:
+.OKT_NoFetch:
                     move.b  d5,(a1)+
 
                 EINLINE
@@ -8074,22 +8074,22 @@ lbC0241B4:
                     move.w  a2,d0
                     neg.w   d0
                     btst    #0,d0
-                    beq.b   .OK_NoOddLength
+                    beq.b   .OKT_NoOddLength
                     addq.w  #1,a0
                     addq.w  #1,d0
-.OK_NoOddLength:
+.OKT_NoOddLength:
                     lsr.w   #1,d0
                     movem.l (a7)+,d2-d5/a2
                     rts
 lbC0241D0:
-                    lea     (OK_PBuffs),a2
+                    lea     (OKT_PBuffs),a2
                     lsl.w   #4,d0
                     adda.w  d0,a2
                     tst.l   (2,a0)
                     beq.b   lbC02423E
                     move.w  (10,a0),d0
                     add.w   d0,d0
-                    lea     (OK_FullPeriodTab),a3
+                    lea     (OKT_FullPeriodTab),a3
                     move.w  (a3,d0.w),(4,a2)
                     move.l  (lbL0243B2,pc),a3
                     move.w  (a3,d0.w),d1
@@ -8117,7 +8117,7 @@ lbC024232:
                     rts
 lbC02423E:
                     move.l  a1,(a2)
-                    move.w  (OK_FullPeriodTab),(4,a2)
+                    move.w  (OKT_FullPeriodTab),(4,a2)
                     move.l  (lbL0243B2,pc),a0
                     move.w  (a0),d0
                     add.w   (8,a2),d0
@@ -8125,60 +8125,60 @@ lbC02423E:
                     bra     lbC024362
 
 ; ===========================================================================
-OK_SetPeriods:
+OKT_SetPeriods:
                     movem.l d2/d3/a2,-(a7)
-                    lea     (OK_PBuffs),a0
+                    lea     (OKT_PBuffs),a0
                     lea     (_CUSTOM|INTREQR),a2
                     lea     (AUD0PER-INTREQR,a2),a1
                     moveq   #4-1,d0
-.OK_SetHWChans:
+.OKT_SetHWChans:
                     move.w  (4,a0),d1
-                    beq.b   .OK_NoNote
+                    beq.b   .OKT_NoNote
                     move.w  d1,(a1)
                     move.w  (a2),(10,a0)
-.OK_NoNote:
+.OKT_NoNote:
                     lea     (16,a0),a0
                     lea     ($10,a1),a1
-                    dbra    d0,.OK_SetHWChans
-                    lea     (OK_PBuffs),a0
+                    dbra    d0,.OKT_SetHWChans
+                    lea     (OKT_PBuffs),a0
                     moveq   #7,d1
-.OK_SetSWChans:
+.OKT_SetSWChans:
                     tst.l   (a0)
-                    beq.b   .OK_NoData
+                    beq.b   .OKT_NoData
                     clr.w   (8,a0)
                     move.w  (10,a0),d0
                     btst    d1,d0
-                    beq.b   .OK_NoData
+                    beq.b   .OKT_NoData
                     addq.w  #1,(8,a0)
-.OK_NoData:
+.OKT_NoData:
                     lea     (16,a0),a0
                     addq.w  #1,d1
                     cmpi.w  #7+4,d1
-                    bne.b   .OK_SetSWChans
+                    bne.b   .OKT_SetSWChans
                     movem.l (a7)+,d2/d3/a2
                     rts
 
 ; ===========================================================================
-OK_AudInt:
-                    move.w  (OK_HWChansBits,pc),d1
-OK_WaitChannel:
+OKT_AudInt:
+                    move.w  (OKT_HWChansBits,pc),d1
+OKT_WaitChannel:
                     move.w  (_CUSTOM|INTREQR),d0
                     and.w   d1,d0
                     cmp.w   d1,d0
-                    bne.b   OK_WaitChannel
+                    bne.b   OKT_WaitChannel
                     move.w  d1,(_CUSTOM|INTREQ)
-                    lea     (OK_PBuffs),a0
+                    lea     (OKT_PBuffs),a0
                     lea     (_CUSTOM|AUD0LCH),a1
                     moveq   #4-1,d0
-.OK_SetChannelsSamples:
+.OKT_SetChannelsSamples:
                     move.l  (a0),d1
-                    beq.b   .OK_NoNewSample
+                    beq.b   .OKT_NoNewSample
                     move.l  d1,(a1)
                     move.w  (6,a0),(4,a1)
-.OK_NoNewSample:
+.OKT_NoNewSample:
                     lea     (16,a0),a0
                     lea     ($10,a1),a1
-                    dbra    d0,.OK_SetChannelsSamples
+                    dbra    d0,.OKT_SetChannelsSamples
                     rts
 
 ; ===========================================================================
@@ -8244,15 +8244,15 @@ lbC0243A2:
 lbC0243A4:
                     dbra    d0,lbC0243A2
                     rts
-OK_MixBuff1Ptr:
-                    dc.l    OK_MixBuff_2
-                    dc.l    OK_MixBuff_2+MIX_BUFFERS_LEN_2
+OKT_MixBuff1Ptr:
+                    dc.l    OKT_MixBuff_2
+                    dc.l    OKT_MixBuff_2+MIX_BUFFERS_LEN_2
 lbL0243B2:
                     dc.l    0
-OK_PALTable:
+OKT_PALTable:
                     dc.w    $29,$2B,$2E,$31,$34,$37,$3A,$3E,$42,$45,$4A,$4E,$53,$57,$5D,$62,$68
                     dc.w    $6F,$75,$7C,$84,$8B,$94,$9D,$A6,$AF,$BA,$C5,$D0,$DE,$EB,$F8,$107,$117
-OK_NTSCTable:
+OKT_NTSCTable:
                     dc.w    $22,$25,$27,$29,$2C,$2E,$31,$34,$37,$3A,$3E,$42,$45,$4A,$4E,$53,$58
                     dc.w    $5D,$63,$68,$6F,$75,$7C,$84,$8B,$94,$9D,$A6,$AF,$BA,$C6,$D1,$DD,$EB
 
@@ -8367,7 +8367,7 @@ display_error:
                     mulu.w  #19,d0
                     adda.l  d0,a0
                     jsr     (display_messagebox)
-                    bsr     lbC0246B8
+                    bsr     wait_any_key_and_mouse_press
                     jsr     (remove_messagebox)
 .no_error:
                     movem.l (a7)+,d0-d7/a0-a6
@@ -8394,7 +8394,7 @@ display_dos_error:
                     bne.b   .search
 .found:
                     jsr     (display_messagebox)
-                    bsr.b   lbC0246B8
+                    bsr.b   wait_any_key_and_mouse_press
                     jsr     (remove_messagebox)
 .no_error:
                     movem.l (a7)+,d0-d7/a0-a6
@@ -8424,17 +8424,17 @@ display_trackdisk_error:
                     bne.b   .search
 .found:
                     jsr     (display_messagebox)
-                    bsr.b   lbC0246B8
+                    bsr.b   wait_any_key_and_mouse_press
                     jsr     (remove_messagebox)
 .no_error:
                     movem.l (a7)+,d0-d7/a0-a6
                     moveq   #ERROR,d0
                     rts
-
-; ===========================================================================
 pattern_bitplane_offset:
                     dc.l    0
-lbC0246B8:
+
+; ===========================================================================
+wait_any_key_and_mouse_press:
                     lea     (lbW0246C0,pc),a0
                     bra     stop_audio_and_process_event
 lbW0246C0:
@@ -8468,37 +8468,38 @@ ask_yes_no_requester:
                     beq.b   .no_display
                     movem.l d1-d7/a1-a6,-(a7)
                     jsr     (display_messagebox)
-                    lea     (lbW02473A,pc),a0
+                    lea     (.requester_events_struct,pc),a0
                     bsr     stop_audio_and_process_event
                     jsr     (remove_messagebox)
                     movem.l (a7)+,d1-d7/a1-a6
-                    move.b  (lbB024768,pc),d0
+                    move.b  (.return_value,pc),d0
                     rts
 .no_display:
                     move.w  #$F00,(_CUSTOM|COLOR00)
-                    moveq   #0,d0
-                    rts
-lbW02473A:
-                    dc.w    EVT_KEY_PRESSED
-                    dc.l    lbC02474E
-                    dc.w    EVT_LEFT_PRESSED
-                    dc.l    lbC02475C
-                    dc.w    EVT_RIGHT_PRESSED
-                    dc.l    lbC02475C
-                    dc.w    EVT_LIST_END
-lbC02474E:
-                    moveq   #0,d0
-                    cmpi.b  #$79,d1
-                    beq.b   lbC02475E
-                    cmpi.b  #$7A,d1
-                    beq.b   lbC02475E
-lbC02475C:
-                    moveq   #ERROR,d0
-lbC02475E:
-                    move.b  d0,(lbB024768)
                     moveq   #OK,d0
                     rts
-lbB024768:
+.requester_events_struct:
+                    dc.w    EVT_KEY_PRESSED
+                    dc.l    .key_pressed
+                    dc.w    EVT_LEFT_PRESSED
+                    dc.l    .mouse_pressed
+                    dc.w    EVT_RIGHT_PRESSED
+                    dc.l    .mouse_pressed
+                    dc.w    EVT_LIST_END
+.key_pressed:
+                    moveq   #OK,d0
+                    cmpi.b  #'y',d1
+                    beq.b   .y_z_key_pressed
+                    ; german keyboard
+                    cmpi.b  #'z',d1
+                    beq.b   .y_z_key_pressed
+.mouse_pressed:
+                    moveq   #ERROR,d0
+.y_z_key_pressed:
+                    move.b  d0,(.return_value)
+                    moveq   #OK,d0
+                    rts
+.return_value:
                     dc.b     0
                     even
 
@@ -8852,7 +8853,7 @@ error_what_samples:
 error_cant_convert_song:
                     moveq   #ERROR_CANT_CONVERT,d0
                     bra     display_error
-error_ok_struct_error:
+error_OKT_struct_error:
                     moveq   #ERROR_OK_STRUCT,d0
                     bra     display_error
 error_st_struct_error:
@@ -8894,42 +8895,45 @@ lbC025132:
 ; ===========================================================================
 lbW02513C:
                     dc.w    0
-OK_FullPeriodTab:
+OKT_FullPeriodTab:
                     dc.w    $358,$328,$2FA,$2D0,$2A6,$280,$25C,$23A,$21A,$1FC,$1E0,$1C5,$1AC,$194
                     dc.w    $17D,$168,$153,$140,$12E,$11D,$10D,$FE,$F0,$E2,$D6,$CA,$BE,$B4,$AA
                     dc.w    $A0,$97,$8F,$87,$7F,$78,$71,0
-C1C1D1D1E1F1F_MSG:
+full_note_table:
                     dc.b    '--- '
                     dc.b    'C-1 C#1 D-1 D#1 E-1 F-1 F#1 G-1 G#1 A-1 A#1 B-1 '
                     dc.b    'C-2 C#2 D-2 D#2 E-2 F-2 F#2 G-2 G#2 A-2 A#2 B-2 '
                     dc.b    'C-3 C#3 D-3 D#3 E-3 F-3 F#3 G-3 G#3 A-3 A#3 B-3 '
-zsxdcvgbhnjml_MSG:
+note_key_table:
                     dc.b    'zsxdcvgbhnjm,l.;/q2w3er5t6y7ui9o0p[=]\',0
-lbB02526B:
-                    dc.b    1,2,3,4,5,6,7,8,9,$A,$B,$C,$D,$E,$F,$10,$11,$D,$E,$F,$10,$11,$12,$13
-                    dc.b    $14,$15,$16,$17,$18,$19,$1A,$1B,$1C,$1D,$1E,$1F,$20,$21,0
-C1C1D1D1E1F1F_MSG0:
+period_table_1:
+                    dc.b    1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,13,14,15,16,17,18,19
+                    dc.b    20,21,22,23,24,25,26,27,28,29,30,31,32,33,0
+note_table_1:
                     dc.b    'C-1 C#1 D-1 D#1 E-1 F-1 F#1 G-1 G#1 A-1 A#1 B-1 '
                     dc.b    'C-2 C#2 D-2 D#2 E-2 '
                     dc.b    'C-2 C#2 D-2 D#2 E-2 F-2 F#2 G-2 G#2 A-2 A#2 B-2 '
-                    dc.b    'C-3 C#3 D-3 D#3 E-3 F-3 F#3 G-3 G#3 --- '
-lbB02532E:
-                    dc.b    $D,$E,$F,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$1A,$1B,$1C,$1D,$19
-                    dc.b    $1A,$1B,$1C,$1D,$1E,$1F,$20,$21,$22,$23,$24,$FF,$FF,$FF,$FF,$FF,$FF
-                    dc.b    $FF,$FF,$FF,0,0
-C2C2D2D2E2F2F_MSG:
+                    dc.b    'C-3 C#3 D-3 D#3 E-3 F-3 F#3 G-3 G#3 '
+                    dc.b    '--- '
+period_table_2:
+                    dc.b    13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,25
+                    dc.b    26,27,28,29,30,31,32,33,34,35,36,-1,-1,-1,-1,-1,-1
+                    dc.b    -1,-1,-1,0
+                    even
+note_table_2:
                     dc.b    'C-2 C#2 D-2 D#2 E-2 F-2 F#2 G-2 G#2 A-2 A#2 B-2 '
                     dc.b    'C-3 C#3 D-3 D#3 E-3 '
                     dc.b    'C-3 C#3 D-3 D#3 E-3 F-3 F#3 G-3 G#3 A-3 A#3 B-3 '
-                    dc.b    '                                    --- '
+                    dc.b    '                                    '
+                    dc.b    '--- '
 alpha_numeric_table:
                     dc.b    '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',0
                     even
-OK_Speed:
+OKT_Speed:
                     dc.w    6
-OK_PLen:
+OKT_PLen:
                     dc.w    1
-OK_Patterns:
+OKT_Patterns:
                     dcb.b   128,0
 caret_pos_x:
                     dc.w    0
@@ -9176,7 +9180,7 @@ release_after_line_drawing:
                     bra     disown_blitter
 
 ; ===========================================================================
-lbC0256DA:
+draw_line:
                     movem.l d4-d6,-(a7)
                     cmp.w   d1,d3
                     bgt.b   lbC0256EA
@@ -12744,7 +12748,7 @@ lbC028172:
                     move.w  d1,d0
                     jsr     (lbC01F06E)
                     bmi.b   lbC0281A8
-                    move.l  (lbL01F2D0),a1
+                    move.l  (current_period_table),a1
                     moveq   #0,d1
                     move.b  (a1,d0.w),d1
                     bmi.b   lbC0281A8
@@ -12828,7 +12832,7 @@ lbC02826C:
                     moveq   #0,d0
                     moveq   #0,d1
                     jsr     (process_commands)
-                    jmp     (lbC0246B8)
+                    jmp     (wait_any_key_and_mouse_press)
 lbC028284:
                     moveq   #-1,d0
                     move.l  d0,(lbW028BE2)
@@ -12915,7 +12919,7 @@ lbC028372:
                     jsr     (error_sample_too_long)
                     bra.b   lbC02830C
 lbC02837A:
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     cmpi.w  #1,(30,a0,d0.w)
@@ -12974,7 +12978,7 @@ lbC028410:
                     move.w  d4,d2
                     addi.w  #$60,d1
                     addi.w  #$60,d3
-                    jsr     (lbC0256DA)
+                    jsr     (draw_line)
                     movem.l (a7)+,d2/d3
 lbC028446:
                     dbra    d3,lbC0283F2
@@ -13024,7 +13028,7 @@ lbC02849E:
                     move.w  d4,d2
                     addi.w  #$60,d1
                     addi.w  #$60,d3
-                    jsr     (lbC0256DA)
+                    jsr     (draw_line)
                     movem.l (a7)+,d2/d3
 lbC0284D4:
                     dbra    d3,lbC02848E
@@ -13050,7 +13054,7 @@ lbC028520:
 lbC02852A:
                     tst.l   (lbL01A130)
                     beq     lbC029E96
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -13337,7 +13341,7 @@ lbW0289C2:
 lbC0289C4:
                     tst.l   (lbL01A130)
                     beq     lbC029E96
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -13348,7 +13352,7 @@ lbC0289C4:
 lbC0289EE:
                     tst.l   (lbL01A130)
                     beq     lbC029E96
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -13371,7 +13375,7 @@ lbC028A2A:
                     bne.b   lbC028A2A
                     sub.l   d2,d0
                     lsr.l   #1,d0
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample),d1
                     lsl.w   #5,d1
                     adda.w  d1,a0
@@ -13381,7 +13385,7 @@ lbC028A2A:
 lbC028A58:
                     tst.l   (lbL01A130)
                     beq     lbC029E96
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -13403,7 +13407,7 @@ lbC028A92:
                     bne.b   lbC028A92
                     sub.l   d0,d1
                     lsr.l   #1,d1
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -13472,7 +13476,7 @@ lbC028B12:
 lbC028B1C:
                     rts
 lbC028B1E:
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample),d1
                     lsl.w   #5,d1
                     adda.w  d1,a0
@@ -13498,7 +13502,7 @@ lbC028B58:
                     bsr.b   lbC028BC0
 lbC028B5A:
                     bsr     lbC028EB2
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -13585,7 +13589,7 @@ lbC028C2A:
 lbC028C3E:
                     tst.b   (lbB029EE7)
                     beq.b   lbC028C8C
-                    lea     (C1C1D1D1E1F1F_MSG),a1
+                    lea     (full_note_table),a1
                     move.w  (lbW029E10),d0
                     add.w   d0,d0
                     add.w   d0,d0
@@ -13605,7 +13609,7 @@ lbC028C3E:
                     addq.w  #1,d1
                     jsr     (draw_text)
 lbC028C8C:
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -13618,7 +13622,7 @@ lbC028C8C:
                     moveq   #10,d1
                     jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     bsr     lbC028EB2
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -13764,7 +13768,7 @@ lbC028E8E:
                     jmp     (lbC0216DC)
 lbC028E96:
                     movem.l d2,-(a7)
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -13772,7 +13776,7 @@ lbC028E96:
                     bra.b   lbC028ECA
 lbC028EB2:
                     movem.l d2,-(a7)
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -14331,7 +14335,7 @@ lbW02953E:
 lbW029540:
                     dc.w    0
 lbC029542:
-                    lea     (C1C1D1D1E1F1F_MSG),a1
+                    lea     (full_note_table),a1
                     add.w   d2,d2
                     add.w   d2,d2
                     lea     (lbL029560,pc),a0
@@ -14691,7 +14695,7 @@ lbC029942:
                     subi.w  #$20,d3
 lbC029966:
                     lea     (main_screen+(56*80)),a0
-                    jsr     (lbC0256DA)
+                    jsr     (draw_line)
                     movem.l (a7)+,d0-d7/a0
                     move.w  d7,d4
                     move.w  d6,d5
@@ -14938,7 +14942,7 @@ lbC029C50:
                     jsr     (lbC01E0FA)
                     bsr     lbC029D92
                     bmi     lbC02830C
-                    lea     (OK_Samples),a0
+                    lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     adda.w  d0,a0
@@ -15051,7 +15055,7 @@ lbC029E1A:
                     move.b  d1,d0
                     jsr     (lbC01F06E)
                     bmi.b   lbC029E3A
-                    move.l  (lbL01F2D0),a0
+                    move.l  (current_period_table),a0
                     moveq   #0,d1
                     move.b  (a0,d0.w),d1
                     bmi.b   lbC029E3A
@@ -15085,7 +15089,7 @@ lbC029E76:
                     rts
 lbC029E84:
                     sf      -(a0)
-                    move.l  #OK_EmptyWaveForm,(a1)+
+                    move.l  #OKT_EmptyWaveForm,(a1)+
                     move.w  #1,(a1)+
                     rts
 lbL029E92:
@@ -15167,7 +15171,7 @@ lbW029F22:
 ; ===========================================================================
 prefs_data:
                     dc.b    'OK__'
-OK_ChannelsModes:
+OKT_ChannelsModes:
                     dc.w    1,0,1,0
 default_pattern_length:
                     dc.w    $40
@@ -15195,7 +15199,8 @@ f10_key_line_jump_value:
                     dc.w    $40
 text_font:
                     incbin  "font_2048x8.lo1"
-st_load_tracks_samples:
+etext_font:
+st_load_samples_mode:
                     dc.b    -1
 st_load_tracks_mode:
                     dc.b    0
@@ -15219,10 +15224,10 @@ lbC02A772:
 .loop:
                     lea     (lbW02A7BA,pc),a0
                     jsr     (process_commands_sequence)
-                    bsr     lbC02A9E2
+                    bsr     display_prefs_screen
                     lea     (lbW02A7AA,pc),a0
                     jsr     (stop_audio_and_process_event)
-                    bsr     lbC02B12E
+                    bsr     invert_previously_select_char
                     move.l  (current_cmd_ptr),d0
                     beq.b   .no_command
                     move.l  d0,a0
@@ -15253,7 +15258,7 @@ lbC02A7E6:
                     moveq   #0,d0
                     moveq   #0,d1
                     jsr     (process_commands)
-                    jmp     (lbC0246B8)
+                    jmp     (wait_any_key_and_mouse_press)
 
 ; ===========================================================================
 load_prefs:
@@ -15270,7 +15275,7 @@ do_load_prefs:
                     bsr     load_prefs_file
                     bmi.b   .load_error
 .cancelled:
-                    bra     lbC02A9E2
+                    bra     display_prefs_screen
 .load_error:
                     jsr     (display_dos_error)
                     bra.b   .cancelled
@@ -15322,7 +15327,7 @@ lbC02A966:
                     rts
 lbC02A972:
                     bsr     restore_prefs
-                    bra     lbC02A9E2
+                    bra     display_prefs_screen
 lbC02A97A:
                     bsr     restore_prefs
                     bsr     lbC02B354
@@ -15341,154 +15346,165 @@ load_prefs_file:
                     movem.l d7/a2,-(a7)
                     sf      d7
                     move.l  a0,a2
-                    bsr     lbC02B2BC
+                    bsr     backup_prefs_before_load
                     smi     d7
-                    bmi.b   lbC02A9DA
+                    bmi.b   .memory_error
                     move.l  a2,a0
                     lea     (prefs_data,pc),a1
                     move.l  #PREFS_FILE_LEN,d0
                     jsr     (load_file)
                     smi     d7
-                    bmi.b   lbC02A9D2
+                    bmi.b   .load_error
                     move.l  (prefs_data,pc),d0
-                    move.l  (lbL02B34C),a0
+                    move.l  (old_prefs_memory_block),a0
                     cmp.l   (a0),d0
-                    beq.b   lbC02A9D6
-lbC02A9D2:
-                    bsr     lbC02B2FE
-lbC02A9D6:
-                    bsr     lbC02B31A
-lbC02A9DA:
+                    beq.b   .correct_header
+.load_error:
+                    bsr     restore_prefs_after_load
+.correct_header:
+                    bsr     free_old_prefs_memory_block
+.memory_error:
                     move.b  d7,d0
                     movem.l (a7)+,d7/a2
                     rts
+
 ; ===========================================================================
-lbC02A9E2:
-                    bsr     lbC02AA86
-                    bsr     lbC02AAD6
-                    bsr     lbC02AB08
-                    bsr     lbC02AB32
-                    bsr     lbC02AB78
-                    bsr     lbC02ABAC
-                    bsr     lbC02ACA6
-                    bsr     lbC02AD72
+display_prefs_screen:
+                    bsr     display_channels_type
+                    bsr     display_default_pattern_length
+                    bsr     display_samples_load_mode
+                    bsr     display_samples_save_format
+                    bsr     display_mouse_repeat_delay
+                    bsr     display_mouse_repeat_speed
+                    bsr     display_current_color_set
+                    bsr     display_polyphony
                     bsr     update_f_keys_line_jump_values
                     bsr     draw_font
                     bsr     draw_selected_char_grid
-                    bra     lbC02AA28
-lbC02AA14:
-                    not.b   (st_load_tracks_samples)
-                    bra     lbC02AA28
-lbC02AA1E:
+                    bra     display_st_load_modes
+
+; ===========================================================================
+switch_st_samples_mode:
+                    not.b   (st_load_samples_mode)
+                    bra     display_st_load_modes
+switch_st_tracks_mode:
                     not.b   (st_load_tracks_mode)
-lbC02AA28:
-                    lea     (ascii_MSG22,pc),a0
-                    tst.b   (st_load_tracks_samples)
-                    beq.b   lbC02AA38
-                    lea     (ascii_MSG23,pc),a0
-lbC02AA38:
+display_st_load_modes:
+                    lea     (.samples_15_text,pc),a0
+                    tst.b   (st_load_samples_mode)
+                    beq.b   .load_15_samples
+                    lea     (.samples_31_text,pc),a0
+.load_15_samples:
                     jsr     (draw_text_with_coords_struct)
-                    lea     (ascii_MSG24,pc),a0
+                    lea     (.channels_4_text,pc),a0
                     tst.b   (st_load_tracks_mode)
-                    beq.b   lbC02AA4E
-                    lea     (ascii_MSG25,pc),a0
-lbC02AA4E:
+                    beq.b   .load_4_channels
+                    lea     (.channels_8_text,pc),a0
+.load_4_channels:
                     jmp     (draw_text_with_coords_struct)
-ascii_MSG22:
-                    dc.b    39,27,'16',0
-ascii_MSG23:
-                    dc.b    39,27,'32',0
-ascii_MSG24:
+.samples_15_text:
+                    dc.b    39,27,'15',0
+.samples_31_text:
+                    dc.b    39,27,'31',0
+.channels_4_text:
                     dc.b    48,27,'4',0
-ascii_MSG25:
+.channels_8_text:
                     dc.b    48,27,'8',0
-lbC02AA68:
+
+; ===========================================================================
+switch_channel_1_type:
                     moveq   #0,d0
-                    bra.b   lbC02AA76
-lbC02AA6C:
+                    bra.b   switch_channel_type
+switch_channel_2_type:
                     moveq   #1,d0
-                    bra.b   lbC02AA76
-lbC02AA70:
+                    bra.b   switch_channel_type
+switch_channel_3_type:
                     moveq   #2,d0
-                    bra.b   lbC02AA76
-lbC02AA74:
+                    bra.b   switch_channel_type
+switch_channel_4_type:
                     moveq   #3,d0
-lbC02AA76:
-                    lea     (OK_ChannelsModes,pc),a0
+switch_channel_type:
+                    lea     (OKT_ChannelsModes,pc),a0
                     add.w   d0,d0
                     eori.w  #1,(a0,d0.w)
-lbC02AA86:
+display_channels_type:
                     moveq   #14,d2
-                    lea     (OK_ChannelsModes,pc),a5
+                    lea     (OKT_ChannelsModes,pc),a5
                     moveq   #4-1,d7
-lbC02AA8E:
-                    lea     (DD_MSG,pc),a0
+.loop:
+                    lea     (doubled_channel_text,pc),a0
                     tst.w   (a5)+
-                    bne.b   lbC02AA9A
-                    lea     (S_MSG,pc),a0
-lbC02AA9A:
+                    bne.b   .doubled_channel
+                    lea     (single_channel_text,pc),a0
+.doubled_channel:
                     move.w  d2,d0
                     moveq   #12,d1
                     jsr     (draw_text)
                     addq.w  #3,d2
-                    dbra    d7,lbC02AA8E
+                    dbra    d7,.loop
                     rts
-S_MSG:
+single_channel_text:
                     dc.b    'S ',0
-DD_MSG:
+doubled_channel_text:
                     dc.b    'DD',0
-lbC02AAB2:
+
+; ===========================================================================
+inc_default_pattern_length:
                     lea     (default_pattern_length,pc),a0
                     cmpi.w  #$80,(a0)
-                    beq.b   lbC02AAC2
+                    beq.b   .max
                     addq.w  #1,(a0)
-                    bra     lbC02AAD6
-lbC02AAC2:
+                    bra     display_default_pattern_length
+.max:
                     rts
-lbC02AAC4:
+dec_default_pattern_length:
                     lea     (default_pattern_length,pc),a0
                     cmpi.w  #1,(a0)
-                    beq.b   lbC02AAD4
+                    beq.b   .min
                     subq.w  #1,(a0)
-                    bra     lbC02AAD6
-lbC02AAD4:
+                    bra     display_default_pattern_length
+.min:
                     rts
-lbC02AAD6:
+display_default_pattern_length:
                     move.w  (default_pattern_length,pc),d2
                     moveq   #23,d0
                     moveq   #13,d1
                     jmp     (draw_2_digits_hex_number)
-lbC02AAE6:
+
+; ===========================================================================
+inc_samples_load_mode:
                     lea     (samples_load_mode,pc),a0
                     cmpi.w  #2,(a0)
-                    beq.b   lbC02AAF6
+                    beq.b   .max
                     addq.w  #1,(a0)
-                    bra     lbC02AB08
-lbC02AAF6:
+                    bra     display_samples_load_mode
+.max:
                     rts
-lbC02AAF8:
+dec_samples_load_mode:
                     lea     (samples_load_mode,pc),a0
                     tst.w   (a0)
-                    beq.b   lbC02AB06
+                    beq.b   .min
                     subq.w  #1,(a0)
-                    bra     lbC02AB08
-lbC02AB06:
+                    bra     display_samples_load_mode
+.min:
                     rts
-lbC02AB08:
-                    lea     (B_MSG1,pc),a0
+display_samples_load_mode:
+                    lea     (.load_mode_text,pc),a0
                     move.w  (samples_load_mode,pc),d2
                     move.b  (a0,d2.w),d2
                     moveq   #24,d0
                     moveq   #15,d1
                     jmp     (draw_one_char)
-B_MSG1:
+.load_mode_text:
                     dc.b    '84B'
                     even
-lbC02AB24:
+
+; ===========================================================================
+switch_samples_save_format:
                     eori.w  #1,(samples_save_format)
-                    bra     lbC02AB32
-lbC02AB32:
-                    lea     (IFF_MSG,pc),a0
+                    bra     display_samples_save_format
+display_samples_save_format:
+                    lea     (.samples_save_format_text,pc),a0
                     move.w  (samples_save_format,pc),d0
                     add.w   d0,d0
                     add.w   d0,d0
@@ -15496,78 +15512,84 @@ lbC02AB32:
                     moveq   #22,d0
                     moveq   #16,d1
                     jmp     (draw_text)
-IFF_MSG:
+.samples_save_format_text:
                     dc.b    'IFF',0
                     dc.b    'RAW',0
-lbC02AB54:
+
+; ===========================================================================
+inc_mouse_repeat_delay:
                     lea     (mouse_repeat_delay,pc),a0
                     cmpi.w  #50,(a0)
-                    beq.b   lbC02AB64
+                    beq.b   .max
                     addq.w  #1,(a0)
-                    bra     lbC02AB78
-lbC02AB64:
+                    bra     display_mouse_repeat_delay
+.max:
                     rts
-lbC02AB66:
+dec_mouse_repeat_delay:
                     lea     (mouse_repeat_delay,pc),a0
                     cmpi.w  #1,(a0)
-                    beq.b   lbC02AB76
+                    beq.b   .min
                     subq.w  #1,(a0)
-                    bra     lbC02AB78
-lbC02AB76:
+                    bra     display_mouse_repeat_delay
+.min:
                     rts
-lbC02AB78:
+display_mouse_repeat_delay:
                     moveq   #23,d0
                     moveq   #18,d1
                     move.w  (mouse_repeat_delay,pc),d2
                     jmp     (draw_2_digits_decimal_number_leading_zeroes)
-lbC02AB88:
+
+; ===========================================================================
+inc_mouse_repeat_speed:
                     lea     (mouse_repeat_speed,pc),a0
                     cmpi.w  #50,(a0)
-                    beq.b   lbC02AB98
+                    beq.b   .max
                     addq.w  #1,(a0)
-                    bra     lbC02ABAC
-lbC02AB98:
+                    bra     display_mouse_repeat_speed
+.max:
                     rts
-lbC02AB9A:
+dec_mouse_repeat_speed:
                     lea     (mouse_repeat_speed,pc),a0
                     cmpi.w  #1,(a0)
-                    beq.b   lbC02ABAA
+                    beq.b   .min
                     subq.w  #1,(a0)
-                    bra     lbC02ABAC
-lbC02ABAA:
+                    bra     display_mouse_repeat_speed
+.min:
                     rts
-lbC02ABAC:
+display_mouse_repeat_speed:
                     moveq   #23,d0
                     moveq   #19,d1
                     move.w  (mouse_repeat_speed,pc),d2
                     jmp     (draw_2_digits_decimal_number_leading_zeroes)
-lbC02ABBC:
-                    lea     (lbW02ACE0,pc),a0
+
+; ===========================================================================
+inc_current_color_set:
+                    lea     (current_color_set,pc),a0
                     cmpi.w  #2,(a0)
-                    beq.b   lbC02ABCC
+                    beq.b   .max
                     addq.w  #1,(a0)
-                    bra     lbC02ACA6
-lbC02ABCC:
+                    bra     display_current_color_set
+.max:
                     rts
-lbC02ABCE:
-                    lea     (lbW02ACE0,pc),a0
+dec_current_color_set:
+                    lea     (current_color_set,pc),a0
                     tst.w   (a0)
-                    beq.b   lbC02ABDC
+                    beq.b   .min
                     subq.w  #1,(a0)
-                    bra     lbC02ACA6
-lbC02ABDC:
+                    bra     display_current_color_set
+.min:
                     rts
-lbC02ABDE:
+inc_background_color_r:
                     moveq   #8,d0
-                    bra.b   lbC02ABE8
-lbC02ABE2:
+                    bra.b   inc_background_color
+inc_background_color_g:
                     moveq   #4,d0
-                    bra.b   lbC02ABE8
-lbC02ABE6:
+                    bra.b   inc_background_color
+inc_background_color_b:
                     moveq   #0,d0
-lbC02ABE8:
+inc_background_color:
                     lea     (prefs_palette+2,pc),a0
-                    move.w  (lbW02ACE0,pc),d1
+                    move.w  (current_color_set,pc),d1
                     add.w   d1,d1
                     add.w   d1,d1
                     adda.w  d1,a0
@@ -15577,24 +15599,24 @@ lbC02ABE8:
                     moveq   #$F,d2
                     and.b   d1,d2
                     cmpi.b  #$F,d2
-                    beq.b   lbC02AC10
+                    beq.b   .max
                     addq.b  #1,d1
                     rol.l   d0,d1
                     move.w  d1,(a0)
-                    bra     lbC02ACA6
-lbC02AC10:
+                    bra     display_current_color_set
+.max:
                     rts
-lbC02AC12:
+dec_background_color_r:
                     moveq   #8,d0
-                    bra.b   lbC02AC1C
-lbC02AC16:
+                    bra.b   dec_background_color
+dec_background_color_g:
                     moveq   #4,d0
-                    bra.b   lbC02AC1C
-lbC02AC1A:
+                    bra.b   dec_background_color
+dec_background_color_b:
                     moveq   #0,d0
-lbC02AC1C:
+dec_background_color:
                     lea     (prefs_palette+2,pc),a0
-                    move.w  (lbW02ACE0,pc),d1
+                    move.w  (current_color_set,pc),d1
                     add.w   d1,d1
                     add.w   d1,d1
                     adda.w  d1,a0
@@ -15603,24 +15625,24 @@ lbC02AC1C:
                     ror.l   d0,d1
                     moveq   #$F,d2
                     and.b   d1,d2
-                    beq.b   lbC02AC40
+                    beq.b   .min
                     subq.b  #1,d1
                     rol.l   d0,d1
                     move.w  d1,(a0)
-                    bra     lbC02ACA6
-lbC02AC40:
+                    bra     display_current_color_set
+.min:
                     rts
-lbC02AC42:
+inc_foreground_color_r:
                     moveq   #8,d0
-                    bra.b   lbC02AC4C
-lbC02AC46:
+                    bra.b   inc_foreground_color
+inc_foreground_color_g:
                     moveq   #4,d0
-                    bra.b   lbC02AC4C
-lbC02AC4A:
+                    bra.b   inc_foreground_color
+inc_foreground_color_b:
                     moveq   #0,d0
-lbC02AC4C:
+inc_foreground_color:
                     lea     (prefs_palette,pc),a0
-                    move.w  (lbW02ACE0,pc),d1
+                    move.w  (current_color_set,pc),d1
                     add.w   d1,d1
                     add.w   d1,d1
                     adda.w  d1,a0
@@ -15630,24 +15652,24 @@ lbC02AC4C:
                     moveq   #$F,d2
                     and.b   d1,d2
                     cmpi.b  #$F,d2
-                    beq.b   lbC02AC74
+                    beq.b   .max
                     addq.b  #1,d1
                     rol.l   d0,d1
                     move.w  d1,(a0)
-                    bra     lbC02ACA6
-lbC02AC74:
+                    bra     display_current_color_set
+.max:
                     rts
-lbC02AC76:
+dec_foreground_color_r:
                     moveq   #8,d0
-                    bra.b   lbC02AC80
-lbC02AC7A:
+                    bra.b   dec_foreground_color
+dec_foreground_color_g:
                     moveq   #4,d0
-                    bra.b   lbC02AC80
-lbC02AC7E:
+                    bra.b   dec_foreground_color
+dec_foreground_color_b:
                     moveq   #0,d0
-lbC02AC80:
+dec_foreground_color:
                     lea     (prefs_palette,pc),a0
-                    move.w  (lbW02ACE0,pc),d1
+                    move.w  (current_color_set,pc),d1
                     add.w   d1,d1
                     add.w   d1,d1
                     adda.w  d1,a0
@@ -15656,21 +15678,21 @@ lbC02AC80:
                     ror.l   d0,d1
                     moveq   #$F,d2
                     and.b   d1,d2
-                    beq.b   lbC02ACA4
+                    beq.b   .min
                     subq.b  #1,d1
                     rol.l   d0,d1
                     move.w  d1,(a0)
-                    bra     lbC02ACA6
-lbC02ACA4:
+                    bra     display_current_color_set
+.min:
                     rts
-lbC02ACA6:
+display_current_color_set:
                     moveq   #16,d0
                     moveq   #21,d1
-                    move.w  (lbW02ACE0,pc),d2
+                    move.w  (current_color_set,pc),d2
                     addq.w  #1,d2
                     jsr     (draw_one_char_alpha_numeric)
                     lea     (prefs_palette,pc),a5
-                    move.w  (lbW02ACE0,pc),d0
+                    move.w  (current_color_set,pc),d0
                     add.w   d0,d0
                     add.w   d0,d0
                     adda.w  d0,a5
@@ -15683,88 +15705,94 @@ lbC02ACA6:
                     moveq   #21,d1
                     jsr     (draw_3_digits_hex_number)
                     bra     set_colors_palette
-lbW02ACE0:
+current_color_set:
                     dc.w    0
-lbC02ACE2:
+
+; ===========================================================================
+dec_polyphony_value:
                     lea     (polyphony,pc),a0
                     adda.w  d0,a0
                     subq.b  #1,(a0)
                     andi.b  #7,(a0)
-                    bra      lbC02AD72
-lbC02ACF2:
+                    bra     display_polyphony
+dec_polyphony_value_1:
                     moveq   #0,d0
-                    bra.b   lbC02ACE2
-lbC02ACF6:
+                    bra.b   dec_polyphony_value
+dec_polyphony_value_2:
                     moveq   #1,d0
-                    bra.b   lbC02ACE2
-lbC02ACFA:
+                    bra.b   dec_polyphony_value
+dec_polyphony_value_3:
                     moveq   #2,d0
-                    bra.b   lbC02ACE2
-lbC02ACFE:
+                    bra.b   dec_polyphony_value
+dec_polyphony_value_4:
                     moveq   #3,d0
-                    bra.b   lbC02ACE2
-lbC02AD02:
+                    bra.b   dec_polyphony_value
+dec_polyphony_value_5:
                     moveq   #4,d0
-                    bra.b   lbC02ACE2
-lbC02AD06:
+                    bra.b   dec_polyphony_value
+dec_polyphony_value_6:
                     moveq   #5,d0
-                    bra.b   lbC02ACE2
-lbC02AD0A:
+                    bra.b   dec_polyphony_value
+dec_polyphony_value_7:
                     moveq   #6,d0
-                    bra.b   lbC02ACE2
-lbC02AD0E:
+                    bra.b   dec_polyphony_value
+dec_polyphony_value_8:
                     moveq   #7,d0
-                    bra.b   lbC02ACE2
-lbC02AD12:
+                    bra.b   dec_polyphony_value
+inc_polyphony_value:
                     lea     (polyphony,pc),a0
                     adda.w  d0,a0
                     addq.b  #1,(a0)
                     andi.b  #7,(a0)
-                    bra     lbC02AD72
-lbC02AD22:
+                    bra     display_polyphony
+inc_polyphony_value_1:
                     moveq   #0,d0
-                    bra.b   lbC02AD12
-lbC02AD26:
+                    bra.b   inc_polyphony_value
+inc_polyphony_value_2:
                     moveq   #1,d0
-                    bra.b   lbC02AD12
-lbC02AD2A:
+                    bra.b   inc_polyphony_value
+inc_polyphony_value_3:
                     moveq   #2,d0
-                    bra.b   lbC02AD12
-lbC02AD2E:
+                    bra.b   inc_polyphony_value
+inc_polyphony_value_4:
                     moveq   #3,d0
-                    bra.b   lbC02AD12
-lbC02AD32:
+                    bra.b   inc_polyphony_value
+inc_polyphony_value_5:
                     moveq   #4,d0
-                    bra.b   lbC02AD12
-lbC02AD36:
+                    bra.b   inc_polyphony_value
+inc_polyphony_value_6:
                     moveq   #5,d0
-                    bra.b   lbC02AD12
-lbC02AD3A:
+                    bra.b   inc_polyphony_value
+inc_polyphony_value_7:
                     moveq   #6,d0
-                    bra.b   lbC02AD12
-lbC02AD3E:
+                    bra.b   inc_polyphony_value
+inc_polyphony_value_8:
                     moveq   #7,d0
-                    bra.b   lbC02AD12
-lbC02AD42:
+                    bra.b   inc_polyphony_value
+reset_polyphony_values:
                     lea     (polyphony,pc),a1
                     moveq   #0,d0
-lbC02AD48:
+.loop:
                     move.b  d0,(a1)+
                     addq.b  #1,d0
                     cmpi.b  #8,d0
-                    bne.b   lbC02AD48
-                    bra     lbC02AD72
-lbC02AD56:
-                    lea     (lbB02AD6A,pc),a0
+                    bne.b   .loop
+                    bra     display_polyphony
+randomize_polyphony_values:
                     lea     (polyphony,pc),a1
                     moveq   #8-1,d0
-lbC02AD60:
-                    move.b  (a0)+,(a1)+
-                    dbra    d0,lbC02AD60
-                    bra     lbC02AD72
-lbB02AD6A:
-                    dc.b    0,2,1,3,6,4,7,5
-lbC02AD72:
+.loop:
+                    move.b  $dff006,d1
+                    eor.b   d0,d1
+                    add.b   $bfe801,d1
+                    eor.b   d0,d1
+                    add.b   $bfe901,d1
+                    eor.b   d0,d1
+                    and.b   #7,d1
+                    move.b  d1,(a1)+
+                    dbra    d0,.loop
+                    bra     display_polyphony
+display_polyphony:
                     move.w  #244,d0
                     move.w  #99,d1
                     move.w  #300,d2
@@ -15775,7 +15803,7 @@ lbC02AD72:
                     lea     (polyphony,pc),a5
                     move.w  #99,d6
                     moveq   #7-1,d7
-lbC02AD9E:
+.loop:
                     moveq   #0,d0
                     move.b  (a5),d0
                     lsl.w   #3,d0
@@ -15790,9 +15818,9 @@ lbC02AD9E:
                     move.w  d6,d3
                     movem.w d6/d7,-(a7)
                     lea     (main_screen),a0
-                    jsr     (lbC0256DA)
+                    jsr     (draw_line)
                     movem.w (a7)+,d6/d7
-                    dbra    d7,lbC02AD9E
+                    dbra    d7,.loop
                     jmp     (release_after_line_drawing)
 
 ; ===========================================================================
@@ -15940,122 +15968,127 @@ update_f_keys_line_jump_values:
 
 ; ===========================================================================
 save_font:
-                    lea     (chars3_MSG,pc),a0
+                    lea     (.font_name_text,pc),a0
                     lea     (text_font,pc),a1
-                    move.l  #2048,d0
+                    move.l  #etext_font-text_font,d0
                     jsr     (save_file)
                     bmi.b   .error
                     rts
 .error:
                     jmp     (display_dos_error)
-chars3_MSG:
+.font_name_text:
                     dc.b    'chars3',0
                     even 
 
 ; ===========================================================================
-lbC02AF0C:
+inc_selected_char_mouse:
                     lea     (current_selected_char,pc),a0
-                    cmpi.w  #$FF,(a0)
-                    beq.b   lbC02AF1C
+                    cmpi.w  #255,(a0)
+                    beq.b   .max
                     addq.w  #1,(a0)
                     bra     draw_selected_char_grid
-lbC02AF1C:
+.max:
                     rts
-lbC02AF1E:
+dec_selected_char_mouse:
                     lea     (current_selected_char,pc),a0
                     tst.w   (a0)
-                    beq.b   lbC02AF2C
+                    beq.b   .min
                     subq.w  #1,(a0)
                     bra     draw_selected_char_grid
-lbC02AF2C:
+.min:
                     rts
-lbC02AF2E:
+dec_selected_char_key:
                     lea     (current_selected_char,pc),a0
                     moveq   #$F,d0
                     and.w   (a0),d0
-                    beq.b   lbC02AF3E
+                    beq.b   .min
                     subq.w  #1,(a0)
                     bra     draw_selected_char_grid
-lbC02AF3E:
+.min:
                     rts
-lbC02AF40:
+inc_selected_char_key:
                     lea     (current_selected_char,pc),a0
                     moveq   #$F,d0
                     and.w   (a0),d0
-                    cmpi.w  #$F,d0
-                    beq.b   lbC02AF54
+                    cmpi.w  #15,d0
+                    beq.b   .max
                     addq.w  #1,(a0)
                     bra     draw_selected_char_grid
-lbC02AF54:
+.max:
                     rts
-lbC02AF56:
+dec_selected_char_column_key:
                     lea     (current_selected_char,pc),a0
                     cmpi.w  #16,(a0)
-                    blt.b   lbC02AF68
+                    blt.b   .min
                     subi.w  #16,(a0)
                     bra     draw_selected_char_grid
-lbC02AF68:
+.min:
                     rts
-lbC02AF6A:
+inc_selected_char_column_key:
                     lea     (current_selected_char,pc),a0
                     cmpi.w  #239,(a0)
-                    bgt.b   lbC02AF7C
+                    bgt.b   .max
                     addi.w  #16,(a0)
                     bra     draw_selected_char_grid
-lbC02AF7C:
+.max:
                     rts
-lbC02AF7E:
+select_current_char:
                     asr.w   #3,d0
                     asr.w   #3,d1
                     subi.w  #62,d0
-                    bmi.b   lbC02AFA8
+                    bmi.b   .out_of_bounds
                     subi.w  #12,d1
-                    bmi.b   lbC02AFA8
+                    bmi.b   .out_of_bounds
                     cmpi.w  #16,d0
-                    bcc.b   lbC02AFA8
+                    bcc.b   .out_of_bounds
                     cmpi.w  #16,d1
-                    bcc.b   lbC02AFA8
+                    bcc.b   .out_of_bounds
                     lsl.w   #4,d1
                     or.w    d1,d0
                     move.w  d0,(current_selected_char)
                     bra     draw_selected_char_grid
-lbC02AFA8:
+.out_of_bounds:
                     rts
-lbC02AFAA:
-                    lea     (lbB01D88E),a0
+
+; ===========================================================================
+restore_undo_buffer:
+                    lea     (char_undo_buffer),a0
                     move.w  (current_selected_char),d0
-                    bsr     lbC02B16E
+                    bsr     copy_buffer_to_font
                     bra     draw_selected_char_grid
-lbC02AFBE:
-                    lea     (lbB01D88E),a0
+swap_undo_buffer:
+                    lea     (char_undo_buffer),a0
                     move.w  (current_selected_char),d0
-                    bsr     lbC02B180
+                    bsr     swap_font_and_buffer
                     bra     draw_selected_char_grid
-lbC02AFD2:
-                    lea     (lbB01D895),a0
+; paste
+restore_copy_buffer:
+                    lea     (char_copy_buffer),a0
                     move.w  (current_selected_char),d0
-                    bsr     lbC02B16E
+                    bsr     copy_buffer_to_font
                     bra     draw_selected_char_grid
-lbC02AFE6:
-                    lea     (lbB01D895),a0
+swap_copy_buffer:
+                    lea     (char_copy_buffer),a0
                     move.w  (current_selected_char),d0
-                    bsr     lbC02B180
+                    bsr     swap_font_and_buffer
                     bra     draw_selected_char_grid
-lbC02AFFA:
-                    lea     (lbB01D895),a0
+; copy
+copy_to_copy_buffer:
+                    lea     (char_copy_buffer),a0
                     move.w  (current_selected_char),d0
-                    bsr     lbC02B15C
+                    bsr     copy_font_to_buffer
                     bra     draw_selected_char_grid
-lbC02B00E:
-                    lea     (lbB01D895),a0
+; cut
+copy_to_copy_buffer_and_erase_char:
+                    lea     (char_copy_buffer),a0
                     move.w  (current_selected_char),d0
-                    bsr     lbC02B15C
+                    bsr     copy_font_to_buffer
                     move.w  (current_selected_char),d0
-                    bsr     lbC02B196
+                    bsr     clear_character
                     bra     draw_selected_char_grid
-lbC02B02C:
+erase_char:
                     move.w  (current_selected_char),d0
-                    bsr     lbC02B196
+                    bsr     clear_character
                     bra     draw_selected_char_grid
 
 ; ===========================================================================
@@ -16120,15 +16153,15 @@ draw_font:
 ; ===========================================================================
 draw_selected_char_grid:
                     move.w  (current_selected_char),d0
-                    cmp.w   (lbW02B15A),d0
-                    beq.b   lbC02B0D4
-                    lea     (lbB01D88E),a0
-                    bsr     lbC02B15C
-lbC02B0D4:
-                    bsr     lbC02B12E
+                    cmp.w   (previous_select_char),d0
+                    beq.b   .no_save_changes
+                    lea     (char_undo_buffer),a0
+                    bsr     copy_font_to_buffer
+.no_save_changes:
+                    bsr     invert_previously_select_char
                     bsr     draw_selected_char
                     move.w  (current_selected_char,pc),d0
-                    move.w  d0,(lbW02B15A)
+                    move.w  d0,(previous_select_char)
                     bsr     invert_selected_char
                     moveq   #53,d0
                     moveq   #12,d1
@@ -16156,13 +16189,13 @@ draw_selected_char:
                     rts
 
 ; ===========================================================================
-lbC02B12E:
-                    lea     (lbW02B15A,pc),a0
+invert_previously_select_char:
+                    lea     (previous_select_char,pc),a0
                     move.w  (a0),d0
-                    bmi.b   lbC02B13E
+                    bmi.b   .none
                     move.w  #-1,(a0)
                     bra     invert_selected_char
-lbC02B13E:
+.none:
                     rts
 invert_selected_char:
                     moveq   #$F,d1
@@ -16174,63 +16207,67 @@ invert_selected_char:
                     jmp     (invert_one_char)
 current_selected_char:
                     dc.w    32
-lbW02B15A:
+previous_select_char:
                     dc.w    -1
-lbC02B15C:
+
+; ===========================================================================
+copy_font_to_buffer:
                     lea     (text_font,pc),a1
                     lsl.w   #3,d0
                     adda.w  d0,a1
                     moveq   #7-1,d0
-lbC02B166:
+.loop:
                     move.b  (a1)+,(a0)+
-                    dbra    d0,lbC02B166
+                    dbra    d0,.loop
                     rts
-lbC02B16E:
+copy_buffer_to_font:
                     lea     (text_font,pc),a1
                     lsl.w   #3,d0
                     adda.w  d0,a1
                     moveq   #7-1,d0
-lbC02B178:
+.loop:
                     move.b  (a0)+,(a1)+
-                    dbra    d0,lbC02B178
+                    dbra    d0,.loop
                     rts
-lbC02B180:
+swap_font_and_buffer:
                     lea     (text_font,pc),a1
                     lsl.w   #3,d0
                     adda.w  d0,a1
                     moveq   #7-1,d0
-lbC02B18A:
+.loop:
                     move.b  (a0),d1
                     move.b  (a1),(a0)+
                     move.b  d1,(a1)+
-                    dbra    d0,lbC02B18A
+                    dbra    d0,.loop
                     rts
-lbC02B196:
+clear_character:
                     lea     (text_font,pc),a1
                     lsl.w   #3,d0
                     adda.w  d0,a1
                     moveq   #7-1,d0
-lbC02B1A0:
+.loop:
                     sf      (a1)+
-                    dbra    d0,lbC02B1A0
+                    dbra    d0,.loop
                     rts
-lbC02B1A8:
+
+; ===========================================================================
+set_char_pixel:
                     movem.l d2,-(a7)
                     st      d2
-                    bra.b   lbC02B1B6
-lbC02B1B0:
+                    bra.b   change_char_pixel
+clear_char_pixel:
                     movem.l d2,-(a7)
                     sf      d2
-lbC02B1B6:
+change_char_pixel:
                     asr.w   #3,d0
                     subi.w  #53,d0
                     cmpi.w  #8,d0
-                    bcc.b   lbC02B1EA
+                    bcc.b   .out_of_bounds
                     not.b   d0
                     asr.w   #3,d1
                     subi.w  #12,d1
                     cmpi.w  #7,d1
-                    bcc.b   lbC02B1EA
+                    bcc.b   .out_of_bounds
                     lea     (text_font,pc),a0
                     adda.w  d1,a0
                     move.w  (current_selected_char,pc),d1
@@ -16238,11 +16275,11 @@ lbC02B1B6:
                     adda.w  d1,a0
                     bclr    d0,(a0)
                     tst.b   d2
-                    beq.b   lbC02B1E6
+                    beq.b   .clear
                     bset    d0,(a0)
-lbC02B1E6:
+.clear:
                     bsr     draw_selected_char_grid
-lbC02B1EA:
+.out_of_bounds:
                     movem.l (a7)+,d2
                     rts
 
@@ -16332,48 +16369,50 @@ restore_prefs:
                     rts
 
 ; ===========================================================================
-lbC02B2BC:
+backup_prefs_before_load:
                     move.l  #PREFS_FILE_LEN,d0
                     moveq   #MEMF_ANY,d1
                     EXEC    AllocMem
-                    move.l  d0,(lbL02B34C)
-                    beq.b   lbC02B2F6
+                    move.l  d0,(old_prefs_memory_block)
+                    beq.b   .error
                     lea     (prefs_data,pc),a0
-                    move.l  (lbL02B34C,pc),a1
+                    move.l  (old_prefs_memory_block,pc),a1
                     move.l  #PREFS_FILE_LEN,d0
                     EXEC    CopyMem
-                    moveq   #0,d0
+                    moveq   #OK,d0
                     rts
-lbC02B2F6:
+.error:
                     jmp     (error_no_memory)
-lbC02B2FE:
-                    move.l  (lbL02B34C,pc),a0
+restore_prefs_after_load:
+                    move.l  (old_prefs_memory_block,pc),a0
                     lea     (prefs_data,pc),a1
                     move.l  #PREFS_FILE_LEN,d0
                     EXEC    CopyMem
                     rts
-lbC02B31A:
-                    lea     (lbL02B34C,pc),a0
+free_old_prefs_memory_block:
+                    lea     (old_prefs_memory_block,pc),a0
                     move.l  (a0),d0
-                    beq.b   lbC02B33A
+                    beq.b   .error
                     clr.l   (a0)
                     move.l  d0,a1
                     move.l  #PREFS_FILE_LEN,d0
                     EXEC    FreeMem
                     rts
-lbC02B33A:
+.error:
                     move.w  #$F00,(_CUSTOM|COLOR00)
                     rts
-lbL02B34C:
+old_prefs_memory_block:
                     dc.l    0
+
+; ===========================================================================
 lbC02B350:
                     st      d0
                     bra.b   lbC02B35A
 lbC02B354:
                     sf      d0
 lbC02B35A:
-                    lea     (OK_ChannelsModes,pc),a0
-                    lea     (OK_ChannelsModes_backup),a1
+                    lea     (OKT_ChannelsModes,pc),a0
+                    lea     (OKT_ChannelsModes_backup),a1
                     cmpm.l  (a0)+,(a1)+
                     bne.b   lbC02B36C
                     cmpm.l  (a0)+,(a1)+
@@ -16384,8 +16423,8 @@ lbC02B36C:
                     jsr     (ask_are_you_sure_requester)
                     bne.b   lbC02B388
 lbC02B378:
-                    lea     (OK_ChannelsModes_backup),a0
-                    lea     (OK_ChannelsModes,pc),a1
+                    lea     (OKT_ChannelsModes_backup),a0
+                    lea     (OKT_ChannelsModes,pc),a1
                     bsr     lbC02B3B2
                     beq.b   lbC02B38C
 lbC02B388:
@@ -16393,7 +16432,7 @@ lbC02B388:
 lbC02B38C:
                     lea     (prefs_data,pc),a0
                     bsr     lbC02B590
-                    tst.l   (OK_PatternList)
+                    tst.l   (OKT_PatternList)
                     bne.b   lbC02B3AA
                     jsr     (inc_song_positions)
                     beq.b   lbC02B3AA
@@ -16404,7 +16443,7 @@ lbC02B3AA:
 lbC02B3B2:
                     movem.l d2/d3/a2-a5,-(a7)
                     bsr     lbC02B506
-                    lea     (OK_PatternList),a2
+                    lea     (OKT_PatternList),a2
                     lea     (lbL01CF58),a3
                     moveq   #64-1,d3
 lbC02B3C8:
@@ -16429,11 +16468,11 @@ lbC02B3FC:
                     lea     (4,a2),a2
                     lea     (4,a3),a3
                     dbra    d3,lbC02B3C8
-                    lea     (OK_PatternList),a0
+                    lea     (OKT_PatternList),a0
                     move.w  (lbW02B584),d0
                     bsr     lbC02B54C
                     lea     (lbL01CF58),a0
-                    lea     (OK_PatternList),a1
+                    lea     (OKT_PatternList),a1
                     moveq   #64-1,d0
 lbC02B426:
                     move.l  (a0),(a1)+
@@ -16601,7 +16640,7 @@ construct_caret_positions_and_channels_config:
                     move.l  #-1,(4,a0)
                     lea     (channels_number_text,pc),a2
                     lea     (lbL02B684,pc),a3
-                    lea     (OK_ChannelsModes,pc),a4
+                    lea     (OKT_ChannelsModes,pc),a4
                     lea     (caret_default_positions,pc),a5
                     lea     (caret_current_positions),a6
                     moveq   #0,d3
@@ -16728,7 +16767,7 @@ lbC02B744:
                     moveq   #0,d0
                     moveq   #0,d1
                     jsr     (process_commands)
-                    jmp     (lbC0246B8)
+                    jmp     (wait_any_key_and_mouse_press)
 lbC02B75C:
                     move.l  #lbC02B768,(current_cmd_ptr)
                     rts
@@ -16737,7 +16776,7 @@ lbC02B768:
                     moveq   #0,d0
                     moveq   #0,d1
                     jsr     (process_commands)
-                    jmp     (lbC0246B8)
+                    jmp     (wait_any_key_and_mouse_press)
 lbC02B780:
                     bsr     lbC02BF88
                     bmi.b   lbC02B7A2
@@ -17189,7 +17228,7 @@ lbC02BC4A:
                     lea     (current_file_name),a0
                     jsr     (open_file_for_writing)
                     bmi.b   lbC02BCA0
-                    lea     (OK_E_MSG,pc),a0
+                    lea     (OKT_E_MSG,pc),a0
                     moveq   #4,d0
                     jsr     (write_to_file)
                     bmi.b   lbC02BCA0
@@ -17213,7 +17252,7 @@ lbC02BCB2:
 SaveEffectTab_MSG:
                     dc.b    'Save EffectTable',0
                     even
-OK_E_MSG:
+OKT_E_MSG:
                     dc.b    'OK_E'
 lbL02BCDA:
                     dc.l    0,0,MEMF_CLEAR|MEMF_ANY
@@ -17711,7 +17750,7 @@ lbC02C2E4:
                     clr.l   (lbB02CA08)
                     clr.l   (lbB02C9CC)
                     sf      (lbB02C470)
-                    move.w  (OK_SLen),d7
+                    move.w  (OKT_SLen),d7
                     bra     lbC02C418
 lbC02C344:
                     movem.l d4-d7/a2-a5,-(a7)
@@ -17721,7 +17760,7 @@ lbC02C344:
                     moveq   #2,d3
                     jsr     (draw_short_ascii_decimal_number)
                     movem.l (a7)+,d4-d7/a2-a5
-                    lea     (OK_PatternList),a0
+                    lea     (OKT_PatternList),a0
                     move.w  (lbB02C9E4+2,pc),d0
                     add.w   d0,d0
                     add.w   d0,d0
@@ -17742,7 +17781,7 @@ lbC02C398:
                     move.w  (lbB02CA20+2,pc),d2
                     jsr     (draw_2_digits_hex_number)
                     movem.l (a7)+,d4-d7/a2-a5
-                    lea     (OK_ChannelsModes),a4
+                    lea     (OKT_ChannelsModes),a4
                     moveq   #1,d0
                     move.l  d0,(lbB02CA14)
                     moveq   #4,d5
@@ -18273,46 +18312,28 @@ lbC02CA2A:
                     move.w  (lbW02CA38,pc,d0.w),d0
                     jmp     (lbW02CA38,pc,d0.w)
 lbW02CA38:
-                    dc.w    lbC02CC46-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38
-                    dc.w    lbC02CA2A-lbW02CA38
+                    dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CA2A-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CA2A-lbW02CA38
+                    dc.w    lbC02CC46-lbW02CA38,lbC02CE16-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CCF0-lbW02CA38,lbC02CC4E-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CE16-lbW02CA38,lbC02CE5E-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38
-                    dc.w    lbC02CA2A-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38
-                    dc.w    lbC02CE16-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38,lbC02CCF0-lbW02CA38,lbC02CC4E-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38,lbC02CE16-lbW02CA38,lbC02CE5E-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38,lbC02CC38-lbW02CA38,lbC02CC46-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38,lbC02CCB6-lbW02CA38,lbC02CCB6-lbW02CA38
+                    dc.w    lbC02CC38-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02CCB6-lbW02CA38,lbC02CCB6-lbW02CA38,lbC02CCB6-lbW02CA38
                     dc.w    lbC02CCB6-lbW02CA38,lbC02CCB6-lbW02CA38,lbC02CCB6-lbW02CA38
-                    dc.w    lbC02CCB6-lbW02CA38,lbC02CCB6-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CCB6-lbW02CA38,lbC02CCB6-lbW02CA38,lbC02CCB6-lbW02CA38
+                    dc.w    lbC02CCB6-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC82-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
-                    dc.w    lbC02C9A0-lbW02CA38,lbC02CC46-lbW02CA38,lbC02C9AC-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38,lbC02C9B8-lbW02CA38,lbC02C9C4-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38,lbC02C9D0-lbW02CA38,lbC02CC46-lbW02CA38
-                    dc.w    lbC02C9DC-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
-                    dc.w    lbC02C9E8-lbW02CA38,lbC02C9F4-lbW02CA38,lbC02CC46-lbW02CA38
-                    dc.w    lbC02CA00-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CA0C-lbW02CA38
-                    dc.w    lbC02CA18-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CC46-lbW02CA38,lbC02CC82-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02C9A0-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02C9AC-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02C9B8-lbW02CA38,lbC02C9C4-lbW02CA38,lbC02CC46-lbW02CA38
@@ -18322,7 +18343,18 @@ lbW02CA38:
                     dc.w    lbC02C9F4-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CA00-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CA0C-lbW02CA38,lbC02CA18-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38,lbC02CC3E-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CC46-lbW02CA38,lbC02C9A0-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02C9AC-lbW02CA38,lbC02CC46-lbW02CA38,lbC02C9B8-lbW02CA38
+                    dc.w    lbC02C9C4-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02C9D0-lbW02CA38
+                    dc.w    lbC02CC46-lbW02CA38,lbC02C9DC-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CC46-lbW02CA38,lbC02C9E8-lbW02CA38,lbC02C9F4-lbW02CA38
+                    dc.w    lbC02CC46-lbW02CA38,lbC02CA00-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CA0C-lbW02CA38,lbC02CA18-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CC3E-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
@@ -18365,7 +18397,7 @@ lbW02CA38:
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
                     dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
-                    dc.w    lbC02CC46-lbW02CA38,lbC02CC46-lbW02CA38
+                    dc.w    lbC02CC46-lbW02CA38
 lbC02CC38:
                     not.b   (a5)
                     bra     lbC02CA2A
@@ -18869,10 +18901,10 @@ alloc_standard_io_request:
                     move.l  d0,d7
                     move.l  a0,a5
                     move.l  a5,d0
-                    bne.b   .ok_alloc
+                    bne.b   .OKT_alloc
                     moveq   #0,d0
                     bra.b   .error
-.ok_alloc:
+.OKT_alloc:
                     move.l  d7,d0
                     move.l  #MEMF_CLEAR|MEMF_PUBLIC,d1
                     EXEC    AllocMem
@@ -20054,167 +20086,167 @@ lbW019080:
                     dc.l    lbW019092
                     dc.w    %1000000000001
                     dc.b    14,12,2,1
-                    dc.l    lbC02AA68,0
+                    dc.l    switch_channel_1_type,0
 lbW019092:
                     dc.l    lbW0190A4
                     dc.w    %1000000000001
                     dc.b    17,12,2,1
-                    dc.l    lbC02AA6C,0
+                    dc.l    switch_channel_2_type,0
 lbW0190A4:
                     dc.l    lbW0190B6
                     dc.w    %1000000000001
                     dc.b    20,12,2,1
-                    dc.l    lbC02AA70,0
+                    dc.l    switch_channel_3_type,0
 lbW0190B6:
                     dc.l    lbW0190C8
                     dc.w    %1000000000001
                     dc.b    23,12,2,1
-                    dc.l    lbC02AA74,0
+                    dc.l    switch_channel_4_type,0
 lbW0190C8:
                     dc.l    lbW0190DA
                     dc.w    %1
                     dc.b    2,13,23,1
-                    dc.l    lbC02AAB2,lbC02AAC4
+                    dc.l    inc_default_pattern_length,dec_default_pattern_length
 lbW0190DA:
                     dc.l    lbW0190EC
                     dc.w    %1
                     dc.b    2,15,23,1
-                    dc.l    lbC02AAE6,lbC02AAF8
+                    dc.l    inc_samples_load_mode,dec_samples_load_mode
 lbW0190EC:
                     dc.l    lbW0190FE
                     dc.w    %1000000000001
                     dc.b    2,16,23,1
-                    dc.l    lbC02AB24,0
+                    dc.l    switch_samples_save_format,0
 lbW0190FE:
                     dc.l    lbW019110
                     dc.w    %1
                     dc.b    2,18,23,1
-                    dc.l    lbC02AB54,lbC02AB66
+                    dc.l    inc_mouse_repeat_delay,dec_mouse_repeat_delay
 lbW019110:
                     dc.l    lbW019122
                     dc.w    %1
                     dc.b    2,19,23,1
-                    dc.l    lbC02AB88,lbC02AB9A
+                    dc.l    inc_mouse_repeat_speed,dec_mouse_repeat_speed
 lbW019122:
                     dc.l    lbW019134
                     dc.w    %1
                     dc.b    2,21,15,1
-                    dc.l    lbC02ABBC,lbC02ABCE
+                    dc.l    inc_current_color_set,dec_current_color_set
 lbW019134:
                     dc.l    lbW019146
                     dc.w    %1
                     dc.b    18,21,1,2
-                    dc.l    lbC02AC42,lbC02AC76
+                    dc.l    inc_foreground_color_r,dec_foreground_color_r
 lbW019146:
                     dc.l    lbW019158
                     dc.w    %1
                     dc.b    19,21,1,2
-                    dc.l    lbC02AC46,lbC02AC7A
+                    dc.l    inc_foreground_color_g,dec_foreground_color_g
 lbW019158:
                     dc.l    lbW01916A
                     dc.w    %1
                     dc.b    20,21,1,2
-                    dc.l    lbC02AC4A,lbC02AC7E
+                    dc.l    inc_foreground_color_b,dec_foreground_color_b
 lbW01916A:
                     dc.l    lbW01917C
                     dc.w    %1
                     dc.b    22,21,1,2
-                    dc.l    lbC02ABDE,lbC02AC12
+                    dc.l    inc_background_color_r,dec_background_color_r
 lbW01917C:
                     dc.l    lbW01918E
                     dc.w    %1
                     dc.b    23,21,1,2
-                    dc.l    lbC02ABE2,lbC02AC16
+                    dc.l    inc_background_color_g,dec_background_color_g
 lbW01918E:
                     dc.l    lbW0191A0
                     dc.w    %1
                     dc.b    24,21,1,2
-                    dc.l    lbC02ABE6,lbC02AC1A
+                    dc.l    inc_background_color_b,dec_background_color_b
 lbW0191A0:
                     dc.l    lbW0191B2
                     dc.w    %1
                     dc.b    29,12,1,1
-                    dc.l    lbC02ACF2,lbC02AD22
+                    dc.l    dec_polyphony_value_1,inc_polyphony_value_1
 lbW0191B2:
                     dc.l    lbW0191C4
                     dc.w    %1
                     dc.b    29,13,1,1
-                    dc.l    lbC02ACF6,lbC02AD26
+                    dc.l    dec_polyphony_value_2,inc_polyphony_value_2
 lbW0191C4:
                     dc.l    lbW0191D6
                     dc.w    %1
                     dc.b    29,14,1,1
-                    dc.l    lbC02ACFA,lbC02AD2A
+                    dc.l    dec_polyphony_value_3,inc_polyphony_value_3
 lbW0191D6:
                     dc.l    lbW0191E8
                     dc.w    %1
                     dc.b    29,15,1,1
-                    dc.l    lbC02ACFE,lbC02AD2E
+                    dc.l    dec_polyphony_value_4,inc_polyphony_value_4
 lbW0191E8:
                     dc.l    lbW0191FA
                     dc.w    %1
                     dc.b    29,16,1,1
-                    dc.l    lbC02AD02,lbC02AD32
+                    dc.l    dec_polyphony_value_5,inc_polyphony_value_5
 lbW0191FA:
                     dc.l    lbW01920C
                     dc.w    %1
                     dc.b    29,17,1,1
-                    dc.l    lbC02AD06,lbC02AD36
+                    dc.l    dec_polyphony_value_6,inc_polyphony_value_6
 lbW01920C:
                     dc.l    lbW01921E
                     dc.w    %1
                     dc.b    29,18,1,1
-                    dc.l    lbC02AD0A,lbC02AD3A
+                    dc.l    dec_polyphony_value_7,inc_polyphony_value_7
 lbW01921E:
                     dc.l    lbW019230
                     dc.w    %1
                     dc.b    29,19,1,1
-                    dc.l    lbC02AD0E,lbC02AD3E
+                    dc.l    dec_polyphony_value_8,inc_polyphony_value_8
 lbW019230:
                     dc.l    lbW019242
                     dc.w    %1
                     dc.b    38,12,1,1
-                    dc.l    lbC02AD22,lbC02ACF2
+                    dc.l    inc_polyphony_value_1,dec_polyphony_value_1
 lbW019242:
                     dc.l    lbW019254
                     dc.w    %1
                     dc.b    38,13,1,1
-                    dc.l    lbC02AD26,lbC02ACF6
+                    dc.l    inc_polyphony_value_2,dec_polyphony_value_2
 lbW019254:
                     dc.l    lbW019266
                     dc.w    %1
                     dc.b    38,14,1,1
-                    dc.l    lbC02AD2A,lbC02ACFA
+                    dc.l    inc_polyphony_value_3,dec_polyphony_value_3
 lbW019266:
                     dc.l    lbW019278
                     dc.w    %1
                     dc.b    38,15,1,1
-                    dc.l    lbC02AD2E,lbC02ACFE
+                    dc.l    inc_polyphony_value_4,dec_polyphony_value_4
 lbW019278:
                     dc.l    lbW01928A
                     dc.w    %1
                     dc.b    38,16,1,1
-                    dc.l    lbC02AD32,lbC02AD02
+                    dc.l    inc_polyphony_value_5,dec_polyphony_value_5
 lbW01928A:
                     dc.l    lbW01929C
                     dc.w    %1
                     dc.b    38,17,1,1
-                    dc.l    lbC02AD36,lbC02AD06
+                    dc.l    inc_polyphony_value_6,dec_polyphony_value_6
 lbW01929C:
                     dc.l    lbW0192AE
                     dc.w    %1
                     dc.b    38,18,1,1
-                    dc.l    lbC02AD3A,lbC02AD0A
+                    dc.l    inc_polyphony_value_7,dec_polyphony_value_7
 lbW0192AE:
                     dc.l    lbW0192C0
                     dc.w    %1
                     dc.b    38,19,1,1
-                    dc.l    lbC02AD3E,lbC02AD0E
+                    dc.l    inc_polyphony_value_8,dec_polyphony_value_8
 lbW0192C0:
                     dc.l    lbW0192D2
                     dc.w    %1000000000001
                     dc.b    29,22,10,1
-                    dc.l    lbC02AD42,lbC02AD56
+                    dc.l    reset_polyphony_values,randomize_polyphony_values
 lbW0192D2:
                     dc.l    lbW0192E4
                     dc.w    %1
@@ -20244,12 +20276,12 @@ lbW01932C:
                     dc.l    lbW01933E
                     dc.w    %10000000000001
                     dc.b    53,12,8,7
-                    dc.l    lbC02B1A8,lbC02B1B0
+                    dc.l    set_char_pixel,clear_char_pixel
 lbW01933E:
                     dc.l    lbW019350
                     dc.w    %1
                     dc.b    53,20,8,1
-                    dc.l    lbC02AF0C,lbC02AF1E
+                    dc.l    inc_selected_char_mouse,dec_selected_char_mouse
 lbW019350:
                     dc.l    lbW019362
                     dc.w    %1
@@ -20279,22 +20311,22 @@ lbW0193AA:
                     dc.l    lbW0193BC
                     dc.w    %1000000000001
                     dc.b    53,23,4,1
-                    dc.l    lbC02AFAA,lbC02AFBE
+                    dc.l    restore_undo_buffer,swap_undo_buffer
 lbW0193BC:
                     dc.l    lbW0193CE
                     dc.w    %1000000000001
                     dc.b    53,24,5,1
-                    dc.l    lbC02AFD2,lbC02AFE6
+                    dc.l    restore_copy_buffer,swap_copy_buffer
 lbW0193CE:
                     dc.l    lbW0193E0
                     dc.w    %1000000000001
                     dc.b    53,25,3,1
-                    dc.l    lbC02B00E,lbC02B02C
+                    dc.l    copy_to_copy_buffer_and_erase_char,erase_char
 lbW0193E0:
                     dc.l    lbW0193F2
                     dc.w    %1000000000001
                     dc.b    57,25,4,1
-                    dc.l    lbC02AFFA,0
+                    dc.l    copy_to_copy_buffer,0
 lbW0193F2:
                     dc.l    lbW019404
                     dc.w    %1000000000001
@@ -20309,7 +20341,7 @@ lbW019416:
                     dc.l    lbW019428
                     dc.w    %10000000000001
                     dc.b    62,12,16,16
-                    dc.l    lbC02AF7E,0
+                    dc.l    select_current_char,0
 lbW019428:
                     dc.l    lbW01943A
                     dc.w    %1000000000001
@@ -20339,12 +20371,12 @@ lbW019482:
                     dc.l    lbW019494
                     dc.w    %1000000000001
                     dc.b    34,27,7,1
-                    dc.l    lbC02AA14,0
+                    dc.l    switch_st_samples_mode,0
 lbW019494:
                     dc.l    0
                     dc.w    %1000000000001
                     dc.b    42,27,7,1
-                    dc.l    lbC02AA1E,0
+                    dc.l    switch_st_tracks_mode,0
 lbW0194A6:
                     dc.w    10,0
                     dc.l    lbW0194C0
@@ -20357,13 +20389,13 @@ lbW0194C0:
                     dc.w    2,5
                     dc.l    lbC02A97A
                     dc.w    4,15
-                    dc.l    lbC02AF2E
+                    dc.l    dec_selected_char_key
                     dc.w    4,14
-                    dc.l    lbC02AF40
+                    dc.l    inc_selected_char_key
                     dc.w    4,12
-                    dc.l    lbC02AF56
+                    dc.l    dec_selected_char_column_key
                     dc.w    4,13
-                    dc.l    lbC02AF6A
+                    dc.l    inc_selected_char_column_key
                     dc.w    0
 lbW0194EA:
                     dc.w    4,15
@@ -20583,9 +20615,9 @@ our_screen_struct:
                     dc.l    0
                     dc.l    0
 ; related to the replay
-OK_PattLineBuff:
+OKT_PattLineBuff:
                     dcb.b   4*8,0
-OK_ChannelsData:
+OKT_ChannelsData:
                     dcb.b   28*4,0
 ; --- mixing buffers
 lbB019D74:
@@ -20593,9 +20625,9 @@ lbB019D74:
 lbB019EAE:
                     dcb.b   314,0
 ; ---
-OK_PBuffs:
+OKT_PBuffs:
                     dcb.l   16,0
-OK_PatternList:
+OKT_PatternList:
                     dcb.l   64,0
 save_stack:
                     dc.l    0
@@ -20615,7 +20647,7 @@ caret_current_positions:
                     dcb.b   40,0
                     dc.b    0
                     even
-OK_SampleTab:
+OKT_SampleTab:
                     dcb.l   36*2,0
 pattern_bitplane_top_pos:
                     dc.w    0
@@ -20692,7 +20724,7 @@ lbW01B7DA:
                     dc.w    0
 lbW01B7DC:
                     dc.w    0
-OK_Samples:
+OKT_Samples:
                     dcb.b   32*36,0
 lbW01BC5E:
                     dc.w    0
@@ -20706,7 +20738,7 @@ midi_mode:
                     dc.b    0
 lbB01BC6B:
                     dcb.b   3,0
-OK_SLen:
+OKT_SLen:
                     dc.w    0
 lbL01BC70:
                     dcb.l   64,0
@@ -20745,13 +20777,13 @@ lbL01CF58:
 ; ===========================================================================
 prefs_backup_data:
                     dc.l    0
-OK_ChannelsModes_backup:
+OKT_ChannelsModes_backup:
                     dcb.b   PREFS_FILE_LEN-4,0
 
 ; ===========================================================================
-lbB01D88E:
+char_undo_buffer:
                     dcb.b   7,0
-lbB01D895:
+char_copy_buffer:
                     dcb.b   7,0
 lbL01D89C:
                     dcb.l   100,0
@@ -20847,11 +20879,11 @@ bottom_credits_picture:
 
 ; ===========================================================================
                     section chip_blocks,bss_c
-OK_MixBuff_1:
+OKT_MixBuff_1:
                     ds.b    MIX_BUFFERS_1*MIX_BUFFERS_LEN_1
-OK_OuputBuff_2:
+OKT_OuputBuff_2:
                     ds.b    82
-OK_MixBuff_2:
+OKT_MixBuff_2:
                     ds.b    MIX_BUFFERS_LEN_2*2
                     ; (must be aligned for AGA)
                     cnop    0,8
@@ -20859,7 +20891,7 @@ main_screen:
                     ds.b    (1080*80)
 dummy_sprite:
                     ds.b    4
-OK_EmptyWaveForm:
+OKT_EmptyWaveForm:
                     ds.w    1
 requesters_save_buffer:
                     ds.b    (24*20)

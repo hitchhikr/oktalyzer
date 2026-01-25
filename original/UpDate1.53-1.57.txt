@@ -128,7 +128,7 @@ The two stereo channels can also be controlled separately:
 
 Name:       OK_SetBalance
 
-Handover: d0: Master volume left.
+Handover:   d0: Master volume left.
             d1: Master volume on the right.
 
 The program Relox
