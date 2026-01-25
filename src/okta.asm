@@ -18735,8 +18735,6 @@ setup_screen:
                     move.l  d0,((5*4),sp)
                     tst.l   d0
                     beq     .err_mem
-                    moveq   #10,d1
-                    DOS     Delay
                     move.l  GFXBase,a0
                     move.l  ((5*4),sp),a1
                     move.l  (gb_ActiView,a0),(4,a1)
@@ -18770,13 +18768,11 @@ restore_screen:
                     cmpa.l  #0,a1
                     beq.b   .no_view
                     GFX     LoadView
-                    GFX     WaitTOF
-                    GFX     WaitTOF
 .no_view:
+                    GFX     WaitTOF
+                    GFX     WaitTOF
                     lea     (_CUSTOM|COP1LCH),a0
                     move.l  (0,a5),(a0)
-                    moveq   #5,d1
-                    DOS     Delay
                     move.l  a5,a0
                     jsr     (free_mem_block,pc)
                     movem.l (a7)+,a1/a4-a6
