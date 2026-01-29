@@ -927,7 +927,7 @@ lbC01EA70:
                     divu.w  #5,d1
                     lea     (caret_current_positions),a0
                     move.w  (caret_pos_x,pc),d2
-                    adda.w  d2,a0
+                    add.w   d2,a0
                     moveq   #0,d5
                     move.b  (a0),d5
                     move.w  d5,d2
@@ -941,7 +941,7 @@ lbC01EACE:
                     move.w  d2,(lbW01EC40)
                     add.w   d1,d1
                     add.w   d1,d1
-                    adda.w  d1,a5
+                    add.w   d1,a5
                     swap    d1
                     lsl.w   #2,d1
                     tst.b   (edit_mode_flag)
@@ -1265,7 +1265,7 @@ lbC01EEB0:
                     bra     lbC01EED2
 lbC01EECC:
                     move.l  (a0,d0.w),(a0)
-                    adda.w  d0,a0
+                    add.w   d0,a0
 lbC01EED2:
                     dbra    d1,lbC01EECC
                     clr.l   (a0)
@@ -1297,7 +1297,7 @@ lbC01EF1E:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     tst.w   (30,a0)
                     bne     lbC01EF46
                     move.w  #64,d2
@@ -1322,7 +1322,7 @@ lbC01EF5A:
                     lea     (OKT_Samples),a2
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a2
+                    add.w   d0,a2
                     lea     (lbW02513C),a0
                     add.w   d1,d1
                     move.w  (a0,d1.w),d2
@@ -1363,7 +1363,7 @@ lbC01EFE8:
                     bset    d4,d5
                     move.w  d5,(DMACON-AUD0LCH,a2)
                     lsl.w   #4,d4
-                    adda.w  d4,a2
+                    add.w   d4,a2
                     move.l  a0,(a2)+
                     move.w  d0,(a2)+
                     move.w  #113,(a2)
@@ -1847,7 +1847,7 @@ lbC01F5A8:
                     move.w  d3,d4
 lbC01F5AA:
                     lea     (a5,d4.w),a0
-                    adda.w  d5,a0
+                    add.w   d5,a0
                     move.l  (a0),(a3)+
                     addq.w  #4,d4
                     cmp.w   d4,d6
@@ -1930,12 +1930,12 @@ lbC01F670:
                     move.w  (lbW01F692,pc),d4
 lbC01F674:
                     lea     (a5,d4.w),a0
-                    adda.w  d5,a0
+                    add.w   d5,a0
                     jsr     (a4)
                     addq.w  #4,d4
                     cmp.w   d4,d6
                     bge     lbC01F674
-                    adda.w  d3,a3
+                    add.w   d3,a3
                     add.w   (current_channels_size),d5
                     cmp.w   d5,d7
                     bge     lbC01F670
@@ -1966,7 +1966,7 @@ lbC01F6C8:
                     add.w   d4,d4
 lbC01F6D6:
                     lea     (a5,d4.w),a0
-                    adda.w  d5,a0
+                    add.w   d5,a0
                     jsr     (a3)
                     addq.w  #4,d4
                     cmp.w   d4,d6
@@ -2008,7 +2008,7 @@ lbC01F702:
                     move.l  a5,a4
                     move.w  (lbW01F506,pc),d0
                     mulu.w  (current_channels_size),d0
-                    adda.w  d0,a4
+                    add.w   d0,a4
 lbC01F752:
                     move.w  (lbW01F500,pc),d4
                     ext.l   d4
@@ -2017,7 +2017,7 @@ lbC01F752:
                     add.w   d4,d4
 lbC01F760:
                     lea     (a5,d4.w),a0
-                    adda.w  d5,a0
+                    add.w   d5,a0
                     lea     (a4,d4.w),a1
                     jsr     (a3)
                     addq.w  #4,d4
@@ -2331,7 +2331,7 @@ lbC01FA98:
                     move.w  (caret_pos_x,pc),d0
                     divu.w  #5,d0
                     lea     (polyphony),a0
-                    adda.w  (lbW01B298),a0
+                    add.w   (lbW01B298),a0
                     cmp.b   (a0),d0
                     bne     lbC01FAFC
                     addq.w  #1,(lbW01B298)
@@ -2340,7 +2340,7 @@ lbC01FA98:
                     clr.w   (lbW01B298)
 lbC01FACE:
                     lea     (polyphony),a0
-                    adda.w  (lbW01B298),a0
+                    add.w   (lbW01B298),a0
                     moveq   #0,d0
                     move.b  (a0),d0
                     mulu.w  #5,d0
@@ -2372,7 +2372,7 @@ lbC01FB24:
                     addq.w  #1,d1
                     move.w  (lbW01B2BA),d0
                     lea     (polyphony),a0
-                    adda.w  (lbW01B298),a0
+                    add.w   (lbW01B298),a0
                     cmp.b   (a0),d0
                     bne     lbC01FB7E
                     addq.w  #1,(lbW01B298)
@@ -2381,7 +2381,7 @@ lbC01FB24:
                     clr.w   (lbW01B298)
 lbC01FB58:
                     lea     (polyphony),a0
-                    adda.w  (lbW01B298),a0
+                    add.w   (lbW01B298),a0
                     moveq   #0,d0
                     move.b  (a0),d0
                     move.w  (current_channels_size),d1
@@ -2474,7 +2474,7 @@ display_main_menu:
                     bsr     draw_midi_mode_status
                     bsr     draw_copy_blocks_mode
                     bsr     draw_current_sample_infos
-                    bsr     draw_replay_type
+;                    bsr     draw_replay_type
                     bsr     do_draw_available_memory_and_song_metrics
 draw_channels_muted_status:
                     ; x pos
@@ -2540,7 +2540,7 @@ draw_current_sample_infos:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     move.l  a0,-(a7)
                     moveq   #46,d0
                     moveq   #1,d1
@@ -2616,12 +2616,12 @@ draw_current_sample_infos:
                     even
 
 ; ===========================================================================
-draw_replay_type:
-                    moveq   #68,d0
-                    moveq   #5,d1
-                    move.w  (replay_type,pc),d2
-                    addq.w  #1,d2
-                    bra     draw_one_char_alpha_numeric
+;draw_replay_type:
+;                    moveq   #68,d0
+;                    moveq   #5,d1
+;                    move.w  (replay_type,pc),d2
+;                    addq.w  #1,d2
+;                    bra     draw_one_char_alpha_numeric
 
 ; ===========================================================================
 draw_available_memory:
@@ -4063,8 +4063,12 @@ do_load_song:
                     jsr     (read_from_file)
                     bmi     .error
                     lea     (song_chunk_header_loaded_data),a0
+                    cmpi.l  #'OXTA',(a0)+
+                    beq     .new_id
+                    subq.l  #4,a0
                     cmpi.l  #'OKTA',(a0)+
                     bne     load_st_mod
+.new_id:
                     cmpi.l  #'SONG',(a0)+
                     beq     .load_okta_mod
                     bsr     error_ok_struct_error
@@ -4184,7 +4188,7 @@ lbC020F9C:
                     lsr.w   #8,d0
                     move.w  d0,(a5)+
                     beq     lbC021024
-                    adda.w  d0,a5
+                    add.w   d0,a5
                     move.w  #$80,d1
                     sub.w   d0,d1
                     bmi     lbC021024
@@ -4602,7 +4606,7 @@ lbC0214AE:
 SaveSong_MSG:
                     dc.b    'Save Song',0
 OKTASONG_MSG:
-                    dc.b    'OKTASONG'
+                    dc.b    'OXTASONG'
 lbC0214C8:
                     move.l  a0,a5
 lbC0214CA:
@@ -4716,7 +4720,7 @@ get_current_sample_ptr_address:
                     move.w  (current_sample,pc),d0
                     lea     (OKT_SampleTab),a0
                     lsl.w   #3,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     move.l  (a7)+,d0
                     rts
 
@@ -4724,7 +4728,7 @@ get_current_sample_ptr_address:
 get_given_sample_ptr_address:
                     lea     (OKT_SampleTab),a0
                     lsl.w   #3,d0
-                    adda.w   d0,a0
+                    add.w    d0,a0
                     rts
 
 ; ===========================================================================
@@ -4778,7 +4782,7 @@ do_free_sample:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     moveq   #(32/4)-1,d0
 .loop:
                     clr.l   (a0)+
@@ -4820,10 +4824,10 @@ lbC0216DC:
                     lea     (OKT_Samples),a0
                     move.l  a0,a1
                     lsl.w   #5,d1
-                    adda.w  d1,a0
+                    add.w   d1,a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     move.l  (20,a0),d0
                     moveq   #8-1,d2
 .loop:
@@ -4855,7 +4859,7 @@ lbC02177E:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     move.w  (30,a0),(lbW01BC68)
                     bsr     get_current_sample_ptr_address
                     move.l  (a0)+,(lbL01BC60)
@@ -4879,7 +4883,7 @@ lbC02177E:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     move.w  (30,a0),d0
                     cmp.w   (lbW01BC68),d0
                     bne     lbC02187A
@@ -4951,10 +4955,10 @@ lbC02189C:
                     move.l  a4,a2
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a4
+                    add.w   d0,a4
                     move.w  (lbW02190A,pc),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a2
+                    add.w   d0,a2
                     movem.l (a3),d0/d1
                     movem.l (a5),d2/d3
                     movem.l d0/d1,(a5)
@@ -5127,7 +5131,7 @@ lbC021B08:
                     lea     (OKT_Samples),a1
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     moveq   #20-1,d0
 lbC021B44:
                     move.b  (a0)+,(a1)+
@@ -5246,7 +5250,7 @@ lbC021C92:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     jsr     (lbC026E36)
                     lea     (SaveSample_MSG,pc),a0
                     moveq   #DIR_SAMPLES,d0
@@ -5276,7 +5280,7 @@ lbC021CDA:
                     lea     (ascii_MSG62,pc),a1
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     move.l  a0,a2
                     moveq   #19-1,d0
 lbC021D26:
@@ -5408,7 +5412,7 @@ lbC021E6C:
                     lea     (OKT_Samples+28),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     cmpi.w  #64,(a0)
                     beq     lbC021E86
                     addq.w  #1,(a0)
@@ -5419,7 +5423,7 @@ lbC021E88:
                     lea     (OKT_Samples+28),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     tst.w   (a0)
                     beq     lbC021EA0
                     subq.w  #1,(a0)
@@ -5434,7 +5438,7 @@ lbC021EA2:
                     lea     (OKT_Samples+30),a5
                     move.w  (current_sample,pc),d1
                     lsl.w   #5,d1
-                    adda.w  d1,a5
+                    add.w   d1,a5
                     move.w  (a5),d0
                     bne     lbC021ED8
                     bsr     lbC021F70
@@ -5458,7 +5462,7 @@ lbC021EF4:
                     lea     (OKT_Samples+30),a5
                     move.w  (current_sample,pc),d1
                     lsl.w   #5,d1
-                    adda.w  d1,a5
+                    add.w   d1,a5
                     move.w  (a5),d0
                     cmp.w   #2,d0
                     bne     lbC021F2A
@@ -5515,7 +5519,7 @@ lbC021F9E:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d2
                     lsl.w   #5,d2
-                    adda.w  d2,a0
+                    add.w   d2,a0
                     move.l  a0,(lbL021FFC)
                     moveq   #MEMF_CHIP,d1
                     tst.w   (30,a0)
@@ -5607,7 +5611,7 @@ lbC0220E4:
                     cmpi.w  #128,(OKT_PLen)
                     beq     error_no_more_positions
                     lea     (OKT_Patterns,pc),a0
-                    adda.w  (current_song_position),a0
+                    add.w   (current_song_position),a0
                     lea     (OKT_Patterns+127,pc),a1
 lbC0220FE:
                     cmpa.l  a0,a1
@@ -5621,7 +5625,7 @@ lbC02210C:
                     cmpi.w  #1,(OKT_PLen)
                     beq     error_no_more_positions
                     lea     (OKT_Patterns,pc),a0
-                    adda.w  (current_song_position),a0
+                    add.w   (current_song_position),a0
                     lea     (OKT_Patterns+127,pc),a1
 lbC022126:
                     cmpa.l  a1,a0
@@ -5699,25 +5703,25 @@ lbW0221DC:
                     dc.w    0
 
 ; ===========================================================================
-dec_replay_type:
-                    lea     (replay_type,pc),a0
-                    subq.w  #1,(a0)
-                    bpl     .reset
-                    move.w  #1,(a0)
-.reset:
-                    bra     draw_replay_type
-
-; ===========================================================================
-inc_replay_type:
-                    lea     (replay_type,pc),a0
-                    addq.w  #1,(a0)
-                    cmpi.w  #2,(a0)
-                    bne     .reset
-                    clr.w   (a0)
-.reset:
-                    bra     draw_replay_type
-replay_type:
-                    dc.w    1
+;dec_replay_type:
+;                    lea     (replay_type,pc),a0
+;                    subq.w  #1,(a0)
+;                    bpl     .reset
+;                    move.w  #1,(a0)
+;.reset:
+;                    bra     draw_replay_type
+;
+;; ===========================================================================
+;inc_replay_type:
+;                    lea     (replay_type,pc),a0
+;                    addq.w  #1,(a0)
+;                    cmpi.w  #2,(a0)
+;                    bne     .reset
+;                    clr.w   (a0)
+;.reset:
+;                    bra     draw_replay_type
+;replay_type:
+;                    dc.w    1
 
 ; ===========================================================================
 lbC022202:
@@ -5763,18 +5767,19 @@ play_pattern:
                     sf      (pattern_play_flag)
                     move.w  (current_viewed_pattern),(OKT_PtPtr)
 go_play:
-                    tst.w   (replay_type)
-                    bne     .OKT_replay_type
-                    tst.b   (ntsc_flag)
-                    beq     .OKT_replay_type
-                    bra     error_only_in_pal
-.OKT_replay_type:
+;                    tst.w   (replay_type)
+;                    bne     .OKT_replay_type
+;                    tst.b   (ntsc_flag)
+;                    beq     .OKT_replay_type
+;                    bra     error_only_in_pal
+;.OKT_replay_type:
                     bsr     lbC01FF8C
-                    move.w  (replay_type,pc),d0
-                    add.w   d0,d0
-                    lea     (lbW022332,pc),a0
+                    ;move.w  (replay_type,pc),d0
+                    ;add.w   d0,d0
+                    ;lea     (lbW022332,pc),a0
                     move.w  (a0,d0.w),d0
-                    jsr     (a0,d0.w)
+                    ;jsr     (a0,d0.w)
+                    bsr     lbC02233A
                     bmi     lbC022310
                     lea     (replay_int,pc),a0
                     bsr     install_copper_int
@@ -5787,10 +5792,11 @@ go_play:
                     bsr     stop_audio_channels
                     bsr     clear_vumeters
                     bsr     show_pattern_position_bar
-                    move.w  (replay_type,pc),d0
-                    add.w   d0,d0
-                    move.w  (lbW022336,pc,d0.w),d0
-                    jsr     (lbW022336,pc,d0.w)
+                    bsr     lbC02236A
+                    ;move.w  (replay_type,pc),d0
+                    ;add.w   d0,d0
+                    ;move.w  (lbW022336,pc,d0.w),d0
+                    ;jsr     (lbW022336,pc,d0.w)
                     move.w  (OKT_ActSpeed),(OKT_Speed)
                     tst.b   (pattern_play_flag)
                     beq     lbC0222E4
@@ -5821,10 +5827,10 @@ lbW022318:
                     dc.w    EVT_RIGHT_PRESSED
                     dc.l    lbC02261E
                     dc.w    EVT_LIST_END
-lbW022332:
-                    dc.w    lbC02233A-lbW022332,lbC022386-lbW022332
-lbW022336:
-                    dc.w    lbC02236A-lbW022336,lbC022396-lbW022336
+;lbW022332:
+;                    dc.w    lbC02233A-lbW022332,lbC022386-lbW022332
+;lbW022336:
+;                    dc.w    lbC02236A-lbW022336,lbC022396-lbW022336
 lbC02233A:
                     move.l  #43252,d0
                     moveq   #MEMF_ANY,d1
@@ -5845,13 +5851,13 @@ lbC02236A:
                     rts
 lbL022382:
                     dc.l    0
-lbC022386:
-                    move.b  (ntsc_flag,pc),d0
-                    bsr     OK_Init_2
-                    moveq   #0,d0
-                    rts
-lbC022396:
-                    rts
+;lbC022386:
+;                    move.b  (ntsc_flag,pc),d0
+;                    bsr     OK_Init_2
+;                    moveq   #0,d0
+;                    rts
+;lbC022396:
+;                    rts
 lbC022398:
                     move.l  #lbC0223A4,(current_cmd_ptr)
                     rts
@@ -5895,15 +5901,16 @@ lbW02263A:
 ; ===========================================================================
 replay_int:
                     movem.l d1-d7/a0-a6,-(a7)
-                    move.w  (replay_type,pc),d0
-                    add.w   d0,d0
-                    move.w  (replay_table,pc,d0.w),d0
-                    jsr     (replay_table,pc,d0.w)
+                    ;move.w  (replay_type,pc),d0
+                    ;add.w   d0,d0
+                    ;move.w  (replay_table,pc,d0.w),d0
+                    ;jsr     (replay_table,pc,d0.w)
+                    bsr     OKT_Play_1
                     movem.l (a7)+,d1-d7/a0-a6
                     moveq   #0,d0
                     rts
-replay_table:
-                    dc.w    OKT_Play_1-replay_table,OKT_Play_2-replay_table
+;replay_table:
+;                    dc.w    OKT_Play_1-replay_table,OKT_Play_2-replay_table
 
 ; ===========================================================================
 install_midi_ints:
@@ -6001,7 +6008,7 @@ receive_bytes_from_ser:
                     cmpi.b  #$90,(lbW0228E2)
                     bne     lbC02286E
                     lea     (lbB0228DE,pc),a0
-                    adda.w  (lbB0228E0,pc),a0
+                    add.w   (lbB0228E0,pc),a0
                     move.b  d0,(a0)
                     bchg    #0,(lbB0228E1)
                     beq     lbC0228D8
@@ -6017,7 +6024,7 @@ lbC02286E:
                     cmpi.b  #$80,(lbW0228E2)
                     bne     lbC0228D8
                     lea     (lbB0228DE,pc),a0
-                    adda.w  (lbB0228E0,pc),a0
+                    add.w   (lbB0228E0,pc),a0
                     move.b  d0,(a0)
                     bchg    #0,(lbB0228E1)
                     beq     lbC0228D8
@@ -6228,7 +6235,7 @@ lbC022B26:
                     move.w  (lbW01B2B6),d2
                     add.w   d2,d2
                     add.w   d2,d2
-                    adda.w  d2,a0
+                    add.w   d2,a0
                     move.b  (lbB021E53,pc),d1
                     move.b  d0,(a0)+
                     bne     lbC022B46
@@ -6298,7 +6305,7 @@ lbC022BEE:
                     move.w  (lbW01B2B6),d2
                     add.w   d2,d2
                     add.w   d2,d2
-                    adda.w  d2,a0
+                    add.w   d2,a0
                     move.b  d0,(a0)+
                     bne     lbC022C24
                     sf      (a0)+
@@ -6416,7 +6423,7 @@ lbC022D66:
                     move.w  (lbW01B2B6),d1
                     add.w   d1,d1
                     add.w   d1,d1
-                    adda.w  d1,a0
+                    add.w   d1,a0
                     move.b  (lbB01B2B9),(a0)+
                     bne     lbC022D88
                     sf      (a0)+
@@ -6480,10 +6487,10 @@ lbC022E44:
                     mulu.w  #5,d0
                     move.b  (a1,d0.w),d1
                     ext.w   d1
-                    adda.w  d1,a0
+                    add.w   d1,a0
                     lea     (-SCREEN_BYTES,a0),a0
                     lea     ((SCREEN_BYTES*8),a0),a1
-                    moveq   #1,d0
+                    moveq   #%00000001,d0
                     eor.b   d0,(-((SCREEN_BYTES*7)+1),a1)
                     eor.b   d0,(-((SCREEN_BYTES*6)+1),a1)
                     eor.b   d0,(-((SCREEN_BYTES*5)+1),a1)
@@ -6502,7 +6509,7 @@ lbC022EC2:
                 ENDR
                     cmpi.w  #72,d1
                     beq     lbC022EF8
-                    move.b  #$80,d0
+                    move.b  #%10000000,d0
                     eor.b   d0,(-(SCREEN_BYTES*7),a1)
                     eor.b   d0,(-(SCREEN_BYTES*6),a1)
                     eor.b   d0,(-(SCREEN_BYTES*5),a1)
@@ -6591,7 +6598,7 @@ OKT_EffectTab_D:
 OKT_NewRow:
                     clr.w   (OKT_ActCyc)
                     move.l  (OKT_TrkPos,pc),a1
-                    adda.w  (OKT_TrkSize,pc),a1
+                    add.w   (OKT_TrkSize,pc),a1
                     move.l  a1,(OKT_TrkPos)
                     bsr     show_pattern_position_bar
                     move.w  (lbW01B2BA),(lbW01B2B6)
@@ -6694,6 +6701,8 @@ OKT_FillDoubleChannels:
                     bsr     .OKT_FillChannelData
                     dbra    d7,.OKT_Loop
                     rts
+
+; ===========================================================================
 .OKT_FillChannelData:
                     btst    d7,d6
                     beq     .OKT_NoData
@@ -6709,7 +6718,7 @@ OKT_FillDoubleChannels:
                     move.b  (1,a2),d0
                     lsl.w   #5,d0
                     lea     (OKT_Samples),a1
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     cmpi.w  #1,(30,a1)
                     beq     .lbC023194
                     move.b  (1,a2),d0
@@ -6760,7 +6769,7 @@ OKT_NoNewRow:
                     cmpi.b  #MIDI_OUT,(midi_mode)
                     beq     .OKT_MidiOut
                     bsr     OKT_HandleEffects_SingleChannels
-                    lea     (OKT_Volume2,pc),a0
+                    lea     (OKT_Volumes,pc),a0
                     move.l  (a0)+,(a0)
                     lea     (_CUSTOM|AUD0VOL),a1
                     moveq   #0,d0
@@ -6836,23 +6845,25 @@ OKT_FillSingleChannels:
                     moveq   #8-1,d7
 .OKT_Loop:
                     tst.b   (a3)
-                    bne     .OKT_DoubleChannel
+                    bne     .OKT_SkipDoubleChannel
                     bsr     .OKT_FillChannelData
                     addq.w  #4,a2
                     lea     (28,a3),a3
-                    lea     (16,a4),a4
+                    lea     ($10,a4),a4
                     add.w   d5,d5
                     subq.w  #1,d7
                     dbra    d7,.OKT_Loop
                     rts
-.OKT_DoubleChannel:
+.OKT_SkipDoubleChannel:
                     addq.w  #8,a2
                     lea     (28,a3),a3
-                    lea     (16,a4),a4
+                    lea     ($10,a4),a4
                     add.w   d5,d5
                     subq.w  #1,d7
                     dbra    d7,.OKT_Loop
                     rts
+
+; ===========================================================================
 .OKT_FillChannelData:
                     btst    d7,d6
                     beq     .OKT_NoSet
@@ -6868,7 +6879,7 @@ OKT_FillSingleChannels:
                     move.b  (1,a2),d0
                     lsl.w   #5,d0
                     lea     (OKT_Samples),a1
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     tst.w   (30,a1)
                     beq     .OKT_Empty
                     move.b  (1,a2),d0
@@ -6895,7 +6906,7 @@ OKT_FillSingleChannels:
                     add.w   d0,d0
                     add.w   d0,d0
                     lea     (OKT_Samples),a1
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     tst.w   (30,a1)
                     beq     .OKT_NoSet
                     move.l  (20,a1),d1
@@ -6911,7 +6922,7 @@ OKT_FillSingleChannels:
                     move.w  d0,(10,a3)
                     move.w  d0,(6,a4)
                     move.l  a0,-(a7)
-                    lea     (OKT_Volume2,pc),a0
+                    lea     (OKT_Volumes,pc),a0
                     moveq   #0,d0
                     move.b  (-8,a0,d7.w),d0
                     move.b  (29,a1),(a0,d0.w)
@@ -6951,7 +6962,7 @@ OKT_HandleEffects_SingleChannels:
                     moveq   #8-1,d7
 .OKT_Loop:
                     tst.b   (a3)
-                    bne     .OKT_MultiChannel
+                    bne     .OKT_SkipDoubleChannel
                     bsr     .OKT_ProcessEffect_S
                     addq.w  #4,a2
                     lea     (28,a3),a3
@@ -6961,7 +6972,7 @@ OKT_HandleEffects_SingleChannels:
                     dbra    d7,.OKT_Loop
 .OKT_MidiOut:
                     rts
-.OKT_MultiChannel:
+.OKT_SkipDoubleChannel:
                     addq.w  #8,a2
                     lea     (28,a3),a3
                     lea     ($10,a4),a4
@@ -7087,6 +7098,8 @@ OKT_SlideUTick_S:
                     move.w  (OKT_ActCyc,pc),d0
                     beq     OKT_SlideU_S
                     rts
+
+; ===========================================================================
 OKT_SlideU_S:
                     move.w  (8,a3),d2
                     add.w   d1,d2
@@ -7098,6 +7111,8 @@ OKT_SlideDTick_S:
                     move.w  (OKT_ActCyc,pc),d0
                     beq     OKT_SlideD_S
                     rts
+
+; ===========================================================================
 OKT_SlideD_S:
                     move.w  (8,a3),d2
                     sub.w   d1,d2
@@ -7236,7 +7251,6 @@ OKT_CSpeed:
                     move.w  (OKT_ActCyc,pc),d0
                     bne     .OKT_NoChange
                     andi.w  #$F,d1
-                    tst.b   d1
                     beq     .OKT_NoChange
                     move.w  d1,(OKT_ActSpeed)
                     ; visually update the speed
@@ -7260,9 +7274,9 @@ OKT_Filt:
 OKT_Volume:
                     move.l  a0,-(a7)
                     moveq   #0,d0
-                    lea     (OKT_Volume2,pc),a0
+                    lea     (OKT_Volumes,pc),a0
                     move.b  (-8,a0,d7.w),d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     cmpi.w  #64,d1
                     bgt     OKT_ActVolume
                     move.b  d1,(a0)
@@ -7305,9 +7319,9 @@ OKT_ActVolume:
 OKT_Release:
                     move.l  a0,-(a7)
                     moveq   #0,d0
-                    lea     (OKT_Volume2,pc),a0
+                    lea     (OKT_Volumes,pc),a0
                     move.b  (-8,a0,d7.w),d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     move.b  (4,a0),(a0)
                     cmpi.b  #64,d1
                     bhi     OKT_ActVolume
@@ -7325,13 +7339,13 @@ OKT_InitVars:
                     lea     (OKT_ChannelsData),a1
                     moveq   #4-1,d0
                     moveq   #0,d1
-.OKT_GetTrackSize:
+.OKT_GetChannelsSize:
                     tst.w   (a0)
                     sne     (a1)
                     sne     (14,a1)
                     add.w   (a0)+,d1
                     lea     (28,a1),a1
-                    dbra    d0,.OKT_GetTrackSize
+                    dbra    d0,.OKT_GetChannelsSize
                     addq.w  #4,d1
                     add.w   d1,d1
                     add.w   d1,d1
@@ -7342,7 +7356,7 @@ OKT_InitVars:
 .OKT_ClearPattLineBuff:
                     move.l  d1,(a0)+
                     dbra    d0,.OKT_ClearPattLineBuff
-                    lea     (OKT_Volume2-8,pc),a0
+                    lea     (OKT_Volumes-8,pc),a0
                     move.l  #$3030202,(a0)+
                     move.l  #$1010000,(a0)+
                     ; volumes at max
@@ -7417,7 +7431,7 @@ OKT_PtPtr:
                     dc.w    0
 ; ====
                     dcb.l   2,0
-OKT_Volume2:
+OKT_Volumes:
                     dcb.l   2,0
 ; ====
 OKT_Filter:
@@ -7427,7 +7441,7 @@ OKT_Dmacon:
                     dc.w    0
 
 ; ===========================================================================
-; replay 1 (faster but takes more memory)
+; replay 1
 OK_Init_1:
                     move.l  a0,-(a7)
                     bsr     OKT_InitVars
@@ -7444,10 +7458,10 @@ OK_Init_1:
                     lea     (OKT_MixBuff_1),a0
                     moveq   #0,d1
                     move.w  #((MIX_BUFFERS_1*MIX_BUFFERS_LEN_1)/8)-1,d0
-.OK_ClearBuffers:
+.OK_ClearMixBuffers:
                     move.l  d1,(a0)+
                     move.l  d1,(a0)+
-                    dbra    d0,.OK_ClearBuffers
+                    dbra    d0,.OK_ClearMixBuffers
                     lea     (_CUSTOM),a1
                     move.w  #DMAF_AUDIO,(DMACON,a1)
                     lea     (OKT_MixBuff_1),a0
@@ -7869,436 +7883,435 @@ lbL023E24:
                     dc.l    0
 
 ; ===========================================================================
-; replay 2 (slower but takes less memory)
-OK_Init_2:
-                    lea     (OKT_PALTable_2,pc),a0
-                    tst.b   d0
-                    beq     .OKT_SelFreqTab
-                    lea     (OKT_NTSCTable_2,pc),a0
-.OKT_SelFreqTab:
-                    move.l  a0,(OKT_CurFreqTab_2)
-                    bsr     OKT_InitVars
-                    moveq   #0,d1
-                    lea     (OKT_PBuffs),a0
-                    moveq   #16-1,d0
-.OKT_ClearPBuffs:
-                    move.l  d1,(a0)+
-                    dbra    d0,.OKT_ClearPBuffs
-                    lea     (OKT_MixBuff_2),a0
-                    lea     (OKT_MixBuff_2+MIX_BUFFERS_LEN_2),a1
-                    move.w  #(MIX_BUFFERS_LEN_2/4)-1,d0
-.OKT_ClearMixBuffs:
-                    move.l  d1,(a0)+
-                    move.l  d1,(a1)+
-                    dbra    d0,.OKT_ClearMixBuffs
-                    lea     (OKT_ChannelsModes),a0
-                    moveq   #0,d1
-                    moveq   #4-1,d0
-.OKT_GetChannelsModes:
-                    or.w    (a0)+,d1
-                    ror.w   #1,d1
-                    dbra    d0,.OKT_GetChannelsModes
-                    ror.w   #5,d1
-                    move.w  d1,(OKT_HWChansBits)
-                    lea     (_CUSTOM),a6
-                    move.w  #DMAF_AUDIO,(DMACON,a6)
-                    lea     (OKT_OuputBuff_2),a0
-                    move.l  a0,(AUD0LCH,a6)
-                    move.l  a0,(AUD1LCH,a6)
-                    move.l  a0,(AUD2LCH,a6)
-                    move.l  a0,(AUD3LCH,a6)
-                    moveq   #82/2,d0
-                    move.w  d0,(AUD0LEN,a6)
-                    move.w  d0,(AUD1LEN,a6)
-                    move.w  d0,(AUD2LEN,a6)
-                    move.w  d0,(AUD3LEN,a6)
-                    move.w  #856,d0
-                    move.w  d0,(AUD0PER,a6)
-                    move.w  d0,(AUD1PER,a6)
-                    move.w  d0,(AUD2PER,a6)
-                    move.w  d0,(AUD3PER,a6)
-                    move.w  #$FF,(ADKCON,a6)
-                    bsr     wait_raster
-                    bsr     wait_raster
-                    st      (OKT_StartDMAFlg)
-                    rts
-OKT_HWChansBits:
-                    dc.w    0
-OKT_StartDMAFlg:
-                    dc.w    0
+;OK_Init_2:
+;                    lea     (OKT_PALTable_2,pc),a0
+;                    tst.b   d0
+;                    beq     .OKT_SelFreqTab
+;                    lea     (OKT_NTSCTable_2,pc),a0
+;.OKT_SelFreqTab:
+;                    move.l  a0,(OKT_CurFreqTab_2)
+;                    bsr     OKT_InitVars
+;                    moveq   #0,d1
+;                    lea     (OKT_PBuffs),a0
+;                    moveq   #16-1,d0
+;.OKT_ClearPBuffs:
+;                    move.l  d1,(a0)+
+;                    dbra    d0,.OKT_ClearPBuffs
+;                    lea     (OKT_MixBuff_2),a0
+;                    lea     (OKT_MixBuff_2+MIX_BUFFERS_LEN_2),a1
+;                    move.w  #(MIX_BUFFERS_LEN_2/4)-1,d0
+;.OKT_ClearMixBuffs:
+;                    move.l  d1,(a0)+
+;                    move.l  d1,(a1)+
+;                    dbra    d0,.OKT_ClearMixBuffs
+;                    lea     (OKT_ChannelsModes),a0
+;                    moveq   #0,d1
+;                    moveq   #4-1,d0
+;.OKT_GetChannelsModes:
+;                    or.w    (a0)+,d1
+;                    ror.w   #1,d1
+;                    dbra    d0,.OKT_GetChannelsModes
+;                    ror.w   #5,d1
+;                    move.w  d1,(OKT_HWChansBits)
+;                    lea     (_CUSTOM),a6
+;                    move.w  #DMAF_AUDIO,(DMACON,a6)
+;                    lea     (OKT_OuputBuff_2),a0
+;                    move.l  a0,(AUD0LCH,a6)
+;                    move.l  a0,(AUD1LCH,a6)
+;                    move.l  a0,(AUD2LCH,a6)
+;                    move.l  a0,(AUD3LCH,a6)
+;                    moveq   #82/2,d0
+;                    move.w  d0,(AUD0LEN,a6)
+;                    move.w  d0,(AUD1LEN,a6)
+;                    move.w  d0,(AUD2LEN,a6)
+;                    move.w  d0,(AUD3LEN,a6)
+;                    move.w  #856,d0
+;                    move.w  d0,(AUD0PER,a6)
+;                    move.w  d0,(AUD1PER,a6)
+;                    move.w  d0,(AUD2PER,a6)
+;                    move.w  d0,(AUD3PER,a6)
+;                    move.w  #$FF,(ADKCON,a6)
+;                    bsr     wait_raster
+;                    bsr     wait_raster
+;                    st      (OKT_StartDMAFlg)
+;                    rts
+;OKT_HWChansBits:
+;                    dc.w    0
+;OKT_StartDMAFlg:
+;                    dc.w    0
 
 ; ===========================================================================
-OKT_Play_2:
-                    cmpi.b  #MIDI_OUT,(midi_mode)
-                    beq     .OKT_MidiOut
-                    move.b  (OKT_StartDMAFlg,pc),d0
-                    beq     .OKT_TurnDMAOn
-                    move.w  #DMAF_SETCLR|DMAF_AUDIO,(_CUSTOM|DMACON)
-                    sf      (OKT_StartDMAFlg)
-.OKT_TurnDMAOn:
-                    bsr     OKT_SetPeriods
-.OKT_MidiOut:
-                    bsr     OKT_ReplayHandler
-                    cmpi.b  #MIDI_OUT,(midi_mode)
-                    beq     .OKT_MidiOutMix
-                    lea     (OKT_ChannelsData),a0
-                    lea     (OKT_MixBuffPtr_2,pc),a2
-                    move.l  (a2)+,a1
-                    move.l  (a2),-(a2)
-                    move.l  a1,(4,a2)
-                    moveq   #0,d0
-.OKT_MixAllBuffers:
-                    tst.w   (a0)
-                    beq     .OKT_NothingToMix
-                    movem.l d0/a0-a2,-(a7)
-                    bsr     OKT_MixBuffers_2
-                    movem.l (a7)+,d0/a0-a2
-.OKT_NothingToMix:
-                    lea     (28,a0),a0
-                    lea     ((MIX_BUFFERS_LEN_2/4),a1),a1
-                    addq.w  #1,d0
-                    cmpi.w  #4,d0
-                    bne     .OKT_MixAllBuffers
-                    bra     OKT_AudInt_2
-.OKT_MidiOutMix:
-                    rts
+;OKT_Play_2:
+;                    cmpi.b  #MIDI_OUT,(midi_mode)
+;                    beq     .OKT_MidiOut
+;                    move.b  (OKT_StartDMAFlg,pc),d0
+;                    beq     .OKT_TurnDMAOn
+;                    move.w  #DMAF_SETCLR|DMAF_AUDIO,(_CUSTOM|DMACON)
+;                    sf      (OKT_StartDMAFlg)
+;.OKT_TurnDMAOn:
+;                    bsr     OKT_SetPeriods
+;.OKT_MidiOut:
+;                    bsr     OKT_ReplayHandler
+;                    cmpi.b  #MIDI_OUT,(midi_mode)
+;                    beq     .OKT_MidiOutMix
+;                    lea     (OKT_ChannelsData),a0
+;                    lea     (OKT_MixBuffPtr_2,pc),a2
+;                    move.l  (a2)+,a1
+;                    move.l  (a2),-(a2)
+;                    move.l  a1,(4,a2)
+;                    moveq   #0,d0
+;.OKT_MixAllBuffers:
+;                    tst.w   (a0)
+;                    beq     .OKT_NothingToMix
+;                    movem.l d0/a0-a2,-(a7)
+;                    bsr     OKT_MixBuffers_2
+;                    movem.l (a7)+,d0/a0-a2
+;.OKT_NothingToMix:
+;                    lea     (28,a0),a0
+;                    lea     ((MIX_BUFFERS_LEN_2/4),a1),a1
+;                    addq.w  #1,d0
+;                    cmpi.w  #4,d0
+;                    bne     .OKT_MixAllBuffers
+;                    bra     OKT_AudInt_2
+;.OKT_MidiOutMix:
+;                    rts
 
 ; ===========================================================================
-OKT_MixBuffers_2:
-                    tst.l   (2,a0)
-                    beq     lbC023F80
-                    tst.l   (16,a0)
-                    beq     lbC023F84
-                    bsr     lbC023F8C
-                    move.w  d1,d2
-                    lea     (14,a0),a0
-                    bsr     lbC023F8C
-                    cmp.w   d1,d2
-                    blt     lbC023F74
-                    move.l  a1,a2
-                    lea     (-14,a0),a1
-                    bra     lbC023FA6
-lbC023F74:
-                    move.l  a1,a2
-                    lea     (-14,a0),a1
-                    exg     a0,a1
-                    bra     lbC023FA6
-lbC023F80:
-                    lea     (14,a0),a0
-lbC023F84:
-                    bsr     lbC023F8C
-                    bra     lbC0241D0
-lbC023F8C:
-                    move.w  (10,a0),d1
-                    bpl     lbC023F98
-                    clr.w   (10,a0)
-                    rts
-lbC023F98:
-                    cmpi.w  #33,d1
-                    ble     lbC023FA4
-                    move.w  #33,(10,a0)
-lbC023FA4:
-                    rts
-lbC023FA6:
-                    lea     (OKT_PBuffs),a3
-                    lsl.w   #4,d0
-                    adda.w  d0,a3
-                    move.w  (10,a1),d0
-                    add.w   d0,d0
-                    lea     (OKT_FullPeriodTab),a4
-                    move.w  (a4,d0.w),d2
-                    move.w  d2,(4,a3)
-                    move.w  (10,a0),d3
-                    add.w   d3,d3
-                    move.w  (a4,d3.w),d3
-                    move.l  (OKT_CurFreqTab_2,pc),a4
-                    move.w  (a4,d0.w),d1
-                    add.w   (8,a3),d1
-                    move.w  d1,(6,a3)
-                    swap    d2
-                    clr.w   d2
-                    divu.w  d3,d2
-                    move.l  (6,a0),d0
-                    lsr.l   #1,d0
-                    move.l  a2,(a3)
-                    movem.l d0/a0/a1,-(a7)
-                    move.l  (2,a0),a0
-                    move.l  a2,a1
-                    bsr     lbC0240DA
-                    move.l  a0,a4
-                    movem.l (a7)+,d1/a0/a1
-                    sub.w   d0,d1
-                    bcc     lbC024016
-                    clr.l   (2,a0)
-                    clr.l   (6,a0)
-                    clr.w   (10,a0)
-                    clr.w   (12,a0)
-                    bra     lbC024020
-lbC024016:
-                    move.l  a4,(2,a0)
-                    add.l   d1,d1
-                    move.l  d1,(6,a0)
-lbC024020:
-                    move.l  (6,a1),d0
-                    lsr.l   #1,d0
-                    move.w  (6,a3),d1
-                    movem.l d0/d1/a1,-(a7)
-                    move.l  (2,a1),a0
-                    move.l  a2,a1
-                    bsr     lbC024060
-                    move.l  a0,a4
-                    movem.l (a7)+,d0/d1/a1
-                    sub.w   d1,d0
-                    bcc     lbC024054
-                    clr.l   (2,a1)
-                    clr.l   (6,a1)
-                    clr.w   (10,a1)
-                    clr.w   (12,a1)
-                    rts
-lbC024054:
-                    move.l  a4,(2,a1)
-                    add.l   d0,d0
-                    move.l  d0,(6,a1)
-                    rts
-lbC024060:
-                    cmp.w   d0,d1
-                    bhi     lbC02406A
-                    move.w  d1,d0
-lbC02406A:
-                    cmpi.w  #32,d0
-                    bcs     lbC0240B6
-                REPT 16
-                    move.l  (a0)+,d1
-                    add.l   d1,(a1)+
-                ENDR
-                    subi.w  #32,d0
-                    bra     lbC02406A
-lbC0240B6:
-                    cmpi.w  #8,d0
-                    bcs     lbC0240D4
-                REPT 4
-                    move.l  (a0)+,d1
-                    add.l   d1,(a1)+
-                ENDR
-                    subq.w  #8,d0
-                    bra     lbC0240B6
-lbC0240D0:
-                    move.w  (a0)+,d1
-                    add.w   d1,(a1)+
-lbC0240D4:
-                    dbra    d0,lbC0240D0
-                    rts
-lbC0240DA:
-                    tst.w   d2
-                    bne     lbC0240E8
-                    move.w  d1,-(a7)
-                    bsr     lbC0242F4
-                    move.w  (a7)+,d0
-                    rts
-lbC0240E8:
-                    move.l  d3,-(a7)
-                    move.w  d2,d3
-                    mulu.w  d1,d3
-                    swap    d3
-                    cmp.w   d0,d3
-                    bhi     lbC0240FC
-                    move.w  d2,d0
-                    bsr     lbC02410A
-                    bra     lbC024106
-lbC0240FC:
-                    move.w  d0,-(a7)
-                    move.w  d1,d0
-                    bsr     lbC024362
-                    move.w  (a7)+,d0
-lbC024106:
-                    move.l  (a7)+,d3
-                    rts
-lbC02410A:
-                    movem.l d2-d5/a2,-(a7)
-                    move.l  a0,a2
-                    move.w  d1,d2
-                    moveq   #0,d3
-                    subq.w  #1,d1
-lbC024116:
-                    subq.w  #8,d2
-                    bmi     lbC0241A0
-            REPT    16
-                INLINE
-                    sub.w   d0,d3
-                    bcc     .OKT_NoFetch
-                    move.b  (a0)+,d5
-.OKT_NoFetch:
-                    move.b  d5,(a1)+
-                EINLINE
-            ENDR
-                    bra     lbC024116
-lbC0241A0:
-                    addq.w  #8,d2
-                    bra     lbC0241B4
-lbC0241A4:
-            REPT    2
-                INLINE
-                    sub.w   d0,d3
-                    bcc     .OKT_NoFetch
-                    move.b  (a0)+,d5
-.OKT_NoFetch:
-                    move.b  d5,(a1)+
-
-                EINLINE
-            ENDR
-lbC0241B4:
-                    dbra    d2,lbC0241A4
-                    sub.l   a0,a2
-                    move.w  a2,d0
-                    neg.w   d0
-                    btst    #0,d0
-                    beq     .OKT_NoOddLength
-                    addq.w  #1,a0
-                    addq.w  #1,d0
-.OKT_NoOddLength:
-                    lsr.w   #1,d0
-                    movem.l (a7)+,d2-d5/a2
-                    rts
-lbC0241D0:
-                    lea     (OKT_PBuffs),a2
-                    lsl.w   #4,d0
-                    adda.w  d0,a2
-                    tst.l   (2,a0)
-                    beq     lbC02423E
-                    move.w  (10,a0),d0
-                    add.w   d0,d0
-                    lea     (OKT_FullPeriodTab),a3
-                    move.w  (a3,d0.w),(4,a2)
-                    move.l  (OKT_CurFreqTab_2,pc),a3
-                    move.w  (a3,d0.w),d1
-                    add.w   (8,a2),d1
-                    move.w  d1,(6,a2)
-                    move.l  (6,a0),d0
-                    lsr.l   #1,d0
-                    move.l  a1,(a2)
-                    movem.l d0/d1/a0,-(a7)
-                    move.l  (2,a0),a0
-                    bsr     lbC0242F4
-                    move.l  a0,a1
-                    movem.l (a7)+,d0/d1/a0
-                    sub.w   d1,d0
-                    bcc     lbC024232
-                    clr.l   (2,a0)
-                    clr.l   (6,a0)
-                    clr.w   (10,a0)
-                    clr.w   (12,a0)
-                    rts
-lbC024232:
-                    move.l  a1,(2,a0)
-                    add.l   d0,d0
-                    move.l  d0,(6,a0)
-                    rts
-lbC02423E:
-                    move.l  a1,(a2)
-                    move.w  (OKT_FullPeriodTab),(4,a2)
-                    move.l  (OKT_CurFreqTab_2,pc),a0
-                    move.w  (a0),d0
-                    add.w   (8,a2),d0
-                    move.w  d0,(6,a2)
-                    bra     lbC024362
+;OKT_MixBuffers_2:
+;                    tst.l   (2,a0)
+;                    beq     lbC023F80
+;                    tst.l   (16,a0)
+;                    beq     lbC023F84
+;                    bsr     lbC023F8C
+;                    move.w  d1,d2
+;                    lea     (14,a0),a0
+;                    bsr     lbC023F8C
+;                    cmp.w   d1,d2
+;                    blt     lbC023F74
+;                    move.l  a1,a2
+;                    lea     (-14,a0),a1
+;                    bra     lbC023FA6
+;lbC023F74:
+;                    move.l  a1,a2
+;                    lea     (-14,a0),a1
+;                    exg     a0,a1
+;                    bra     lbC023FA6
+;lbC023F80:
+;                    lea     (14,a0),a0
+;lbC023F84:
+;                    bsr     lbC023F8C
+;                    bra     lbC0241D0
+;lbC023F8C:
+;                    move.w  (10,a0),d1
+;                    bpl     lbC023F98
+;                    clr.w   (10,a0)
+;                    rts
+;lbC023F98:
+;                    cmpi.w  #33,d1
+;                    ble     lbC023FA4
+;                    move.w  #33,(10,a0)
+;lbC023FA4:
+;                    rts
+;lbC023FA6:
+;                    lea     (OKT_PBuffs),a3
+;                    lsl.w   #4,d0
+;                    add.w   d0,a3
+;                    move.w  (10,a1),d0
+;                    add.w   d0,d0
+;                    lea     (OKT_FullPeriodTab),a4
+;                    move.w  (a4,d0.w),d2
+;                    move.w  d2,(4,a3)
+;                    move.w  (10,a0),d3
+;                    add.w   d3,d3
+;                    move.w  (a4,d3.w),d3
+;                    move.l  (OKT_CurFreqTab_2,pc),a4
+;                    move.w  (a4,d0.w),d1
+;                    add.w   (8,a3),d1
+;                    move.w  d1,(6,a3)
+;                    swap    d2
+;                    clr.w   d2
+;                    divu.w  d3,d2
+;                    move.l  (6,a0),d0
+;                    lsr.l   #1,d0
+;                    move.l  a2,(a3)
+;                    movem.l d0/a0/a1,-(a7)
+;                    move.l  (2,a0),a0
+;                    move.l  a2,a1
+;                    bsr     lbC0240DA
+;                    move.l  a0,a4
+;                    movem.l (a7)+,d1/a0/a1
+;                    sub.w   d0,d1
+;                    bcc     lbC024016
+;                    clr.l   (2,a0)
+;                    clr.l   (6,a0)
+;                    clr.w   (10,a0)
+;                    clr.w   (12,a0)
+;                    bra     lbC024020
+;lbC024016:
+;                    move.l  a4,(2,a0)
+;                    add.l   d1,d1
+;                    move.l  d1,(6,a0)
+;lbC024020:
+;                    move.l  (6,a1),d0
+;                    lsr.l   #1,d0
+;                    move.w  (6,a3),d1
+;                    movem.l d0/d1/a1,-(a7)
+;                    move.l  (2,a1),a0
+;                    move.l  a2,a1
+;                    bsr     lbC024060
+;                    move.l  a0,a4
+;                    movem.l (a7)+,d0/d1/a1
+;                    sub.w   d1,d0
+;                    bcc     lbC024054
+;                    clr.l   (2,a1)
+;                    clr.l   (6,a1)
+;                    clr.w   (10,a1)
+;                    clr.w   (12,a1)
+;                    rts
+;lbC024054:
+;                    move.l  a4,(2,a1)
+;                    add.l   d0,d0
+;                    move.l  d0,(6,a1)
+;                    rts
+;lbC024060:
+;                    cmp.w   d0,d1
+;                    bhi     lbC02406A
+;                    move.w  d1,d0
+;lbC02406A:
+;                    cmpi.w  #32,d0
+;                    bcs     lbC0240B6
+;                REPT 16
+;                    move.l  (a0)+,d1
+;                    add.l   d1,(a1)+
+;                ENDR
+;                    subi.w  #32,d0
+;                    bra     lbC02406A
+;lbC0240B6:
+;                    cmpi.w  #8,d0
+;                    bcs     lbC0240D4
+;                REPT 4
+;                    move.l  (a0)+,d1
+;                    add.l   d1,(a1)+
+;                ENDR
+;                    subq.w  #8,d0
+;                    bra     lbC0240B6
+;lbC0240D0:
+;                    move.w  (a0)+,d1
+;                    add.w   d1,(a1)+
+;lbC0240D4:
+;                    dbra    d0,lbC0240D0
+;                    rts
+;lbC0240DA:
+;                    tst.w   d2
+;                    bne     lbC0240E8
+;                    move.w  d1,-(a7)
+;                    bsr     lbC0242F4
+;                    move.w  (a7)+,d0
+;                    rts
+;lbC0240E8:
+;                    move.l  d3,-(a7)
+;                    move.w  d2,d3
+;                    mulu.w  d1,d3
+;                    swap    d3
+;                    cmp.w   d0,d3
+;                    bhi     lbC0240FC
+;                    move.w  d2,d0
+;                    bsr     lbC02410A
+;                    bra     lbC024106
+;lbC0240FC:
+;                    move.w  d0,-(a7)
+;                    move.w  d1,d0
+;                    bsr     lbC024362
+;                    move.w  (a7)+,d0
+;lbC024106:
+;                    move.l  (a7)+,d3
+;                    rts
+;lbC02410A:
+;                    movem.l d2-d5/a2,-(a7)
+;                    move.l  a0,a2
+;                    move.w  d1,d2
+;                    moveq   #0,d3
+;                    subq.w  #1,d1
+;lbC024116:
+;                    subq.w  #8,d2
+;                    bmi     lbC0241A0
+;            REPT    16
+;                INLINE
+;                    sub.w   d0,d3
+;                    bcc     .OKT_NoFetch
+;                    move.b  (a0)+,d5
+;.OKT_NoFetch:
+;                    move.b  d5,(a1)+
+;                EINLINE
+;            ENDR
+;                    bra     lbC024116
+;lbC0241A0:
+;                    addq.w  #8,d2
+;                    bra     lbC0241B4
+;lbC0241A4:
+;            REPT    2
+;                INLINE
+;                    sub.w   d0,d3
+;                    bcc     .OKT_NoFetch
+;                    move.b  (a0)+,d5
+;.OKT_NoFetch:
+;                    move.b  d5,(a1)+
+;
+;                EINLINE
+;            ENDR
+;lbC0241B4:
+;                    dbra    d2,lbC0241A4
+;                    sub.l   a0,a2
+;                    move.w  a2,d0
+;                    neg.w   d0
+;                    btst    #0,d0
+;                    beq     .OKT_NoOddLength
+;                    addq.w  #1,a0
+;                    addq.w  #1,d0
+;.OKT_NoOddLength:
+;                    lsr.w   #1,d0
+;                    movem.l (a7)+,d2-d5/a2
+;                    rts
+;lbC0241D0:
+;                    lea     (OKT_PBuffs),a2
+;                    lsl.w   #4,d0
+;                    add.w   d0,a2
+;                    tst.l   (2,a0)
+;                    beq     lbC02423E
+;                    move.w  (10,a0),d0
+;                    add.w   d0,d0
+;                    lea     (OKT_FullPeriodTab),a3
+;                    move.w  (a3,d0.w),(4,a2)
+;                    move.l  (OKT_CurFreqTab_2,pc),a3
+;                    move.w  (a3,d0.w),d1
+;                    add.w   (8,a2),d1
+;                    move.w  d1,(6,a2)
+;                    move.l  (6,a0),d0
+;                    lsr.l   #1,d0
+;                    move.l  a1,(a2)
+;                    movem.l d0/d1/a0,-(a7)
+;                    move.l  (2,a0),a0
+;                    bsr     lbC0242F4
+;                    move.l  a0,a1
+;                    movem.l (a7)+,d0/d1/a0
+;                    sub.w   d1,d0
+;                    bcc     lbC024232
+;                    clr.l   (2,a0)
+;                    clr.l   (6,a0)
+;                    clr.w   (10,a0)
+;                    clr.w   (12,a0)
+;                    rts
+;lbC024232:
+;                    move.l  a1,(2,a0)
+;                    add.l   d0,d0
+;                    move.l  d0,(6,a0)
+;                    rts
+;lbC02423E:
+;                    move.l  a1,(a2)
+;                    move.w  (OKT_FullPeriodTab),(4,a2)
+;                    move.l  (OKT_CurFreqTab_2,pc),a0
+;                    move.w  (a0),d0
+;                    add.w   (8,a2),d0
+;                    move.w  d0,(6,a2)
+;                    bra     lbC024362
+;
+; ===========================================================================
+;OKT_AudInt_2:
+;                    move.w  (OKT_HWChansBits,pc),d1
+;.OKT_WaitChannel:
+;                    move.w  (_CUSTOM|INTREQR),d0
+;                    and.w   d1,d0
+;                    cmp.w   d1,d0
+;                    bne     .OKT_WaitChannel
+;                    move.w  d1,(_CUSTOM|INTREQ)
+;                    lea     (OKT_PBuffs),a0
+;                    lea     (_CUSTOM|AUD0LCH),a1
+;                    moveq   #4-1,d0
+;.OKT_SetChannelsSamples:
+;                    move.l  (a0),d1
+;                    beq     .OKT_NoNewSample
+;                    move.l  d1,(a1)
+;                    move.w  (6,a0),(4,a1)
+;.OKT_NoNewSample:
+;                    lea     (16,a0),a0
+;                    lea     ($10,a1),a1
+;                    dbra    d0,.OKT_SetChannelsSamples
+;                    rts
 
 ; ===========================================================================
-OKT_AudInt_2:
-                    move.w  (OKT_HWChansBits,pc),d1
-.OKT_WaitChannel:
-                    move.w  (_CUSTOM|INTREQR),d0
-                    and.w   d1,d0
-                    cmp.w   d1,d0
-                    bne     .OKT_WaitChannel
-                    move.w  d1,(_CUSTOM|INTREQ)
-                    lea     (OKT_PBuffs),a0
-                    lea     (_CUSTOM|AUD0LCH),a1
-                    moveq   #4-1,d0
-.OKT_SetChannelsSamples:
-                    move.l  (a0),d1
-                    beq     .OKT_NoNewSample
-                    move.l  d1,(a1)
-                    move.w  (6,a0),(4,a1)
-.OKT_NoNewSample:
-                    lea     (16,a0),a0
-                    lea     ($10,a1),a1
-                    dbra    d0,.OKT_SetChannelsSamples
-                    rts
-
-; ===========================================================================
-lbC0242F4:
-                    movem.l d2/a2,-(a7)
-                    move.w  d1,d2
-                    cmp.w   d0,d2
-                    bhi     lbC024306
-                    move.w  d2,d0
-                    bsr     lbC02431C
-                    bra     lbC024316
-lbC024306:
-                    sub.w   d0,d2
-                    bsr     lbC02431C
-                    move.l  a0,a2
-                    move.w  d2,d0
-                    bsr     lbC024362
-                    move.l  a2,a0
-lbC024316:
-                    movem.l (a7)+,d2/a2
-                    rts
-lbC02431C:
-                    cmpi.w  #32,d0
-                    bcs     lbC024348
-                REPT 16
-                    move.l  (a0)+,(a1)+
-                ENDR
-                    subi.w  #32,d0
-                    bra     lbC02431C
-lbC024348:
-                    cmpi.w  #8,d0
-                    bcs     lbC02435C
-                REPT 4
-                    move.l  (a0)+,(a1)+
-                ENDR
-                    subq.w  #8,d0
-                    bra     lbC024348
-lbC02435A:
-                    move.w  (a0)+,(a1)+
-lbC02435C:
-                    dbra    d0,lbC02435A
-                    rts
-lbC024362:
-                    moveq   #0,d1
-lbC024364:
-                    cmpi.w  #32,d0
-                    bcs     lbC024390
-                REPT 16
-                    move.l  d1,(a1)+
-                ENDR
-                    subi.w  #32,d0
-                    bra     lbC024364
-lbC024390:
-                    cmpi.w  #8,d0
-                    bcs     lbC0243A4
-                REPT 4
-                    move.l  d1,(a1)+
-                ENDR
-                    subq.w  #8,d0
-                    bra     lbC024390
-lbC0243A2:
-                    move.w  d1,(a1)+
-lbC0243A4:
-                    dbra    d0,lbC0243A2
-                    rts
-OKT_MixBuffPtr_2:
-                    dc.l    OKT_MixBuff_2
-                    dc.l    OKT_MixBuff_2+MIX_BUFFERS_LEN_2
-OKT_CurFreqTab_2:
-                    dc.l    0
-OKT_PALTable_2:
-                    dc.w    $29,$2B,$2E,$31,$34,$37,$3A,$3E,$42,$45,$4A,$4E,$53,$57,$5D,$62,$68
-                    dc.w    $6F,$75,$7C,$84,$8B,$94,$9D,$A6,$AF,$BA,$C5,$D0,$DE,$EB,$F8,$107,$117
-OKT_NTSCTable_2:
-                    dc.w    $22,$25,$27,$29,$2C,$2E,$31,$34,$37,$3A,$3E,$42,$45,$4A,$4E,$53,$58
-                    dc.w    $5D,$63,$68,$6F,$75,$7C,$84,$8B,$94,$9D,$A6,$AF,$BA,$C6,$D1,$DD,$EB
+;lbC0242F4:
+;                    movem.l d2/a2,-(a7)
+;                    move.w  d1,d2
+;                    cmp.w   d0,d2
+;                    bhi     lbC024306
+;                    move.w  d2,d0
+;                    bsr     lbC02431C
+;                    bra     lbC024316
+;lbC024306:
+;                    sub.w   d0,d2
+;                    bsr     lbC02431C
+;                    move.l  a0,a2
+;                    move.w  d2,d0
+;                    bsr     lbC024362
+;                    move.l  a2,a0
+;lbC024316:
+;                    movem.l (a7)+,d2/a2
+;                    rts
+;lbC02431C:
+;                    cmpi.w  #32,d0
+;                    bcs     lbC024348
+;                REPT 16
+;                    move.l  (a0)+,(a1)+
+;                ENDR
+;                    subi.w  #32,d0
+;                    bra     lbC02431C
+;lbC024348:
+;                    cmpi.w  #8,d0
+;                    bcs     lbC02435C
+;                REPT 4
+;                    move.l  (a0)+,(a1)+
+;                ENDR
+;                    subq.w  #8,d0
+;                    bra     lbC024348
+;lbC02435A:
+;                    move.w  (a0)+,(a1)+
+;lbC02435C:
+;                    dbra    d0,lbC02435A
+;                    rts
+;lbC024362:
+;                    moveq   #0,d1
+;lbC024364:
+;                    cmpi.w  #32,d0
+;                    bcs     lbC024390
+;                REPT 16
+;                    move.l  d1,(a1)+
+;                ENDR
+;                    subi.w  #32,d0
+;                    bra     lbC024364
+;lbC024390:
+;                    cmpi.w  #8,d0
+;                    bcs     lbC0243A4
+;                REPT 4
+;                    move.l  d1,(a1)+
+;                ENDR
+;                    subq.w  #8,d0
+;                    bra     lbC024390
+;lbC0243A2:
+;                    move.w  d1,(a1)+
+;lbC0243A4:
+;                    dbra    d0,lbC0243A2
+;                    rts
+;OKT_MixBuffPtr_2:
+;                    dc.l    OKT_MixBuff_2
+;                    dc.l    OKT_MixBuff_2+MIX_BUFFERS_LEN_2
+;OKT_CurFreqTab_2:
+;                    dc.l    0
+;OKT_PALTable_2:
+;                    dc.w    $29,$2B,$2E,$31,$34,$37,$3A,$3E,$42,$45,$4A,$4E,$53,$57,$5D,$62,$68
+;                    dc.w    $6F,$75,$7C,$84,$8B,$94,$9D,$A6,$AF,$BA,$C5,$D0,$DE,$EB,$F8,$107,$117
+;OKT_NTSCTable_2:
+;                    dc.w    $22,$25,$27,$29,$2C,$2E,$31,$34,$37,$3A,$3E,$42,$45,$4A,$4E,$53,$58
+;                    dc.w    $5D,$63,$68,$6F,$75,$7C,$84,$8B,$94,$9D,$A6,$AF,$BA,$C6,$D1,$DD,$EB
 
 ; end of replays core
 ; ===========================================================================
@@ -9144,8 +9157,8 @@ draw_filled_box_with_minterms:
                     and.w   d0,d4
                     add.w   d4,d4
                     lsr.w   #4,d0
-                    adda.w  d0,a3
-                    adda.w  d0,a3
+                    add.w   d0,a3
+                    add.w   d0,a3
                     moveq   #$F,d5
                     and.w   d2,d5
                     add.w   d5,d5
@@ -9241,7 +9254,7 @@ lbC0256EA:
                     and.w   d0,d5
                     lsr.w   #3,d5
                     add.w   d5,d4
-                    adda.w  d4,a1
+                    add.w   d4,a1
                     moveq   #0,d5
                     sub.w   d1,d3
                     sub.w   d0,d2
@@ -9802,7 +9815,7 @@ prepare_ascii_decimal_number:
                     sub.w   d1,d3
                     add.w   d3,d3
                     add.w   d3,d3
-                    adda.w  d3,a0
+                    add.w   d3,a0
                     sf      d3
 .loop:
                     move.l  (a0)+,d1
@@ -10020,7 +10033,7 @@ current_draw_y:
 draw_text:
                     movem.l a2-a6,-(a7)
                     lea     (main_screen),a2
-                    adda.w  d0,a2
+                    add.w   d0,a2
                     mulu.w  #(SCREEN_BYTES*8),d1
                     adda.l  d1,a2
                     lea     (SCREEN_BYTES,a2),a3
@@ -10032,7 +10045,7 @@ draw_text:
 .loop:
                     lsl.w   #3,d0
                     move.l  d1,a1
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     move.b  (a1)+,(a2)+
                     move.b  (a1)+,(a3)+
                     move.b  (a1)+,(a4)+
@@ -10051,7 +10064,7 @@ draw_text:
 invert_chars:
                     movem.l a2-a6,-(a7)
                     lea     (main_screen),a2
-                    adda.w  d0,a2
+                    add.w   d0,a2
                     mulu.w  #(SCREEN_BYTES*8),d1
                     adda.l  d1,a2
                     lea     (SCREEN_BYTES,a2),a3
@@ -10161,7 +10174,7 @@ draw_text_with_coords_struct:
                     move.b  (a0)+,d0
                     move.b  (a0)+,d1
                     lea     (main_screen),a3
-                    adda.w  d0,a3
+                    add.w   d0,a3
                     mulu.w  #(SCREEN_BYTES*8),d1
                     adda.l  d1,a3
                     lea     (text_font),a2
@@ -10209,7 +10222,7 @@ draw_text_without_coords:
 draw_text_with_blanks:
                     movem.l a2/a3,-(a7)
                     lea     (main_screen),a2
-                    adda.w  d0,a2
+                    add.w   d0,a2
                     mulu.w  #(SCREEN_BYTES*8),d1
                     adda.l  d1,a2
                     lea     (text_font),a3
@@ -10247,13 +10260,13 @@ draw_text_with_blanks:
 draw_repeated_char:
                     movem.l d2/d3,-(a7)
                     lea     (main_screen),a1
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     mulu.w  #(SCREEN_BYTES*8),d1
                     adda.l  d1,a1
                     lea     (text_font),a0
                     andi.w  #$FF,d2
                     lsl.w   #3,d2
-                    adda.w  d2,a0
+                    add.w   d2,a0
                     bra     .go
 .loop:
                     move.b  (a0)+,(a1)+
@@ -10273,13 +10286,13 @@ draw_repeated_char:
 draw_one_char:
                     movem.l d2,-(a7)
                     lea     (main_screen),a1
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     mulu.w  #(SCREEN_BYTES*8),d1
                     adda.l  d1,a1
                     lea     (text_font),a0
                     andi.w  #$FF,d2
                     lsl.w   #3,d2
-                    adda.w  d2,a0
+                    add.w   d2,a0
                     move.b  (a0)+,(a1)
                     move.b  (a0)+,((SCREEN_BYTES*1),a1)
                     move.b  (a0)+,((SCREEN_BYTES*2),a1)
@@ -10294,7 +10307,7 @@ draw_one_char:
 ; d2 = number of chars to clear
 clear_chars:
                     lea     (main_screen),a1
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     mulu.w  #(SCREEN_BYTES*8),d1
                     adda.l  d1,a1
                     bra     .go
@@ -10315,7 +10328,7 @@ draw_zoomed_char:
                     movem.l d3-d7/a2,-(a7)
                     lea     (text_font),a2
                     lsl.w   #3,d2
-                    adda.w  d2,a2
+                    add.w   d2,a2
                     move.w  d0,d5
                     move.w  d1,d6
                     move.w  #7-1,d7
@@ -10448,14 +10461,14 @@ lbC0265CE:
                     bra     lbC026616
 lbC0265E4:
                     move.l  (lbL02680E,pc),a0
-                    adda.w  (lbW02681C,pc),a0
+                    add.w   (lbW02681C,pc),a0
                     tst.b   (-2,a0)
                     bne     lbC026616
                     move.l  (lbL02680E,pc),a0
-                    adda.w  (lbW02681E,pc),a0
-                    adda.w  (lbW026820,pc),a0
+                    add.w   (lbW02681E,pc),a0
+                    add.w   (lbW026820,pc),a0
                     move.l  (lbL02680E,pc),a1
-                    adda.w  (lbW02681C,pc),a1
+                    add.w   (lbW02681C,pc),a1
 lbC026606:
                     cmpa.l  a0,a1
                     ble     lbC026610
@@ -10468,7 +10481,7 @@ lbC026616:
                     rts
 lbC026618:
                     move.l  (lbL02680E,pc),a0
-                    adda.w  (lbW02681E,pc),a0
+                    add.w   (lbW02681E,pc),a0
                     movem.w (lbW026812,pc),d0/d1
                     move.w  (lbW026816,pc),d2
                     jmp     (draw_text_with_blanks,pc)
@@ -10521,12 +10534,12 @@ lbC0266A8:
                     rts
 lbC0266B0:
                     move.l  (lbL02680E,pc),a0
-                    adda.w  (lbW02681E,pc),a0
-                    adda.w  (lbW026820,pc),a0
+                    add.w   (lbW02681E,pc),a0
+                    add.w   (lbW026820,pc),a0
                     tst.b   (a0)
                     beq     lbC0266D8
                     move.l  (lbL02680E,pc),a1
-                    adda.w  (lbW02681C,pc),a1
+                    add.w   (lbW02681C,pc),a1
                     subq.w  #1,a1
 lbC0266CA:
                     cmpa.l  a1,a0
@@ -10592,8 +10605,8 @@ lbW02675C:
                     dc.w    0
 lbC02675E:
                     move.l  (lbL02680E,pc),a0
-                    adda.w  (lbW02681E,pc),a0
-                    adda.w  (lbW026820,pc),a0
+                    add.w   (lbW02681E,pc),a0
+                    add.w   (lbW026820,pc),a0
                     tst.b   (a0)
                     beq     lbC02678E
                     move.w  (lbW026816,pc),d0
@@ -10674,7 +10687,7 @@ invert_one_char:
                     lea     (main_screen),a0
                     mulu.w  #(SCREEN_BYTES*8),d1
                     adda.l  d1,a0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     not.b   (a0)
                     not.b   ((SCREEN_BYTES*1),a0)
                     not.b   ((SCREEN_BYTES*2),a0)
@@ -10778,7 +10791,7 @@ lbC026994:
 lbC0269A4:
                     lea     (main_screen+(56*80)),a1
                     add.w   d0,d0
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     mulu.w  #(SCREEN_BYTES*8),d1
                     adda.l  d1,a1
                     lea     ((SCREEN_BYTES*8),a1),a0
@@ -10813,7 +10826,7 @@ lbC0269F2:
 lbC026A0C:
                     subq.w  #2,a1
                     add.w   d0,d0
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     add.w   d2,d1
                     mulu.w  #(SCREEN_BYTES*8),d1
                     adda.l  d1,a1
@@ -11529,11 +11542,11 @@ lbC027298:
                     move.l  (a3)+,d0
                     beq     lbC0272BE
                     move.l  d0,a0
-                    adda.w  d2,a0
+                    add.w   d2,a0
                     move.l  (a3),d0
                     beq     lbC0272BE
                     move.l  d0,a1
-                    adda.w  d2,a1
+                    add.w   d2,a1
                     bsr     lbC0272C4
                     bne     lbC027298
                     move.l  -(a3),d0
@@ -11684,7 +11697,7 @@ lbB027427:
                     dcb.b   11,0
 lbC027432:
                     lea     (main_screen),a0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     mulu.w  #(SCREEN_BYTES*8),d1
                     adda.l  d1,a0
                     moveq   #0,d1
@@ -11698,7 +11711,7 @@ lbC027444:
                     rts
 lbC027460:
                     lea     (main_screen),a0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     mulu.w  #(SCREEN_BYTES*8),d1
                     adda.l  d1,a0
                     moveq   #7-1,d0
@@ -13104,7 +13117,7 @@ lbC02852A:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     moveq   #14,d0
                     moveq   #10,d1
                     moveq   #21,d2
@@ -13391,7 +13404,7 @@ lbC0289C4:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     tst.w   (30,a0)
                     beq     lbC029EBE
                     clr.l   (24,a0)
@@ -13402,7 +13415,7 @@ lbC0289EE:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     tst.w   (30,a0)
                     beq     lbC029EBE
                     moveq   #0,d0
@@ -13425,7 +13438,7 @@ lbC028A2A:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample),d1
                     lsl.w   #5,d1
-                    adda.w  d1,a0
+                    add.w   d1,a0
                     add.w   d0,(24,a0)
                     sub.w   d0,(26,a0)
                     bra     lbC028B58
@@ -13435,7 +13448,7 @@ lbC028A58:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     tst.w   (30,a0)
                     beq     lbC029EBE
                     moveq   #0,d0
@@ -13457,7 +13470,7 @@ lbC028A92:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     move.w  d1,(26,a0)
                     bra     lbC028B58
 lbC028ABC:
@@ -13526,7 +13539,7 @@ lbC028B1E:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample),d1
                     lsl.w   #5,d1
-                    adda.w  d1,a0
+                    add.w   d1,a0
                     tst.w   (30,a0)
                     beq     lbC029EBE
                     subq.w  #1,d0
@@ -13552,7 +13565,7 @@ lbC028B5A:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     tst.w   (30,a0)
                     beq     lbC028BBC
                     tst.w   (26,a0)
@@ -13607,7 +13620,7 @@ lbC028BF0:
                     lea     (main_screen+(96*80)),a0
                     move.w  d0,d1
                     lsr.w   #3,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     moveq   #-$80,d0
                     ror.b   d1,d0
                     moveq   #8-1,d1
@@ -13650,7 +13663,7 @@ lbC028C3E:
                     move.w  (lbW029EFE),d0
                     add.w   d0,d0
                     add.w   d0,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     moveq   #73,d0
                     move.w  (max_lines,pc),d1
                     addq.w  #1,d1
@@ -13659,7 +13672,7 @@ lbC028C8C:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     moveq   #14,d0
                     moveq   #10,d1
                     moveq   #21,d2
@@ -13672,7 +13685,7 @@ lbC028C8C:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     tst.w   (30,a0)
                     beq     lbC028CFC
                     move.l  a0,-(a7)
@@ -13818,7 +13831,7 @@ lbC028E96:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     move.l  (lbL01A134),d2
                     bra     lbC028ECA
 lbC028EB2:
@@ -13826,7 +13839,7 @@ lbC028EB2:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     move.l  (20,a0),d2
 lbC028ECA:
                     moveq   #0,d0
@@ -14111,8 +14124,8 @@ lbC02921E:
                     lea     (lbL01CA58),a1
                     move.l  a1,a2
                     movem.w (lbB029F1C),d0/d1
-                    adda.w  d1,a2
-                    adda.w  d1,a2
+                    add.w   d1,a2
+                    add.w   d1,a2
                     moveq   #-1,d0
                     bsr     lbC02930C
                     bmi     lbC02929A
@@ -14647,10 +14660,10 @@ lbC029846:
                     lea     (lbL01CA58),a0
                     move.l  a0,a1
                     move.l  a0,a2
-                    adda.w  d2,a0
-                    adda.w  d2,a0
-                    adda.w  d3,a1
-                    adda.w  d3,a1
+                    add.w   d2,a0
+                    add.w   d2,a0
+                    add.w   d3,a1
+                    add.w   d3,a1
                     movem.w (lbB029F1C),d4/d5
                     add.w   d4,d4
                     add.w   d5,d5
@@ -14664,8 +14677,8 @@ lbC029874:
 lbC02987E:
                     move.w  d2,(a2,d4.w)
                     move.w  d3,(a2,d5.w)
-                    adda.w  d0,a2
-                    adda.w  d0,a2
+                    add.w   d0,a2
+                    add.w   d0,a2
                     move.w  d1,(a2)
                     bsr     lbC029902
 lbC02988E:
@@ -14992,7 +15005,7 @@ lbC029C50:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     move.w  #1,(30,a0)
                     move.w  #64,(28,a0)
                     bsr     lbC02896C
@@ -15007,7 +15020,7 @@ lbC029CAE:
                     lea     (lbW02513C),a0
                     move.w  (lbW029E10),d0
                     add.w   d0,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     move.w  (a0),d0
                     lsr.w   #1,d0
                     move.w  d0,(AUD0PER,a6)
@@ -15561,7 +15574,7 @@ display_samples_save_format:
                     move.w  (samples_save_format,pc),d0
                     add.w   d0,d0
                     add.w   d0,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     moveq   #22,d0
                     moveq   #16,d1
                     jmp     (draw_text)
@@ -15645,7 +15658,7 @@ inc_background_color:
                     move.w  (current_color_set,pc),d1
                     add.w   d1,d1
                     add.w   d1,d1
-                    adda.w  d1,a0
+                    add.w   d1,a0
                     moveq   #0,d1
                     move.w  (a0),d1
                     ror.l   d0,d1
@@ -15672,7 +15685,7 @@ dec_background_color:
                     move.w  (current_color_set,pc),d1
                     add.w   d1,d1
                     add.w   d1,d1
-                    adda.w  d1,a0
+                    add.w   d1,a0
                     moveq   #0,d1
                     move.w  (a0),d1
                     ror.l   d0,d1
@@ -15698,7 +15711,7 @@ inc_foreground_color:
                     move.w  (current_color_set,pc),d1
                     add.w   d1,d1
                     add.w   d1,d1
-                    adda.w  d1,a0
+                    add.w   d1,a0
                     moveq   #0,d1
                     move.w  (a0),d1
                     ror.l   d0,d1
@@ -15725,7 +15738,7 @@ dec_foreground_color:
                     move.w  (current_color_set,pc),d1
                     add.w   d1,d1
                     add.w   d1,d1
-                    adda.w  d1,a0
+                    add.w   d1,a0
                     moveq   #0,d1
                     move.w  (a0),d1
                     ror.l   d0,d1
@@ -15748,7 +15761,7 @@ display_current_color_set:
                     move.w  (current_color_set,pc),d0
                     add.w   d0,d0
                     add.w   d0,d0
-                    adda.w  d0,a5
+                    add.w   d0,a5
                     move.w  (a5)+,d2
                     moveq   #18,d0
                     moveq   #21,d1
@@ -15764,7 +15777,7 @@ current_color_set:
 ; ===========================================================================
 dec_polyphony_value:
                     lea     (polyphony,pc),a0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     subq.b  #1,(a0)
                     andi.b  #7,(a0)
                     bra     display_polyphony
@@ -15794,7 +15807,7 @@ dec_polyphony_value_8:
                     bra     dec_polyphony_value
 inc_polyphony_value:
                     lea     (polyphony,pc),a0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     addq.b  #1,(a0)
                     andi.b  #7,(a0)
                     bra     display_polyphony
@@ -16150,7 +16163,7 @@ mirror_char_x:
                     lea     (text_font,pc),a0
                     move.w  (current_selected_char),d0
                     lsl.w   #3,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     moveq   #7-1,d0
 .loop_y:
                     move.b  (a0),d1
@@ -16170,7 +16183,7 @@ mirror_char_y:
                     lea     (text_font,pc),a0
                     move.w  (current_selected_char),d0
                     lsl.w   #3,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     lea     (7,a0),a1
                     moveq   #3-1,d0
 .loop:
@@ -16267,7 +16280,7 @@ previous_select_char:
 copy_font_to_buffer:
                     lea     (text_font,pc),a1
                     lsl.w   #3,d0
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     moveq   #7-1,d0
 .loop:
                     move.b  (a1)+,(a0)+
@@ -16276,7 +16289,7 @@ copy_font_to_buffer:
 copy_buffer_to_font:
                     lea     (text_font,pc),a1
                     lsl.w   #3,d0
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     moveq   #7-1,d0
 .loop:
                     move.b  (a0)+,(a1)+
@@ -16285,7 +16298,7 @@ copy_buffer_to_font:
 swap_font_and_buffer:
                     lea     (text_font,pc),a1
                     lsl.w   #3,d0
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     moveq   #7-1,d0
 .loop:
                     move.b  (a0),d1
@@ -16296,7 +16309,7 @@ swap_font_and_buffer:
 clear_character:
                     lea     (text_font,pc),a1
                     lsl.w   #3,d0
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     moveq   #7-1,d0
 .loop:
                     sf      (a1)+
@@ -16322,10 +16335,10 @@ change_char_pixel:
                     cmpi.w  #7,d1
                     bcc     .out_of_bounds
                     lea     (text_font,pc),a0
-                    adda.w  d1,a0
+                    add.w   d1,a0
                     move.w  (current_selected_char,pc),d1
                     lsl.w   #3,d1
-                    adda.w  d1,a0
+                    add.w   d1,a0
                     bclr    d0,(a0)
                     tst.b   d2
                     beq     .clear
@@ -16341,7 +16354,7 @@ rotate_char_left:
                     lea     (text_font,pc),a0
                     move.w  (current_selected_char,pc),d0
                     lsl.w   #3,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     moveq   #7-1,d1
 .loop:
                     move.b  (a0),d0
@@ -16355,7 +16368,7 @@ rotate_char_right:
                     lea     (text_font,pc),a0
                     move.w  (current_selected_char,pc),d0
                     lsl.w   #3,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     moveq   #7-1,d1
 .loop:
                     move.b  (a0),d0
@@ -16369,7 +16382,7 @@ rotate_char_up:
                     lea     (text_font,pc),a0
                     move.w  (current_selected_char,pc),d0
                     lsl.w   #3,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     move.b  (a0)+,d0
                     moveq   #6-1,d1
 .loop:
@@ -16383,7 +16396,7 @@ rotate_char_down:
                     lea     (text_font,pc),a0
                     move.w  (current_selected_char,pc),d0
                     lsl.w   #3,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     lea     (6,a0),a0
                     move.b  (a0),d0
                     moveq   #6-1,d1
@@ -16398,7 +16411,7 @@ outline_char:
                     lea     (text_font,pc),a0
                     move.w  (current_selected_char,pc),d0
                     lsl.w   #3,d0
-                    adda.w  d0,a0
+                    add.w   d0,a0
                     moveq   #7-1,d0
 .loop:
                     not.b   (a0)+
@@ -16568,12 +16581,12 @@ convert_pattern:
                     addq.w  #1,d0
                     add.w   d0,d0
                     add.w   d0,d0
-                    adda.w  d0,a2
+                    add.w   d0,a2
                     move.w  (a5)+,d0
                     addq.w  #1,d0
                     add.w   d0,d0
                     add.w   d0,d0
-                    adda.w  d0,a3
+                    add.w   d0,a3
                     dbra    d3,.loop
                     movem.l (a7)+,d2/d3/a2-a5
                     rts
@@ -16591,8 +16604,8 @@ copy_single_to_single:
                     bra     .go
 .loop:
                     move.l  (a0),(a1)
-                    adda.w  (old_channels_size,pc),a0
-                    adda.w  (new_channels_size,pc),a1
+                    add.w   (old_channels_size,pc),a0
+                    add.w   (new_channels_size,pc),a1
 .go:
                     dbra    d0,.loop
                     rts
@@ -16607,8 +16620,8 @@ copy_double_to_single:
                     beq     .empty_first
                     move.l  (a0),(a1)
 .empty_first:
-                    adda.w  (old_channels_size,pc),a0
-                    adda.w  (new_channels_size,pc),a1
+                    add.w   (old_channels_size,pc),a0
+                    add.w   (new_channels_size,pc),a1
 .go:
                     dbra    d0,.loop
                     rts
@@ -16617,8 +16630,8 @@ copy_double_to_double:
 .loop:
                     move.l  (a0),(a1)
                     move.l  (4,a0),(4,a1)
-                    adda.w  (old_channels_size,pc),a0
-                    adda.w  (new_channels_size,pc),a1
+                    add.w   (old_channels_size,pc),a0
+                    add.w   (new_channels_size,pc),a1
 .go:
                     dbra    d0,.loop
                     rts
@@ -17102,7 +17115,7 @@ lbC02BA3E:
                     move.w  (lbW02BA76,pc),d0
                     add.w   d0,d0
                     add.w   d0,d0
-                    adda.w  d0,a1
+                    add.w   d0,a1
                     move.w  (lbW02B710,pc),d0
                     sub.w   (lbW02BA76,pc),d0
                     bmi     lbC02BA6A
@@ -19375,15 +19388,15 @@ lbB017876:
                     dc.b    60,5,5,1
                     dc.l    lbC02177E,0
 lbB017888:
-                    dc.l    lbB01789A
+                    dc.l    lbL0178AC
                     dc.w    %1
                     dc.b    60,6,5,1
                     dc.l    lbC01E096,0
-lbB01789A:
-                    dc.l    lbL0178AC
-                    dc.w    %1000000000001
-                    dc.b    67,5,3,1
-                    dc.l    inc_replay_type,dec_replay_type
+;lbB01789A:
+;                    dc.l    lbL0178AC
+;                    dc.w    %1000000000001
+;                    dc.b    67,5,3,1
+;                    dc.l    inc_replay_type,dec_replay_type
 lbL0178AC:
                     dc.l    lbB0178BE
                     dc.w    %1000000000001
@@ -19525,8 +19538,8 @@ lbW017A58:
                     dc.l    lbC01E09E
                     dc.w    2,76
                     dc.l    lbC02191E
-                    dc.w    2,80
-                    dc.l    inc_replay_type
+;                    dc.w    2,80
+;                    dc.l    inc_replay_type
                     dc.w    2,83
                     dc.l    lbC021C72
                     dc.w    2,31
