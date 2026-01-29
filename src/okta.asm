@@ -20934,10 +20934,10 @@ bottom_credits_picture:
                     section chip_blocks,bss_c
 OKT_MixBuff_1:
                     ds.b    MIX_BUFFERS_1*MIX_BUFFERS_LEN_1
-OKT_OuputBuff_2:
-                    ds.b    82
-OKT_MixBuff_2:
-                    ds.b    MIX_BUFFERS_LEN_2*2
+;OKT_OuputBuff_2:
+;                    ds.b    82
+;OKT_MixBuff_2:
+;                    ds.b    MIX_BUFFERS_LEN_2*2
                     ; (must be aligned for AGA)
                     cnop    0,8
 main_screen:
