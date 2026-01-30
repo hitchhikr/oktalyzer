@@ -4599,24 +4599,26 @@ lbC02146A:
                     lea     (SaveSong_MSG),a0
                     moveq   #DIR_SONGS,d0
                     jsr     (display_file_requester)
-                    bmi     lbC0214AE
+                    bmi     .done
+                    bsr     overwrite_file_requester
+                    bne     .done
                     lea     (current_file_name),a0
                     jsr     (open_file_for_writing)
-                    bmi     lbC0214AA
+                    bmi     .lbC0214AA
                     lea     (OKTASONG_MSG,pc),a0
                     moveq   #8,d0
                     jsr     (write_to_file)
-                    bmi     lbC0214AA
+                    bmi     .lbC0214AA
                     lea     (CMOD_MSG0,pc),a0
                     bsr     lbC0214C8
-                    bmi     lbC0214AE
+                    bmi     .done
                     bsr     lbC021548
-                    bmi     lbC0214AE
+                    bmi     .done
                     bsr     lbC0215AC
-                    bra     lbC0214AE
-lbC0214AA:
+                    bra     .done
+.lbC0214AA:
                     bsr     display_dos_error
-lbC0214AE:
+.done:
                     jmp     (close_file)
 SaveSong_MSG:
                     dc.b    'Save Song',0
@@ -5274,6 +5276,9 @@ lbC021C92:
                     moveq   #DIR_SAMPLES,d0
                     jsr     (display_file_requester)
                     bmi     lbC021DA2
+                    bsr     overwrite_file_requester
+                    bne     lbC021DA2
+
                     lea     (OKT_Samples+30),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
@@ -8066,6 +8071,20 @@ lbC0246D4:
 lbC0246DE:
                     moveq   #OK,d0
                     rts
+
+; ===========================================================================
+overwrite_file_requester:
+                    lea     (current_file_name),a0
+                    bsr     file_exist
+                    bmi     .no_file
+                    lea     (overwrite_text,pc),a0
+                    bra     ask_yes_no_requester
+.no_file:
+                    moveq   #OK,d0
+                    rts
+overwrite_text:
+                    dc.b    ' Overwrite file ? ',0
+                    even
 
 ; ===========================================================================
 ask_are_you_sure_requester:
@@ -16848,6 +16867,8 @@ lbC02BC3A:
                     bpl     lbC02BC4A
                     rts
 lbC02BC4A:
+                    bsr     overwrite_file_requester
+                    bne     .done
                     lea     (lbL02BCDA,pc),a0
                     move.w  (lbW02B710,pc),d0
                     mulu.w  #131,d0
@@ -16869,6 +16890,7 @@ lbC02BC4A:
                     jsr     (write_to_file)
                     bmi     lbC02BCA0
                     bsr     lbC02BCB2
+.done:
                     moveq   #OK,d0
                     rts
 lbC02BCA0:
