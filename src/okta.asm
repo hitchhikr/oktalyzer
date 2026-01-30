@@ -4075,11 +4075,11 @@ do_load_song:
                     jsr     (read_from_file)
                     bmi     .error
                     lea     (song_chunk_header_loaded_data),a0
-                    subq.l  #4,a0
                     cmpi.l  #'OKTA',(a0)+
                     bne     load_st_mod
                     cmpi.l  #'SONG',(a0)+
                     beq     .load_okta_mod
+                    subq.l  #4,a0
                     cmpi.l  #'SON2',(a0)+
                     beq     .load_okta_mod
                     bsr     error_ok_struct_error
