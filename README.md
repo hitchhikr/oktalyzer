@@ -8,8 +8,8 @@ To do:
 - Integrate the new replay into the tracker.
 - Add 'help' gadgets onto the the different screens.
 - Remove the constraints of the sample types (remove the samples types).
-- Patch the older songs volume effects for double channels:
-  oxx will be converted to vxx (as we don't need hw channels volumes backup anymore).
+- Patch the older songs volume effects for double channels:<br>
+  oxx will be converted to vxx (as we don't need hw channels volumes backup anymore).<br>
   v00 will always be duplicated, vxx values won't be if there's an effect on the other channel.
 - 'OKTASON1' header tag for new Amiga songs (so songs volume columns aren't fixed again).
 - 'OKTASON2' header tag for Vampire songs (16 bit samples and maybe more).
