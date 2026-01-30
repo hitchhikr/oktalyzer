@@ -8,6 +8,9 @@
 ; ===========================================================================
                     section start,code
 start:
+                    ; only necessary if using more than 4 channels
+                    bsr     OKT_init_buffers
+                    beq     .error_mem
                     move.w  $dff01c,-(a7)
                     move.w  $dff002,-(a7)
                     move.w  #$7fff,$dff096
@@ -28,6 +31,9 @@ start:
                     move.w  (a7)+,d0
                     or.w    #$C000,d0
                     move.w  d0,$dff09a
+                    ; only necessary if using more than 4 channels
+                    bsr     OKT_release_buffers
+.error_mem:
                     moveq   #0,d0
                     rts
 
@@ -37,9 +43,8 @@ start:
 ; ===========================================================================
                     section music,data_c
 
-music:              ;incbin "lame d-mo.okta"
+music:              ;incbin  "../songs/lame d-mo.okta"
                     incbin  "../songs/storm angel.okta"
-                    ;incbin  "s.okta"
-                    ;incbin  "future melody.okta"
+                    ;incbin  "../songs/future melody.okta"
 
                     end

@@ -13,6 +13,7 @@
 ; ===========================================================================
 		            rsreset
 OKT_AUDIO_BASE      equ     $DFF400
+OKT_AUDIO_DMA       equ     $DFF296
 OKT_AUDIO_ADR       equ     0
 OKT_AUDIO_LEN       equ     4
 OKT_AUDIO_PER       equ     $C
@@ -20,26 +21,6 @@ OKT_AUDIO_VOL       equ     8
 OKT_AUDIO_SIZE      equ     $10
 OKT_AUDIO_HW_CHANS  equ     8
 OKT_AUDIO_ALL_HW    equ     1
-
-OKT_SET_AUDIO_ADR   macro
-                    move.l  \1,(OKT_AUDIO_ADR,\2)
-                    endm
-
-OKT_SET_AUDIO_LEN   macro
-                    move.l  \1,(OKT_AUDIO_LEN,\2)
-                    endm
-
-OKT_SET_AUDIO_PER   macro
-                    move.w  \1,(OKT_AUDIO_PER,\2)
-                    endm
-
-OKT_SET_AUDIO_VOL   macro
-                    move.w  \1,(OKT_AUDIO_VOL,\2)
-                    endm
-
-OKT_SET_AUDIO_DMA   macro
-                    move.w  \1,$DFF296
-                    endm
 
 ; ===========================================================================
 OKT_custom_init:
@@ -146,11 +127,3 @@ OKT_main:
 
 ; ===========================================================================
                     include "replay_common.asm"
-
-; ===========================================================================
-                    section  OKT_chip_sample,data_c
-
-OKT_empty_waveform:
-                    ds.w    2
-
-                    section music,code

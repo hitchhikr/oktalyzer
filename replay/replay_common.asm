@@ -35,6 +35,27 @@ CHAN_SMP_PROC_LEN_D:rs.l    1           ; 18
 CHAN_LEN:           rs.b    0           ; 22
 
 ; ===========================================================================
+OKT_SET_AUDIO_ADR   macro
+                    move.l  \1,(OKT_AUDIO_ADR,\2)
+                    endm
+
+OKT_SET_AUDIO_LEN   macro
+                    move.w  \1,(OKT_AUDIO_LEN,\2)
+                    endm
+
+OKT_SET_AUDIO_PER   macro
+                    move.w  \1,(OKT_AUDIO_PER,\2)
+                    endm
+
+OKT_SET_AUDIO_VOL   macro
+                    move.w  \1,(OKT_AUDIO_VOL,\2)
+                    endm
+
+OKT_SET_AUDIO_DMA   macro
+                    move.w  \1,OKT_AUDIO_DMA
+                    endm
+
+; ===========================================================================
 OKT_init:
                     movem.l d1-a6,-(a7)
                     lea     (OKT_vars,pc),a6
@@ -1061,3 +1082,11 @@ OKT_patterns_list:
                     ds.l    64
 OKT_samples_table:
                     ds.l    SMPS_NUMBER
+
+; ===========================================================================
+                    section  OKT_chip_sample,data_c
+
+OKT_empty_waveform:
+                    ds.w    2
+
+                    section replay,code
