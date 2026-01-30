@@ -24,7 +24,8 @@ To do:
 Done:
 
 - Fixed the tracker for AGA and RTG.
-- Made a screen refresh frequency independant new replay with improved software mixer.
+- Made a screen refresh frequency independant new replay with improved software mixer<br>
+  (notably with separate volume controls for doubled channels).
 - Made a replay for the Vampire using only hw channels.
 - Fixed the mirror x/mirror y commands inversion in tracker preferences screen.
 - Polyphony settings are now randomized when clicking on 'Left-Right' command with right mouse button.
