@@ -62,6 +62,7 @@ The playback routine is now approximately twice as fast in 4-channel mode.
 
 With the MIDI Out mode, Oktalyzer songs can now also be output via MIDI.
 Here, samples 0-f are assigned to the corresponding MIDI channels.
+
 The length of the MIDI notes is proportional to the Amiga sample lengths.
 This is just a small 'hack' to enable the transfer of Oktalyzer songs to a MIDI sequencer.
 
@@ -122,7 +123,6 @@ Name:       OK_SetVol
 
 Handover:   d0: Master volume for all channels (0-$40)
 
-Warning: If the specified volume is > $40, it will be ignored.
 Warning: The internally stored value is not reset to $40 in the initialization routine "OK_Init".
 
 The two stereo channels can also be controlled separately:

@@ -611,9 +611,9 @@ OKT_effects_table_d:
                     dc.w    0,                                      0,                                  0
                     dc.w    0,                                      OKT_arp_d-OKT_effects_table_d,      OKT_arp2_d-OKT_effects_table_d
                     dc.w    OKT_arp3_d-OKT_effects_table_d,         OKT_slide_d_d-OKT_effects_table_d,  0
-                    dc.w    OKT_filter-OKT_effects_table_d,         0,                                  OKT_slide_u_tick_d-OKT_effects_table_d
+                    dc.w    OKT_filter-OKT_effects_table_d,         0,                                  OKT_slide_u_once_d-OKT_effects_table_d
                     dc.w    0,                                      0,                                  0
-                    dc.w    OKT_slide_d_tick_d-OKT_effects_table_d, 0,                                  0
+                    dc.w    OKT_slide_d_once_d-OKT_effects_table_d, 0,                                  0
                     dc.w    0,                                      OKT_pos_jump-OKT_effects_table_d,   0
                     dc.w    0,                                      OKT_set_speed-OKT_effects_table_d,  0
                     dc.w    OKT_slide_u_d-OKT_effects_table_d,      OKT_set_volume-OKT_effects_table_d, 0
@@ -661,10 +661,10 @@ OKT_effects_table_s:
                     dc.w    0,                                      0,                                  0
                     dc.w    0,                                      OKT_arp_s-OKT_effects_table_s,      OKT_arp2_s-OKT_effects_table_s
                     dc.w    OKT_arp3_s-OKT_effects_table_s,         OKT_slide_d_s-OKT_effects_table_s,  0
-                    dc.w    OKT_filter-OKT_effects_table_s,         0,                                  OKT_slide_u_tick_s-OKT_effects_table_s
+                    dc.w    OKT_filter-OKT_effects_table_s,         0,                                  OKT_slide_u_once_s-OKT_effects_table_s
                     dc.w    0,                                      0,                                  0
-                    dc.w    OKT_slide_d_tick_s-OKT_effects_table_s, 0,                                  0
-                    dc.w    OKT_release-OKT_effects_table_s,        OKT_pos_jump-OKT_effects_table_s,   0
+                    dc.w    OKT_slide_d_once_s-OKT_effects_table_s, 0,                                  0
+                    dc.w    0,                                      OKT_pos_jump-OKT_effects_table_s,   0
                     dc.w    0,                                      OKT_set_speed-OKT_effects_table_s,  0
                     dc.w    OKT_slide_u_s-OKT_effects_table_s,      OKT_set_volume-OKT_effects_table_s, 0
                     dc.w    0,                                      0,                                  0
@@ -767,7 +767,7 @@ OKT_div_table_3_s:
                     dc.b    0,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3
 
 ; ===========================================================================
-OKT_slide_u_tick_s:
+OKT_slide_u_once_s:
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
                     beq     OKT_slide_u_s
                     rts
@@ -780,7 +780,7 @@ OKT_slide_u_s:
                     bra     OKT_set_arp_s
 
 ; ===========================================================================
-OKT_slide_d_tick_s:
+OKT_slide_d_once_s:
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
                     beq     OKT_slide_d_s
                     rts
@@ -884,7 +884,7 @@ OKT_div_table_3_d:
                     dc.b    0,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3
 
 ; ===========================================================================
-OKT_slide_u_tick_d:
+OKT_slide_u_once_d:
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
                     beq     OKT_slide_u_d
                     rts
@@ -894,7 +894,7 @@ OKT_slide_u_d:
                     rts
 
 ; ===========================================================================
-OKT_slide_d_tick_d:
+OKT_slide_d_once_d:
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
                     beq     OKT_slide_d_d
                     rts
@@ -953,47 +953,37 @@ OKT_volume_fade:
                     subi.b  #$40,d1
                     ;$40 >= $4f
                     cmp.b   #$10,d1
-                    blt     .OKT_fade_volume_out
+                    blt     .OKT_fade_volume_down
                     ;$50 >= $5f
                     subi.b  #$10,d1
                     cmp.b   #$10,d1
-                    blt     .OKT_fade_volume_in
+                    blt     .OKT_fade_volume_up
                     ;$60 >= $6f
                     subi.b  #$10,d1
                     cmp.b   #$10,d1
-                    blt     .OKT_fade_volume_out_tick
+                    blt     .OKT_fade_volume_down_once
                     ;$70 >= $7f
                     subi.b  #$10,d1
                     cmp.b   #$10,d1
-                    blt     .OKT_fade_volume_in_tick
+                    blt     .OKT_fade_volume_up_once
                     rts
-.OKT_fade_volume_out_tick:
+.OKT_fade_volume_down_once:
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
                     bne     OKT_volume_fade_done
-.OKT_fade_volume_out:
+.OKT_fade_volume_down:
                     sub.b   d1,(a0)
                     bpl     OKT_volume_fade_done
                     sf      (a0)
                     rts
-.OKT_fade_volume_in_tick:
+.OKT_fade_volume_up_once:
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
                     bne     OKT_volume_fade_done
-.OKT_fade_volume_in:
+.OKT_fade_volume_up:
                     add.b   d1,(a0)
                     cmp.b   #64,(a0)
                     bls     OKT_volume_fade_done
                     move.b  #64,(a0)
                     bra     OKT_volume_fade_done
-
-; ===========================================================================
-OKT_release:
-                    moveq   #0,d0
-                    lea     (OKT_channels_volumes-OKT_vars,a6),a0
-                    move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d0
-                    add.w   d7,a0
-                    cmp.b   #$40,d1
-                    bhi     OKT_volume_fade
-                    rts
 
 ; ===========================================================================
 ; set global volume
