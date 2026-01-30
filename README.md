@@ -3,7 +3,7 @@ A complete disassembly of the Amiga music tool Oktalyzer originally programmed b
 This is an ongoing effort to improve it, modify it to use the hardware mixing of the Amiga Vampire cards
 and extract an asm replay routine.
 
-TODO:
+To do:
 
 - Integrate the new replay into the tracker.
 - Add 'help' gadgets onto the the different screens.
@@ -11,8 +11,8 @@ TODO:
 - Patch the older songs volume effects for double channels:
   oxx will be converted to vxx (as we don't need hw channels volumes backup anymore).
   v00 will always be duplicated, vxx values won't be if there's an effect on the other channel.
-- OKTASON1 for new Amiga songs (so songs volumes columns aren't fixed again).
-- OKTASON2 for Vampire songs (16 bit samples and maybe more).
+- 'OKTASON1' header tag for new Amiga songs (so songs volumes columns aren't fixed again).
+- 'OKTASON2' header tag for Vampire songs (16 bit samples and maybe more).
 - 8/16 bit samples in the vampire version (keep the sample type word in infos).
 - Add the possibility to load wave samples (8 bit but also 16 bit for Vampire).
 - Add a clear way to set the samples repeat start & length.
@@ -22,7 +22,7 @@ TODO:
 - Understand what the effects editor is for.
 - Add new patterns effects.
 
-DONE:
+Done:
 
 - Fix the tracker for AGA and RTG.
 - Make a frequency independant new replay.
