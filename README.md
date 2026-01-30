@@ -31,6 +31,6 @@ Done:
 - CLI/WB requester is now correctly positioned on top right regardless of the width of the screen.
 - Chip/Fast memory display will show 'Plenty!' message if there's a too great amount to be available.
 - Add independant volumes to doubled channels.
-- Increase the speed to 31.
+- Increase the speed limit to 31.
 
 A work in progress...
