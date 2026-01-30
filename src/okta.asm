@@ -19210,18 +19210,18 @@ patterns_ed_help_text_1:
                     dc.b    CMD_TEXT,0,15, 'SH_CURSOR Size Block      SH_F3  Cut Block          AL_CURSOR Prv/Nxt/Size Patt',0
                     dc.b    CMD_TEXT,0,16, 'AM_CURSOR Move Block      SH_F4  Flip Block         CT_CURSLR Go to Track',0
                     dc.b    CMD_TEXT,0,17, 'SH_B      Block Mode      SH_F5  Delete Sample      BK_0-9    Move to Pattern',0
-                    dc.b    CMD_TEXT,26,18,'AL_F5  Delete Sample Inst',0
+                    dc.b    CMD_TEXT,0,18, '                          AL_F5  Delete Sample Inst',0
                     dc.b    CMD_TEXT,0,19, '- Octave Settings ------- SH_F6  Note Down          - Misc --------------------',0
-                    dc.b    CMD_TEXT,26,20,'AL_F6  Note Down Inst',0
+                    dc.b    CMD_TEXT,0,20, '                          AL_F6  Note Down Inst',0
                     dc.b    CMD_TEXT,0,21, '___F1 Set Octave 1+2      SH_F7  Note Up            ___ESC    Play Pattern',0
                     dc.b    CMD_TEXT,0,22, '___F2 Set Octave 2+3      AL_F7  Note Up Inst       ___`      Play Pattern',0
-                    dc.b    CMD_TEXT,26,23,'SH_F8  Octave Down        SH_P      Change PlayRout',0
-                    dc.b    CMD_TEXT,0,24, '- Samples --------------- AL_F8  Octave Down Inst   AL+BK_0-9 Set Quant',0
-                    dc.b    CMD_TEXT,26,25,'SH_F9  Octave Up          SH_HELP   Here I am!',0
+                    dc.b    CMD_TEXT,0,23, '                          SH_F8  Octave Down',0
+                    dc.b    CMD_TEXT,0,24, '- Samples --------------- SH_F9  Octave Up          AL+BK_0-9 Set Quant',0
+                    dc.b    CMD_TEXT,0,25, '                          AL_F8  Octave Down Inst   SH_HELP   Here I am!',0
                     dc.b    CMD_TEXT,0,26, 'SH_L       Load Sample    AL_F9  Octave Up Inst     AL_HELP   Play Help Page',0
                     dc.b    CMD_TEXT,0,27, 'SH_S       Save Sample    SH_F10 Change Instrument  AM_HELP   Effect Help Page',0
-                    dc.b    CMD_TEXT,0,28, 'SH_E       Edit Sample    AL_F10 Change Effect',0
-                    dc.b    CMD_TEXT,0,29, 'AL_0-9/a-z Set  Sample    AM_F10 Effect Editor',0
+                    dc.b    CMD_TEXT,0,28, 'SH_E       Edit Sample    AL_F10 Change Effect      AM_F10    Effect Editor',0
+                    dc.b    CMD_TEXT,0,29, 'AL_0-9/a-z Set  Sample',0
                     dc.b    CMD_TEXT,0,30, 'CT_CURSUD  Add/Sub Sample',0
                     dc.b    CMD_END
 patterns_ed_help_text_2:
@@ -19242,23 +19242,23 @@ effects_help_text:
                     dc.b    CMD_SET_SUB_SCREEN
                     dc.b    4
                     dc.b    CMD_TEXT,17,8, '- Effects Help Page --------------------------',0
-                    dc.b    CMD_TEXT,17,10,'1 Portamento Down (4) (Period)',0
-                    dc.b    CMD_TEXT,17,11,'2 Portamento Up   (4) (Period)',0
-                    dc.b    CMD_TEXT,17,13,'A Arpeggio 1      (B) (down, orig,   up)',0
-                    dc.b    CMD_TEXT,17,14,'B Arpeggio 2      (B) (orig,   up, orig, down)',0
-                    dc.b    CMD_TEXT,17,15,'C Arpeggio 3      (B) (  up,   up, orig)',0
-                    dc.b    CMD_TEXT,17,17,'D Slide Down      (B) (Notes)',0
-                    dc.b    CMD_TEXT,17,18,'U Slide Up        (B) (Notes)',0
-                    dc.b    CMD_TEXT,17,20,'L Slide Down Once (B) (Notes)',0
-                    dc.b    CMD_TEXT,17,21,'H Slide Up   Once (B) (Notes)',0
-                    dc.b    CMD_TEXT,17,23,'F Set Filter      (B) <>00:ON',0
-                    dc.b    CMD_TEXT,17,24,'P Pos Jump        (B)',0
-                    dc.b    CMD_TEXT,17,25,'S Speed           (B)',0
-                    dc.b    CMD_TEXT,17,26,'V Volume          (B) <=40:DIRECT',0
-                    dc.b    CMD_TEXT,41,27,                        '4x:Vol Down      (VO)',0
-                    dc.b    CMD_TEXT,41,28,                        '5x:Vol Up        (VO)',0
-                    dc.b    CMD_TEXT,41,29,                        '6x:Vol Down Once (VO)',0
-                    dc.b    CMD_TEXT,41,30,                        '7x:Vol Up   Once (VO)',0
+                    dc.b    CMD_TEXT,17,10,'1 Portamento Down (Period)',0
+                    dc.b    CMD_TEXT,17,11,'2 Portamento Up   (Period)',0
+                    dc.b    CMD_TEXT,17,13,'A Arpeggio 1      (down, orig,   up)',0
+                    dc.b    CMD_TEXT,17,14,'B Arpeggio 2      (orig,   up, orig, down)',0
+                    dc.b    CMD_TEXT,17,15,'C Arpeggio 3      (  up,   up, orig)',0
+                    dc.b    CMD_TEXT,17,17,'D Slide Down      (Notes)',0
+                    dc.b    CMD_TEXT,17,18,'U Slide Up        (Notes)',0
+                    dc.b    CMD_TEXT,17,20,'L Slide Down Once (Notes)',0
+                    dc.b    CMD_TEXT,17,21,'H Slide Up   Once (Notes)',0
+                    dc.b    CMD_TEXT,17,23,'F Set Filter      <> 00:ON',0
+                    dc.b    CMD_TEXT,17,24,'P Pos Jump        ',0
+                    dc.b    CMD_TEXT,17,25,'S Speed           ',0
+                    dc.b    CMD_TEXT,17,26,'V Volume          <= 40:DIRECT',0
+                    dc.b    CMD_TEXT,38,27,                     '4x:Vol Down      (VO)',0
+                    dc.b    CMD_TEXT,38,28,                     '5x:Vol Up        (VO)',0
+                    dc.b    CMD_TEXT,38,29,                     '6x:Vol Down Once (VO)',0
+                    dc.b    CMD_TEXT,38,30,                     '7x:Vol Up   Once (VO)',0
                     dc.b    CMD_END
                     even
 input_device_int:
@@ -20237,19 +20237,19 @@ compute_help_text:
 play_help_text:
                     dc.b    CMD_SET_SUB_SCREEN
                     dc.b    4
-                    dc.b    CMD_TEXT,9,10,'- Play Song, Play Pattern Help Page -------------------------',0
-                    dc.b    CMD_TEXT,9,12,'- Misc --------------------------- - Octave Settings --------',0
-                    dc.b    CMD_TEXT,9,14,'___ESC       Stop                  ___F1 Set Octave 1+2',0
-                    dc.b    CMD_TEXT,9,15,'___`         Stop to Act Pos       ___F2 Set Octave 2+3',0
-                    dc.b    CMD_TEXT,9,17,'___TAB       Change Edit Mode      - Track Movement ---------',0
-                    dc.b    CMD_TEXT,9,18,'___CURSOR UD Change Sample',0
-                    dc.b    CMD_TEXT,9,19,'___F3-F10    Change Channel States ___CURSOR LR Change Track',0
+                    dc.b    CMD_TEXT,9,10, '- Play Song, Play Pattern Help Page -------------------------',0
+                    dc.b    CMD_TEXT,9,12, '- Misc --------------------------- - Octave Settings --------',0
+                    dc.b    CMD_TEXT,9,14, '___ESC       Stop                  ___F1 Set Octave 1+2',0
+                    dc.b    CMD_TEXT,9,15, '___`         Stop to Act Pos       ___F2 Set Octave 2+3',0
+                    dc.b    CMD_TEXT,9,17, '___TAB       Change Edit Mode      - Track Movement ---------',0
+                    dc.b    CMD_TEXT,9,18, '___CURSOR UD Change Sample',0
+                    dc.b    CMD_TEXT,9,19, '___F3-F10    Change Channel States ___CURSOR LR Change Track',0
                     dc.b    CMD_TEXT,44,20,'___HELP      Go to PolyPos',0
-                    dc.b    CMD_TEXT,9,21,'NB_1         Sub Quant',0
-                    dc.b    CMD_TEXT,9,22,'NB_2         Add Quant',0
-                    dc.b    CMD_TEXT,9,24,'NB_4         Sub Poly',0
-                    dc.b    CMD_TEXT,9,25,'NB_5         Add Poly',0
-                    dc.b    CMD_TEXT,9,27,'NB_7         Change MidiMode',0
+                    dc.b    CMD_TEXT,9,21, 'NB_1         Sub Quant',0
+                    dc.b    CMD_TEXT,9,22, 'NB_2         Add Quant',0
+                    dc.b    CMD_TEXT,9,24, 'NB_4         Sub Poly',0
+                    dc.b    CMD_TEXT,9,25, 'NB_5         Add Poly',0
+                    dc.b    CMD_TEXT,9,27, 'NB_7         Change MidiMode',0
                     dc.b    CMD_END
 ; related to the replay
 OKT_PattLineBuff:
