@@ -31,7 +31,7 @@ Done:
 - Polyphony settings are now randomized when clicking on Left-Right command with right mouse button.
 - CLI/WB requester is now correctly positioned on top right coords regardless of the width of the screen.
 - Chip/Fast memory display will show 'Plenty!' message if there's a too great amount to be available.
-- Added independant volumes to doubled channels.
+- Added independant volumes support to doubled channels.
 - Increased the speed limit to 31.
 
 A work in progress...
