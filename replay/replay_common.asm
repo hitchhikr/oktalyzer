@@ -1036,8 +1036,8 @@ OKT_periods_table:
                     dc.w    $17D,$168,$153,$140,$12E,$11D,$10D,$FE,$F0,$E2,$D6,$CA,$BE,$B4,$AA
                     dc.w    $A0,$97,$8F,$87,$7F,$78,$71,0
                 IFNE OKT_AUDIO_ALL_HW
-OKT_panning_table:  dc.b    $af,$50,$50,$af,$af,$50,$50,$af
-                    dc.b    $af,$50,$50,$af,$af,$50,$50,$af
+OKT_panning_table:  dc.w    $af,$50,$50,$af,$af,$50,$50,$af
+                    dc.w    $af,$50,$50,$af,$af,$50,$50,$af
                 ENDC
 OKT_old_cia_timer:
                     dcb.b   2,0

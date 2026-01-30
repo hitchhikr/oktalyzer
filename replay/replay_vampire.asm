@@ -27,10 +27,10 @@ OKT_AUDIO_ALL_HW    equ     1
 OKT_SET_AUDIO_PAN   MACRO
                     ; set panning
                     move.w  d0,d1
-                    mulu    (a4,d3.w),d0
+                    mulu    (a4,d3.w*4),d0
                     lsr.w   #7,d0
                     lsl.w   #8,d0
-                    mulu    (a4,d3.w),d1
+                    mulu    2(a4,d3.w*4),d1
                     lsr.w   #7,d1
                     or.w    d1,d0
                     ENDM
