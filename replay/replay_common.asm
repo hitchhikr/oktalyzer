@@ -17,8 +17,7 @@ SMP_NAME:           rs.b    20
 SMP_LEN:            rs.l    1           ; 20
 SMP_REP_START:      rs.w    1           ; 24
 SMP_REP_LEN:        rs.w    1           ; 26
-                    rs.b    1           ; 28 (empty)
-SMP_VOL:            rs.b    1           ; 29
+SMP_VOL:            rs.w    1           ; 28
 SMP_TYPE:           rs.w    1           ; 30
 SMP_INFOS_LEN:      rs.b    0           ; 32
 		            rsreset
@@ -446,7 +445,7 @@ OKT_fill_double_channel_data:
                     moveq   #0,d0
                     move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d0
                     ; default sample volume
-                    move.b  (SMP_VOL,a1),(a0,d0.w)
+                    move.b  (SMP_VOL+1,a1),(a0,d0.w)
                     move.l  (a7)+,a0
                     ; note index
                     move.w  d3,(CHAN_NOTE_D,a3)
@@ -521,7 +520,7 @@ OKT_fill_single_channel_data:
                     moveq   #0,d0
                     move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d0
                     ; default sample volume
-                    move.b  (SMP_VOL,a1),(a0,d0.w)
+                    move.b  (SMP_VOL+1,a1),(a0,d0.w)
                     move.l  (a7)+,a0
                     moveq   #0,d0
                     ; repeat length

@@ -10,7 +10,7 @@ Automatic adjustment to the NTSC standard
 (Here I must thank Peter Weiﬂ, who installed the PAL-NTSC switch in my A2000).
 
 Unfortunately, I was unable to rewrite playback routine 1 to the NTSC standard.
-When attempting to play a piece of music in NTSC using playback routine 1, 
+When attempting to play a piece of music in NTSC using playback routine 1,
 the following error message appears: "Only in PAL" (Only in PAL mode).
 
 Every now and then the entire program stopped at Karl-Heinz (TAR).
@@ -90,6 +90,7 @@ After relocation using "Relox", the functions of the playback routines can be ca
 Where "Basis" is the starting address of the playback routine in the CHIP STORAGE.
 
 As you may have already noticed, I have added new commands to the external playback routine.
+
 The allocation routines OK_AllocDMA and OK_FreeDMA can be used, for example, to play your own samples while the music is playing.
 Unfortunately, these routines only work with non-separated channels, 
 as a desynchronization of the shared channels would have unpredictable consequences.
@@ -128,7 +129,7 @@ The two stereo channels can also be controlled separately:
 
 Name:       OK_SetBalance
 
-Handover:   d0: Master volume left.
+Handover:   d0: Master volume on the left.
             d1: Master volume on the right.
 
 The program Relox
@@ -156,12 +157,12 @@ The following keyboard commands are also available in the file system:
 
 ESC
 
-To exit the file system (=CANCEL).
+To exit the file system requester (=CANCEL).
 
 
 RETURN
 
-Used to confirm the current file system function (=OK).
+Used to confirm the current file system requester (=OK).
 
 
 "a"

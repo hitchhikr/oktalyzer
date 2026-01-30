@@ -1298,6 +1298,8 @@ lbC01EF1E:
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
+                    ; sample mode
+                    ; check mode 8
                     tst.w   (30,a0)
                     bne     lbC01EF46
                     move.w  #64,d2
@@ -1329,6 +1331,7 @@ lbC01EF5A:
                     move.l  (lbL01A130),a0
                     move.l  (lbL01A134),d0
                     lsr.l   #1,d0
+                    ; sample mode
                     tst.w   (30,a2)
                     bne     lbC01EFB6
                     moveq   #64,d3
@@ -2537,6 +2540,7 @@ draw_current_sample_infos:
                     moveq   #56,d0
                     moveq   #0,d1
                     bsr     draw_one_char_alpha_numeric
+                    ; name
                     lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
@@ -2546,13 +2550,16 @@ draw_current_sample_infos:
                     moveq   #1,d1
                     jsr     (draw_text)
                     move.l  (a7),a0
+                    ; length
                     move.l  (20,a0),d2
                     moveq   #46,d0
                     moveq   #2,d1
                     jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     move.l  (a7),a0
+                    ; sample mode
                     tst.w   (30,a0)
                     beq     .empty
+                    ; 4 or B
                     lea     (.infos_header_text,pc),a0
                     moveq   #40,d0
                     moveq   #3,d1
@@ -2580,6 +2587,7 @@ draw_current_sample_infos:
                     moveq   #46,d0
                     moveq   #5,d1
                     jsr     (draw_2_digits_decimal_number_leading_zeroes)
+                    ; allow volume modifications
                     lea     (lbB0177D4),a0
                     bsr     lbC020C8A
                     bra     .sample_mode
@@ -2588,10 +2596,12 @@ draw_current_sample_infos:
                     moveq   #40,d0
                     moveq   #3,d1
                     jsr     (process_commands)
+                    ; forbid volume modifications
                     lea     (lbB0177D4),a0
                     bsr     lbC020C92
 .sample_mode:
                     move.l  (a7)+,a0
+                    ; sample mode
                     move.w  (30,a0),d0
                     lea     (.sample_mode_text,pc),a0
                     move.b  (a0,d0.w),d2
@@ -4063,13 +4073,12 @@ do_load_song:
                     jsr     (read_from_file)
                     bmi     .error
                     lea     (song_chunk_header_loaded_data),a0
-                    cmpi.l  #'OXTA',(a0)+
-                    beq     .new_id
                     subq.l  #4,a0
                     cmpi.l  #'OKTA',(a0)+
                     bne     load_st_mod
-.new_id:
                     cmpi.l  #'SONG',(a0)+
+                    beq     .load_okta_mod
+                    cmpi.l  #'SON2',(a0)+
                     beq     .load_okta_mod
                     bsr     error_ok_struct_error
                     bra     lbC020E96
@@ -4166,11 +4175,14 @@ lbC020F4A:
                     bhi     lbC021024
                     move.w  (26,a5),(24,a5)
                     move.w  d0,(26,a5)
+                    ; 4 mode
                     moveq   #1,d0
                     tst.b   (st_load_tracks_mode)
                     beq     lbC020F90
+                    ; 8 mode
                     moveq   #0,d0
 lbC020F90:
+                    ; sample mode
                     move.w  d0,(30,a5)
                     bra     lbC020F9C
 lbC020F96:
@@ -4296,6 +4308,7 @@ lbC0210D6:
                     move.l  (lbL01B732),d0
                     jsr     (read_from_file)
                     bmi     lbC021138
+                    ; sample mode
                     cmpi.w  #1,(30,a5)
                     beq     lbC02111E
                     move.l  (lbL021140,pc),a0
@@ -4606,7 +4619,7 @@ lbC0214AE:
 SaveSong_MSG:
                     dc.b    'Save Song',0
 OKTASONG_MSG:
-                    dc.b    'OXTASONG'
+                    dc.b    'OKTASON2'
 lbC0214C8:
                     move.l  a0,a5
 lbC0214CA:
@@ -4860,7 +4873,8 @@ lbC02177E:
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
-                    move.w  (30,a0),(lbW01BC68)
+                    ; sample mode
+                    move.w  (30,a0),(save_sample_mode)
                     bsr     get_current_sample_ptr_address
                     move.l  (a0)+,(lbL01BC60)
                     beq     error_what_sample
@@ -4884,8 +4898,9 @@ lbC02177E:
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
+                    ; sample mode changed ?
                     move.w  (30,a0),d0
-                    cmp.w   (lbW01BC68),d0
+                    cmp.w   (save_sample_mode),d0
                     bne     lbC02187A
                     bsr     ask_are_you_sure_requester
                     bne     lbC02187E
@@ -5122,6 +5137,7 @@ lbC021B08:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample,pc),d2
                     lsl.w   #5,d2
+                    ; load with default sample mode
                     move.w  (samples_load_mode),(30,a0,d2.w)
                     bsr     lbC021F9E
                     bmi     lbC021BA6
@@ -5522,8 +5538,10 @@ lbC021F9E:
                     add.w   d2,a0
                     move.l  a0,(lbL021FFC)
                     moveq   #MEMF_CHIP,d1
+                    ; sample mode
                     tst.w   (30,a0)
                     bne     lbC021FC4
+                    ; mode 8 in chip
                     moveq   #MEMF_ANY,d1
 lbC021FC4:
                     ori.l   #MEMF_CLEAR,d1
@@ -6267,9 +6285,9 @@ lbC022B60:
                     beq     inc_polyphony_channels_count
 lbC022B92:
                     cmpi.b  #$C,d0
-                    beq     lbC022C88
+                    beq     dec_current_sample_number
                     cmpi.b  #$D,d0
-                    beq     lbC022C98
+                    beq     inc_current_sample_number
                     btst    #$F,d0
                     bne     lbC022C3A
                     btst    #$B,d0
@@ -6335,22 +6353,29 @@ lbC022C6A:
                     move.l  (a0)+,(a1)+
                 ENDR
                     rts
-lbC022C88:
+
+
+; ===========================================================================
+dec_current_sample_number:
                     lea     (current_sample,pc),a0
                     tst.w   (a0)
-                    beq     lbC022C96
+                    beq     .min
                     subq.w  #1,(a0)
                     bra     draw_current_sample_infos
-lbC022C96:
+.min:
                     rts
-lbC022C98:
+
+; ===========================================================================
+inc_current_sample_number:
                     lea     (current_sample,pc),a0
-                    cmpi.w  #35,(a0)
-                    beq     lbC022CA8
+                    cmpi.w  #36-1,(a0)
+                    beq     .max
                     addq.w  #1,(a0)
                     bra     draw_current_sample_infos
-lbC022CA8:
+.max:
                     rts
+
+; ===========================================================================
 lbC022CAA:
                     subi.b  #18,d0
                     ext.w   d0
@@ -6703,6 +6728,7 @@ OKT_FillDoubleChannels:
                     rts
 
 ; ===========================================================================
+; fill double
 .OKT_FillChannelData:
                     btst    d7,d6
                     beq     .OKT_NoData
@@ -6710,6 +6736,7 @@ OKT_FillDoubleChannels:
                     move.b  (a2),d3
                     beq     .OKT_NoData
                     subq.w  #1,d3
+                    ; === MIDI
                     cmpi.b  #MIDI_OUT,(midi_mode)
                     bne     .OKT_NoMidiOut
                     movem.l d0-d4/a0/a1,-(a7)
@@ -6719,6 +6746,9 @@ OKT_FillDoubleChannels:
                     lsl.w   #5,d0
                     lea     (OKT_Samples),a1
                     add.w   d0,a1
+                    ; sample mode
+                    ; no midi out in mode 4
+                    ; only in mode 8 or b
                     cmpi.w  #1,(30,a1)
                     beq     .lbC023194
                     move.b  (1,a2),d0
@@ -6731,12 +6761,14 @@ OKT_FillDoubleChannels:
                     bhi     .OKT_Max
                     move.b  (3,a2),d2
 .OKT_Max:
+                    ; sample length
                     move.l  (20,a1),d3
                     jsr     (lbC022AA6,pc)
 .lbC023194:
                     movem.l (a7)+,d0-d4/a0/a1
                     bra     .OKT_DoneMidiOut
 .OKT_NoMidiOut:
+                    ; ===
                     moveq   #0,d0
                     move.b  (1,a2),d0
                     lsl.w   #3,d0
@@ -6744,6 +6776,8 @@ OKT_FillDoubleChannels:
                     beq     .OKT_NoData
                     add.w   d0,d0
                     add.w   d0,d0
+                    ; sample mode
+                    ; not in 4 mode
                     cmpi.w  #1,(30,a1,d0.w)
                     beq     .OKT_NoData
                     move.l  d2,(2,a3)
@@ -6864,6 +6898,7 @@ OKT_FillSingleChannels:
                     rts
 
 ; ===========================================================================
+; fill single
 .OKT_FillChannelData:
                     btst    d7,d6
                     beq     .OKT_NoSet
@@ -6880,18 +6915,27 @@ OKT_FillSingleChannels:
                     lsl.w   #5,d0
                     lea     (OKT_Samples),a1
                     add.w   d0,a1
+                    ; sample mode
+                    ; not in 8 mode
+                    ; only in 4 and b modes
                     tst.w   (30,a1)
                     beq     .OKT_Empty
+                    ; sample assigned to corresponding MIDI channel
                     move.b  (1,a2),d0
+                    ; note
                     move.b  d3,d1
                     addq.b  #1,d1
+                    ; volume
                     move.b  (29,a1),d2
+                    ; volume effect
                     cmpi.b  #31,(2,a2)
                     bne     .OKT_Max
                     cmpi.b  #64,(3,a2)
                     bhi     .OKT_Max
+                    ; use volume effect data
                     move.b  (3,a2),d2
 .OKT_Max:
+                    ; length
                     move.l  (20,a1),d3
                     jsr     (lbC022AA6,pc)
 .OKT_Empty:
@@ -6907,6 +6951,8 @@ OKT_FillSingleChannels:
                     add.w   d0,d0
                     lea     (OKT_Samples),a1
                     add.w   d0,a1
+                    ; sample mode
+                    ; not in 8 mode
                     tst.w   (30,a1)
                     beq     .OKT_NoSet
                     move.l  (20,a1),d1
@@ -6951,6 +6997,7 @@ OKT_FillSingleChannels:
 
 ; ===========================================================================
 OKT_HandleEffects_SingleChannels:
+                    ; no effects in midi out mode
                     cmpi.b  #MIDI_OUT,(midi_mode)
                     beq     .OKT_MidiOut
                     lea     (OKT_PattLineBuff),a2
@@ -7378,40 +7425,6 @@ OKT_InitVars:
                     clr.w   (OKT_ActCyc)
                     clr.w   (OKT_Filter)
                     clr.w   (OKT_Dmacon)
-                    rts
-
-; ===========================================================================
-OKT_SetPeriods:
-                    movem.l d2/d3/a2,-(a7)
-                    lea     (OKT_PBuffs),a0
-                    lea     (_CUSTOM|INTREQR),a2
-                    lea     (AUD0PER-INTREQR,a2),a1
-                    moveq   #4-1,d0
-.OKT_SetHWChans:
-                    move.w  (4,a0),d1
-                    beq     .OKT_NoNote
-                    move.w  d1,(a1)
-                    move.w  (a2),(10,a0)
-.OKT_NoNote:
-                    lea     (16,a0),a0
-                    lea     ($10,a1),a1
-                    dbra    d0,.OKT_SetHWChans
-                    lea     (OKT_PBuffs),a0
-                    moveq   #7,d1
-.OKT_SetSWChans:
-                    tst.l   (a0)
-                    beq     .OKT_NoData
-                    clr.w   (8,a0)
-                    move.w  (10,a0),d0
-                    btst    d1,d0
-                    beq     .OKT_NoData
-                    addq.w  #1,(8,a0)
-.OKT_NoData:
-                    lea     (16,a0),a0
-                    addq.w  #1,d1
-                    cmpi.w  #7+4,d1
-                    bne     .OKT_SetSWChans
-                    movem.l (a7)+,d2/d3/a2
                     rts
 
 ; ===========================================================================
@@ -8237,6 +8250,41 @@ lbL023E24:
 ;                    lea     ($10,a1),a1
 ;                    dbra    d0,.OKT_SetChannelsSamples
 ;                    rts
+
+
+; ===========================================================================
+; OKT_SetPeriods:
+                    ; movem.l d2/d3/a2,-(a7)
+                    ; lea     (OKT_PBuffs),a0
+                    ; lea     (_CUSTOM|INTREQR),a2
+                    ; lea     (AUD0PER-INTREQR,a2),a1
+                    ; moveq   #4-1,d0
+; .OKT_SetHWChans:
+                    ; move.w  (4,a0),d1
+                    ; beq     .OKT_NoNote
+                    ; move.w  d1,(a1)
+                    ; move.w  (a2),(10,a0)
+; .OKT_NoNote:
+                    ; lea     (16,a0),a0
+                    ; lea     ($10,a1),a1
+                    ; dbra    d0,.OKT_SetHWChans
+                    ; lea     (OKT_PBuffs),a0
+                    ; moveq   #7,d1
+; .OKT_SetSWChans:
+                    ; tst.l   (a0)
+                    ; beq     .OKT_NoData
+                    ; clr.w   (8,a0)
+                    ; move.w  (10,a0),d0
+                    ; btst    d1,d0
+                    ; beq     .OKT_NoData
+                    ; addq.w  #1,(8,a0)
+; .OKT_NoData:
+                    ; lea     (16,a0),a0
+                    ; addq.w  #1,d1
+                    ; cmpi.w  #7+4,d1
+                    ; bne     .OKT_SetSWChans
+                    ; movem.l (a7)+,d2/d3/a2
+                    ; rts
 
 ; ===========================================================================
 ;lbC0242F4:
@@ -12982,6 +13030,8 @@ lbC02837A:
                     lea     (OKT_Samples),a0
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
+                    ; sample mode
+                    ; set in 4 mode
                     cmpi.w  #1,(30,a0,d0.w)
                     seq     (lbB029EE6)
                     bsr     lbC0284F6
@@ -13405,6 +13455,7 @@ lbC0289C4:
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
+                    ; sample mode
                     tst.w   (30,a0)
                     beq     lbC029EBE
                     clr.l   (24,a0)
@@ -13416,6 +13467,7 @@ lbC0289EE:
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
+                    ; sample mode
                     tst.w   (30,a0)
                     beq     lbC029EBE
                     moveq   #0,d0
@@ -13449,6 +13501,7 @@ lbC028A58:
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
+                    ; sample mode
                     tst.w   (30,a0)
                     beq     lbC029EBE
                     moveq   #0,d0
@@ -13540,6 +13593,7 @@ lbC028B1E:
                     move.w  (current_sample),d1
                     lsl.w   #5,d1
                     add.w   d1,a0
+                    ; sample mode
                     tst.w   (30,a0)
                     beq     lbC029EBE
                     subq.w  #1,d0
@@ -13566,6 +13620,7 @@ lbC028B5A:
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
+                    ; sample mode
                     tst.w   (30,a0)
                     beq     lbC028BBC
                     tst.w   (26,a0)
@@ -13686,6 +13741,8 @@ lbC028C8C:
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
+                    ; sample mode
+                    ; not in mode 8
                     tst.w   (30,a0)
                     beq     lbC028CFC
                     move.l  a0,-(a7)
@@ -15006,6 +15063,8 @@ lbC029C50:
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
+                    ; sample mode
+                    ; mode 4
                     move.w  #1,(30,a0)
                     move.w  #64,(28,a0)
                     bsr     lbC02896C
@@ -20785,7 +20844,7 @@ lbL01BC60:
                     dc.l    0
 lbL01BC64:
                     dc.l    0
-lbW01BC68:
+save_sample_mode:
                     dc.w    0
 midi_mode:
                     dc.b    0
