@@ -20026,7 +20026,7 @@ lbW019514:
 effects_ed_text:
                     dc.b    CMD_SET_SUB_SCREEN
                     dc.b    4
-                    dc.b    CMD_TEXT,1,8,'Oktalyer Effect Editor',0
+                    dc.b    CMD_TEXT,1,8,'Oktalyzer Effect Editor',0
                     dc.b    5,1,9,56,5
                     dc.b    CMD_TEXT,4,11,'Add  Sub  Copy  Cut  Paste  Load  Save  DO!!  Exit',0
                     dc.b    CMD_TEXT,59,8,'Status',0
