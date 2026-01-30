@@ -26,7 +26,7 @@ Done:
 
 - Fix the tracker for AGA and RTG.
 - Make a screen refresh frequency independant new replay.
-- Fix the mirror x/mirror y commands inversion in prefs.
+- Fix the mirror x/mirror y commands inversion in track preferences screen.
 - Polyphony is randomized when clicking on Left-Right command with right mouse button.
 - CLI/WB requester is now correctly positioned on top right regardless of the width of the screen.
 - Chip/Fast memory display will show 'Plenty!' message if there's a too great amount to be available.
