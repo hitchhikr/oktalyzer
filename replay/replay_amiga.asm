@@ -438,7 +438,7 @@ OKT_mix_buffers:
                     move.l  (OKT_volumes_scaling_table_l,pc),a5
                     btst    #1,(OKT_processor-OKT_vars,a6)
                     beq     .OKT_sel_020_table
-                    move.l  (OKT_volumes_scaling_table_l,pc),a5
+                    move.l  (OKT_volumes_scaling_table_r,pc),a5
 .OKT_sel_020_table:
                     add.l   d1,a5
                     bsr     OKT_create_channel_waveform_data
