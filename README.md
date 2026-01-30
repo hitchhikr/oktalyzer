@@ -11,7 +11,7 @@ To do:
 - Patch the older songs volume effects for double channels:
   oxx will be converted to vxx (as we don't need hw channels volumes backup anymore).
   v00 will always be duplicated, vxx values won't be if there's an effect on the other channel.
-- 'OKTASON1' header tag for new Amiga songs (so songs volumes columns aren't fixed again).
+- 'OKTASON1' header tag for new Amiga songs (so songs volume columns aren't fixed again).
 - 'OKTASON2' header tag for Vampire songs (16 bit samples and maybe more).
 - 8/16 bit samples in the vampire version (keep the sample type word in infos).
 - Add the possibility to load wave samples (8 bit but also 16 bit for Vampire).
