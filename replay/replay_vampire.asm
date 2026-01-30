@@ -22,6 +22,7 @@ OKT_AUDIO_PER       equ     $C
 OKT_AUDIO_SIZE      equ     $10
 OKT_AUDIO_HW_CHANS  equ     8
 OKT_AUDIO_ALL_HW    equ     1
+OKT_IN_TRACKER      equ     0
 
 ; ===========================================================================
 OKT_SET_AUDIO_PAN   MACRO

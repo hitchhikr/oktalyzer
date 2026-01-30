@@ -126,6 +126,8 @@ EVT_KEY_RELEASED    equ     14
 RESP_EVT_ROUT_1     equ     10
 RESP_EVT_ROUT_2     equ     14
 
+OKT_IN_TRACKER      equ     1
+
 ; ===========================================================================
 EXEC                MACRO
                     move.l  a6,-(a7)
