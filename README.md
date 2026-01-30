@@ -22,6 +22,7 @@ To do:
 - Understand what the effects editor is for.
 - Add new patterns effects.
 - Change the version number and the bottom picture.
+- And maybe more...
 
 Done:
 
