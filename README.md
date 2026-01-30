@@ -21,6 +21,7 @@ To do:
 - Decode the rest of the source.
 - Understand what the effects editor is for.
 - Add new patterns effects.
+- Change the version number and the bottom picture.
 
 Done:
 
