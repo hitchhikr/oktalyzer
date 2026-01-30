@@ -31,10 +31,6 @@ _LVOCacheClearU     equ     -636
 _LVOCacheClearE     equ     -642
 CACRF_ClearI        equ     8
 
-;tt:
-;                    dcb.b   (256*65),0
-;ftt:
-
 ; ===========================================================================
 OKT_init_buffers:
                     movem.l d1-a6,-(a7)
