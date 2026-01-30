@@ -16,11 +16,25 @@ OKT_AUDIO_BASE      equ     $DFF400
 OKT_AUDIO_DMA       equ     $DFF296
 OKT_AUDIO_ADR       equ     0
 OKT_AUDIO_LEN       equ     4
-OKT_AUDIO_PER       equ     $C
 OKT_AUDIO_VOL       equ     8
+OKT_AUDIO_CTRL      equ     $A
+OKT_AUDIO_PER       equ     $C
 OKT_AUDIO_SIZE      equ     $10
 OKT_AUDIO_HW_CHANS  equ     8
 OKT_AUDIO_ALL_HW    equ     1
+
+; ===========================================================================
+OKT_SET_AUDIO_VOL   macro
+                    ; set panning
+                    move.w  d0,d1
+                    mulu    (a4,d3.w),d0
+                    lsr.w   #7,d0
+                    lsl.w   #8,d0
+                    mulu    (a4,d3.w),d1
+                    lsr.w   #7,d1
+                    or.w    d1,d0
+                    move.w  \1,(OKT_AUDIO_VOL,\2)
+                    endm
 
 ; ===========================================================================
 OKT_custom_init:

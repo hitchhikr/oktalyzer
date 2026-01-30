@@ -47,8 +47,8 @@ OKT_SET_AUDIO_PER   macro
                     move.w  \1,(OKT_AUDIO_PER,\2)
                     endm
 
-OKT_SET_AUDIO_VOL   macro
-                    move.w  \1,(OKT_AUDIO_VOL,\2)
+OKT_SET_AUDIO_CTRL  macro
+                    move.w  \1,(OKT_AUDIO_CTRL,\2)
                     endm
 
 OKT_SET_AUDIO_DMA   macro
@@ -298,13 +298,17 @@ OKT_set_hw_regs:
                     lea     (OKT_channels_volumes-OKT_vars,a6),a0
                     lea     (OKT_channels_data-OKT_vars,a6),a3
                     lea     (OKT_AUDIO_BASE),a1
+                IFNE OKT_AUDIO_ALL_HW
+                    lea     (OKT_panning_table-OKT_vars,a6),a4
+                ENDC
+                    moveq   #0,d3
                     moveq   #8-1,d7
 .OKT_loop:
                     tst.b   CHAN_TYPE(a3)
                     bne     .OKT_skip_double_channel
                     moveq   #0,d0
-                    move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d0
-                    move.b  (a0,d0.w),d0
+                    move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d3
+                    move.b  (a0,d3.w),d0
                     mulu.w  d2,d0
                     lsr.w   #6,d0
                     OKT_SET_AUDIO_VOL d0,a1
@@ -327,8 +331,8 @@ OKT_set_hw_regs:
                     rts
                 ELSE
                     moveq   #0,d0
-                    move.b  (-8,a0,d7.w),d0
-                    move.b  (a0,d0.w),d0
+                    move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d3
+                    move.b  (a0,d3.w),d0
                     mulu.w  d2,d0
                     lsr.w   #6,d0
                     OKT_SET_AUDIO_VOL d0,a1
@@ -336,8 +340,8 @@ OKT_set_hw_regs:
                     lea     (OKT_AUDIO_SIZE,a1),a1
                     subq.w  #1,d7
                     moveq   #0,d0
-                    move.b  (-8,a0,d7.w),d0
-                    move.b  (a0,d0.w),d0
+                    move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d3
+                    move.b  (a0,d3.w),d0
                     mulu.w  d2,d0
                     lsr.w   #6,d0
                     OKT_SET_AUDIO_VOL d0,a1
@@ -529,6 +533,9 @@ OKT_fill_single_channel_data:
                     or.w    d5,d4
                     ; start sample address
                     OKT_SET_AUDIO_ADR d2,a4
+                IFNE OKT_AUDIO_ALL_HW
+                    OKT_SET_AUDIO_CTRL #%0,a4
+                ENDC
                     ; note index
                     move.w  d3,(CHAN_NOTE_S,a3)
                     add.w   d3,d3
@@ -1022,6 +1029,10 @@ OKT_periods_table:
                     dc.w    $358,$328,$2FA,$2D0,$2A6,$280,$25C,$23A,$21A,$1FC,$1E0,$1C5,$1AC,$194
                     dc.w    $17D,$168,$153,$140,$12E,$11D,$10D,$FE,$F0,$E2,$D6,$CA,$BE,$B4,$AA
                     dc.w    $A0,$97,$8F,$87,$7F,$78,$71,0
+                IFNE OKT_AUDIO_ALL_HW
+OKT_panning_table:  dc.b    $af,$50,$50,$af,$af,$50,$50,$af
+                    dc.b    $af,$50,$50,$af,$af,$50,$50,$af
+                ENDC
 OKT_old_cia_timer:
                     dcb.b   2,0
 OKT_global_volume:

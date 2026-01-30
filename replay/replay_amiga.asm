@@ -32,6 +32,11 @@ _LVOCacheClearE     equ     -642
 CACRF_ClearI        equ     8
 
 ; ===========================================================================
+OKT_SET_AUDIO_VOL   macro
+                    move.w  \1,(OKT_AUDIO_VOL,\2)
+                    endm
+
+; ===========================================================================
 OKT_init_buffers:
                     movem.l d1-a6,-(a7)
                     move.l  #OKT_CODE_LENGTH,d0
