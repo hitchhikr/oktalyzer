@@ -65,7 +65,7 @@ OKT_init:
                     lea     (OKT_vars,pc),a6
                     cmp.l   #'OKTA',(a0)+
                     bne     .OKT_error
-                    cmp.l   #'SONG',(a0)+
+                    cmp.l   #'SON2',(a0)+
                     bne     .OKT_error
                     move.l  a0,(OKT_search_hunk_ptr-OKT_vars,a6)
                     move.l  #'CMOD',d0
