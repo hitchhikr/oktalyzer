@@ -24,13 +24,13 @@ TODO:
 
 DONE:
 
-+ Fix the tracker for AGA and RTG.
-+ Make a frequency independant new replay.
-+ Fix the mirror x/mirror y commands inversion in prefs.
-+ Polyphony is randomized when clicking on Left-Right command with right mouse button.
-+ CLI/WB requester is now correctly positioned on top right regardless of the width of the screen.
-+ Chip/Fast memory display will show 'Plenty!' message if there's a too great amount to be available.
-+ Add independant volumes to doubled channels.
-+ Increase the speed to 31.
+- Fix the tracker for AGA and RTG.
+- Make a frequency independant new replay.
+- Fix the mirror x/mirror y commands inversion in prefs.
+- Polyphony is randomized when clicking on Left-Right command with right mouse button.
+- CLI/WB requester is now correctly positioned on top right regardless of the width of the screen.
+- Chip/Fast memory display will show 'Plenty!' message if there's a too great amount to be available.
+- Add independant volumes to doubled channels.
+- Increase the speed to 31.
 
 A work in progress...
