@@ -129,7 +129,7 @@ OKT_init_buffers:
                     move.b  d0,(a0)+
                     move.b  d0,(a0)+
                     ; interleaved table
-                    muls.w  #64,d1
+                    muls.w  #65,d1
                     divs.w  #128,d1
                     move.b  d1,(a1)+
                     move.b  d1,(a1)+
@@ -416,16 +416,24 @@ OKT_mix_buffers:
                     sub.b   d0,d1
                     lsl.w   #8,d1
                     move.l  (OKT_volumes_scaling_table_l,pc),a5
+                    btst    #1,(OKT_processor-OKT_vars,a6)
+                    beq     .OKT_sel_020_table
+                    move.l  (OKT_volumes_scaling_table_r,pc),a5
+.OKT_sel_020_table:
                     add.l   d1,a5
                     bsr     OKT_create_channel_waveform_data
                     add.w   d0,(OKT_mixing_routines_index-OKT_vars,a6)
                     move.l  (a7),d7
                     subq.w  #1,d7
                     move.l  4(a7),a1
+                    move.l  (OKT_volumes_scaling_table_l,pc),a5
                     tst.b   d0
                     bne     .OKT_no_buffer
                     ; wasn't processed
                     move.l  (OKT_channels_notes_buffers,pc),a1
+                    btst    #1,(OKT_processor-OKT_vars,a6)
+                    beq     .OKT_no_buffer
+                    move.l  (OKT_volumes_scaling_table_r,pc),a5
 .OKT_no_buffer:
                     lea     (CHAN_LEN,a2),a3
                     lea     (OKT_channels_volumes-OKT_vars,a6),a0
@@ -435,11 +443,6 @@ OKT_mix_buffers:
                     moveq   #64,d1
                     sub.b   d0,d1
                     lsl.w   #8,d1
-                    move.l  (OKT_volumes_scaling_table_l,pc),a5
-                    btst    #1,(OKT_processor-OKT_vars,a6)
-                    beq     .OKT_sel_020_table
-                    move.l  (OKT_volumes_scaling_table_r,pc),a5
-.OKT_sel_020_table:
                     add.l   d1,a5
                     bsr     OKT_create_channel_waveform_data
                     movem.l (a7)+,d7/a5
