@@ -26,6 +26,7 @@ Done:
 
 - Fixed the tracker for AGA and RTG.
 - Made a screen refresh frequency independant new replay.
+- Made a replay for the Vampire using only hw channels.
 - Fixed the mirror x/mirror y commands inversion in tracker preferences screen.
 - Polyphony settings are now randomized when clicking on Left-Right command with right mouse button.
 - CLI/WB requester is now correctly positioned on top right coords regardless of the width of the screen.
