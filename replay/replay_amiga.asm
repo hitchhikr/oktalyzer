@@ -31,9 +31,17 @@ _LVOCacheClearU     equ     -636
 _LVOCacheClearE     equ     -642
 CACRF_ClearI        equ     8
 
+;tt:
+;                    dcb.b   (256*65),0
+;ftt:
+
 ; ===========================================================================
 OKT_init_buffers:
                     movem.l d1-a6,-(a7)
+                    move.l  4.w,a0
+                    move.b  297(a0),d0
+                    move.b  d0,(OKT_processor)
+
                     move.l  #OKT_CODE_LENGTH,d0
                     moveq   #MEMF_ANY,d1
                     move.l  4.w,a6
@@ -61,14 +69,30 @@ OKT_init_buffers:
                     lea     (OKT_channels_notes_buffers,pc),a0
                     move.l  d0,(a0)
 
+                    move.l  #256*65,d0
+                    btst    #1,(OKT_processor)
+                    beq     .OKT_alloc_000_table
+                    move.l  #256*65*4,d0
+.OKT_alloc_000_table:
+                    moveq   #MEMF_ANY,d1
+                    move.l  4.w,a6
+                    jsr     (_LVOAllocMem,a6)
+                    tst.l   d0
+                    beq     .OKT_error
+                    lea     (OKT_volumes_scaling_table_l,pc),a0
+                    move.l  d0,(a0)
+
+                    btst    #1,(OKT_processor)
+                    beq     .OKT_alloc_020_table_r
                     move.l  #256*65*4,d0
                     moveq   #MEMF_ANY,d1
                     move.l  4.w,a6
                     jsr     (_LVOAllocMem,a6)
                     tst.l   d0
                     beq     .OKT_error
-                    lea     (OKT_volumes_scaling_table,pc),a0
+                    lea     (OKT_volumes_scaling_table_r,pc),a0
                     move.l  d0,(a0)
+.OKT_alloc_020_table_r:
 
                     move.l  #512*8,d0
                     move.l  #MEMF_CLEAR|MEMF_CHIP,d1
@@ -80,10 +104,8 @@ OKT_init_buffers:
                     move.l  d0,(a0)
 
                     lea     (OKT_vars,pc),a6
-                    move.l  4.w,a0
-                    move.b  297(a0),d0
-                    move.b  d0,(OKT_processor-OKT_vars,a6)
-                    move.l  (OKT_volumes_scaling_table,pc),a0
+                    move.l  (OKT_volumes_scaling_table_l-OKT_vars,a6),a0
+                    move.l  (OKT_volumes_scaling_table_r-OKT_vars,a6),a1
                     moveq   #65-1,d6
                     move.l  #256,d2
 .OKT_make_volumes_table_outer:
@@ -97,13 +119,22 @@ OKT_init_buffers:
 .OKT_wrap:
                     muls.w  d2,d0
                     asr.l   #8,d0
-                    neg.b   d0
+                    neg.w   d0
+                    move.w  d0,d1
+                    asr.b   #1,d0
                     move.b  d0,(a0)+
                     btst    #1,(OKT_processor-OKT_vars,a6)
                     beq     .OKT_sel_020_code
                     move.b  d0,(a0)+
                     move.b  d0,(a0)+
                     move.b  d0,(a0)+
+                    ; interleaved table
+                    muls.w  #64,d1
+                    divs.w  #128,d1
+                    move.b  d1,(a1)+
+                    move.b  d1,(a1)+
+                    move.b  d1,(a1)+
+                    move.b  d1,(a1)+
 .OKT_sel_020_code:
                     addq.l  #1,d3
                     dbf     d7,.OKT_make_volumes_table_inner
@@ -134,30 +165,42 @@ OKT_release_buffers:
                     move.l  #512*8,d0
                     jsr     (_LVOFreeMem,a6)
 .OKT_empty_1:
-                    move.l  (OKT_volumes_scaling_table,pc),d0
+                    btst    #1,(OKT_processor)
+                    beq     .OKT_empty_2
+                    move.l  (OKT_volumes_scaling_table_r,pc),d0
                     beq     .OKT_empty_2
                     move.l  d0,a1
                     move.l  #256*65*4,d0
                     jsr     (_LVOFreeMem,a6)
 .OKT_empty_2:
-                    move.l  (OKT_channels_notes_buffers,pc),d0
+                    move.l  (OKT_volumes_scaling_table_l,pc),d0
                     beq     .OKT_empty_3
+                    move.l  d0,a1
+                    move.l  #256*65,d0
+                    btst    #1,(OKT_processor)
+                    beq     .OKT_free_000_table
+                    move.l  #256*65*4,d0
+.OKT_free_000_table:
+                    jsr     (_LVOFreeMem,a6)
+.OKT_empty_3:
+                    move.l  (OKT_channels_notes_buffers,pc),d0
+                    beq     .OKT_empty_4
                     move.l  d0,a1
                     move.l  #512,d0
                     jsr     (_LVOFreeMem,a6)
-.OKT_empty_3:
+.OKT_empty_4:
                     move.l  (OKT_scaling_code_lines,pc),d0
-                    beq     .OKT_empty_4
+                    beq     .OKT_empty_5
                     move.l  d0,a1
                     move.l  #OKT_SCALING_MINES,d0
                     jsr     (_LVOFreeMem,a6)
-.OKT_empty_4:
+.OKT_empty_5:
                     move.l  (OKT_scaling_code_buffer,pc),d0
-                    beq     .OKT_empty_5
+                    beq     .OKT_empty_6
                     move.l  d0,a1
                     move.l  #OKT_CODE_LENGTH,d0
                     jsr     (_LVOFreeMem,a6)
-.OKT_empty_5:
+.OKT_empty_6:
                     movem.l (a7)+,d0-a6
                     rts
 
@@ -372,7 +415,7 @@ OKT_mix_buffers:
                     moveq   #64,d1
                     sub.b   d0,d1
                     lsl.w   #8,d1
-                    move.l  (OKT_volumes_scaling_table,pc),a5
+                    move.l  (OKT_volumes_scaling_table_l,pc),a5
                     add.l   d1,a5
                     bsr     OKT_create_channel_waveform_data
                     add.w   d0,(OKT_mixing_routines_index-OKT_vars,a6)
@@ -392,7 +435,11 @@ OKT_mix_buffers:
                     moveq   #64,d1
                     sub.b   d0,d1
                     lsl.w   #8,d1
-                    move.l  (OKT_volumes_scaling_table,pc),a5
+                    move.l  (OKT_volumes_scaling_table_l,pc),a5
+                    btst    #1,(OKT_processor-OKT_vars,a6)
+                    beq     .OKT_sel_020_table
+                    move.l  (OKT_volumes_scaling_table_l,pc),a5
+.OKT_sel_020_table:
                     add.l   d1,a5
                     bsr     OKT_create_channel_waveform_data
                     movem.l (a7)+,d7/a5
@@ -898,7 +945,9 @@ OKT_scaling_code_lines:
                     dc.l    0
 OKT_channels_notes_buffers:
                     dc.l    0
-OKT_volumes_scaling_table:
+OKT_volumes_scaling_table_l:
+                    dc.l    0
+OKT_volumes_scaling_table_r:
                     dc.l    0
 OKT_final_mixing_buffers:
                     dc.l    0

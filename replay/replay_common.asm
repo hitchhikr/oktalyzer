@@ -66,7 +66,11 @@ OKT_init:
                     cmp.l   #'OKTA',(a0)+
                     bne     .OKT_error
                     cmp.l   #'SON2',(a0)+
+                    beq     .OKT_ok
+                    subq.l  #4,a0
+                    cmp.l   #'SONG',(a0)+
                     bne     .OKT_error
+.OKT_ok:
                     move.l  a0,(OKT_search_hunk_ptr-OKT_vars,a6)
                     move.l  #'CMOD',d0
                     bsr     .OKT_search_hunk
