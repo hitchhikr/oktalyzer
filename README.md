@@ -25,7 +25,7 @@ To do:
 Done:
 
 - Fix the tracker for AGA and RTG.
-- Make a frequency independant new replay.
+- Make a screen refresh frequency independant new replay.
 - Fix the mirror x/mirror y commands inversion in prefs.
 - Polyphony is randomized when clicking on Left-Right command with right mouse button.
 - CLI/WB requester is now correctly positioned on top right regardless of the width of the screen.
