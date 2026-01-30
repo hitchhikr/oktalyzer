@@ -244,8 +244,8 @@ lbC01E09E:
 lbC01E0AA:
                     move.l  #lbC02A772,(current_cmd_ptr)
                     rts
-lbC01E0B6:
-                    move.l  #lbC02B6CC,(current_cmd_ptr)
+fx_editor:
+                    move.l  #do_fx_editor,(current_cmd_ptr)
                     rts
 lbC01E0C2:
                     jsr     (wait_drive_ready)
@@ -2477,7 +2477,6 @@ display_main_menu:
                     bsr     draw_midi_mode_status
                     bsr     draw_copy_blocks_mode
                     bsr     draw_current_sample_infos
-;                    bsr     draw_replay_type
                     bsr     do_draw_available_memory_and_song_metrics
 draw_channels_muted_status:
                     ; x pos
@@ -2624,14 +2623,6 @@ draw_current_sample_infos:
 .sample_mode_text:
                     dc.b    '84B'
                     even
-
-; ===========================================================================
-;draw_replay_type:
-;                    moveq   #68,d0
-;                    moveq   #5,d1
-;                    move.w  (replay_type,pc),d2
-;                    addq.w  #1,d2
-;                    bra     draw_one_char_alpha_numeric
 
 ; ===========================================================================
 draw_available_memory:
@@ -5728,27 +5719,6 @@ lbW0221DC:
                     dc.w    0
 
 ; ===========================================================================
-;dec_replay_type:
-;                    lea     (replay_type,pc),a0
-;                    subq.w  #1,(a0)
-;                    bpl     .reset
-;                    move.w  #1,(a0)
-;.reset:
-;                    bra     draw_replay_type
-;
-;; ===========================================================================
-;inc_replay_type:
-;                    lea     (replay_type,pc),a0
-;                    addq.w  #1,(a0)
-;                    cmpi.w  #2,(a0)
-;                    bne     .reset
-;                    clr.w   (a0)
-;.reset:
-;                    bra     draw_replay_type
-;replay_type:
-;                    dc.w    1
-
-; ===========================================================================
 lbC022202:
                     st      (channels_mute_flags)
                     bra     display_main_menu
@@ -5807,10 +5777,6 @@ go_play:
                     bsr     clear_vumeters
                     bsr     show_pattern_position_bar
                     bsr     lbC02236A
-                    ;move.w  (replay_type,pc),d0
-                    ;add.w   d0,d0
-                    ;move.w  (lbW022336,pc,d0.w),d0
-                    ;jsr     (lbW022336,pc,d0.w)
                     move.w  (OKT_ActSpeed),(OKT_Speed)
                     tst.b   (pattern_play_flag)
                     beq     lbC0222E4
@@ -16375,7 +16341,7 @@ set_colors_palette:
                     rts
 
 ; ===========================================================================
-lbC02B6CC:
+do_fx_editor:
                     lea     (lbW02B712,pc),a0
                     jsr     (process_commands_sequence)
                     bsr     lbC02C054
@@ -16385,10 +16351,10 @@ lbC02B6CC:
                     beq     lbC02B6F2
                     move.l  d0,a0
                     jsr     (a0)
-                    bra     lbC02B6CC
+                    bra     do_fx_editor
 lbC02B6F2:
                     tst.b   (quit_flag)
-                    beq     lbC02B6CC
+                    beq     do_fx_editor
                     lea     (lbL02C53C,pc),a0
                     jmp     (free_mem_block_from_struct)
 lbW02B706:
@@ -18917,7 +18883,7 @@ lbB0177B0:
                     dc.l    lbB0177C2
                     dc.w    %1
                     dc.b    33,6,6,1
-                    dc.l    lbC01F8E8,lbC01E0B6
+                    dc.l    lbC01F8E8,fx_editor
 lbB0177C2:
                     dc.l    lbB0177D4
                     dc.w    %1
@@ -18978,11 +18944,6 @@ lbB017888:
                     dc.w    %1
                     dc.b    60,6,5,1
                     dc.l    lbC01E096,0
-;lbB01789A:
-;                    dc.l    lbL0178AC
-;                    dc.w    %1000000000001
-;                    dc.b    67,5,3,1
-;                    dc.l    inc_replay_type,dec_replay_type
 lbL0178AC:
                     dc.l    lbB0178BE
                     dc.w    %1000000000001
@@ -19179,7 +19140,7 @@ lbW017B6C:
                     dc.w    0
 lbW017B8E:
                     dc.w    2,25
-                    dc.l    lbC01E0B6
+                    dc.l    fx_editor
                     dc.w    2,31
                     dc.l    lbC01E074
                     dc.w    4,15
