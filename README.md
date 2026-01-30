@@ -32,7 +32,7 @@ Done:
 - Chip/Fast memory display will show 'Plenty!' message if there's a too great amount of memory available.
 - Added independant channels volume support to doubled channels.
 - Increased the speed upper limit to 31.
-- Now displays a requester when tryiong to save over a file that already exists.
+- Now displays a requester when trying to save over a file that already exists.
 - Set a new colorscheme for the default config.
 
 A work in progress...
