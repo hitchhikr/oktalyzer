@@ -5785,18 +5785,7 @@ play_pattern:
                     sf      (pattern_play_flag)
                     move.w  (current_viewed_pattern),(OKT_PtPtr)
 go_play:
-;                    tst.w   (replay_type)
-;                    bne     .OKT_replay_type
-;                    tst.b   (ntsc_flag)
-;                    beq     .OKT_replay_type
-;                    bra     error_only_in_pal
-;.OKT_replay_type:
                     bsr     lbC01FF8C
-                    ;move.w  (replay_type,pc),d0
-                    ;add.w   d0,d0
-                    ;lea     (lbW022332,pc),a0
-                    move.w  (a0,d0.w),d0
-                    ;jsr     (a0,d0.w)
                     bsr     lbC02233A
                     bmi     lbC022310
                     lea     (replay_int,pc),a0
@@ -5845,10 +5834,6 @@ lbW022318:
                     dc.w    EVT_RIGHT_PRESSED
                     dc.l    lbC02261E
                     dc.w    EVT_LIST_END
-;lbW022332:
-;                    dc.w    lbC02233A-lbW022332,lbC022386-lbW022332
-;lbW022336:
-;                    dc.w    lbC02236A-lbW022336,lbC022396-lbW022336
 lbC02233A:
                     move.l  #43252,d0
                     moveq   #MEMF_ANY,d1
@@ -5859,7 +5844,7 @@ lbC02233A:
 lbC022356:
                     move.l  d0,(lbL022382)
                     move.l  d0,a0
-                    bsr     OK_Init_1
+                    bsr     OK_Init
                     moveq   #0,d0
                     rts
 lbC02236A:
@@ -5869,13 +5854,6 @@ lbC02236A:
                     rts
 lbL022382:
                     dc.l    0
-;lbC022386:
-;                    move.b  (ntsc_flag,pc),d0
-;                    bsr     OK_Init_2
-;                    moveq   #0,d0
-;                    rts
-;lbC022396:
-;                    rts
 lbC022398:
                     move.l  #lbC0223A4,(current_cmd_ptr)
                     rts
@@ -5919,16 +5897,10 @@ lbW02263A:
 ; ===========================================================================
 replay_int:
                     movem.l d1-d7/a0-a6,-(a7)
-                    ;move.w  (replay_type,pc),d0
-                    ;add.w   d0,d0
-                    ;move.w  (replay_table,pc,d0.w),d0
-                    ;jsr     (replay_table,pc,d0.w)
-                    bsr     OKT_Play_1
+                    bsr     OKT_Play
                     movem.l (a7)+,d1-d7/a0-a6
                     moveq   #0,d0
                     rts
-;replay_table:
-;                    dc.w    OKT_Play_1-replay_table,OKT_Play_2-replay_table
 
 ; ===========================================================================
 install_midi_ints:
@@ -6550,7 +6522,6 @@ current_song_position:
 ; ===========================================================================
 ; ===========================================================================
 ; ===========================================================================
-; replays common core
 OKT_ReplayHandler:
                     bsr     draw_vumeters
                     bsr     OKT_SetHWRegs
@@ -7454,7 +7425,7 @@ OKT_Dmacon:
                     dc.w    0
 
 ; ===========================================================================
-OK_Init_1:
+OK_Init:
                     move.l  a0,-(a7)
                     bsr     OKT_InitVars
                     move.l  (a7)+,a0
@@ -7501,7 +7472,7 @@ lbB023940:
                     dc.b    0
 OK_StartDMAFlg:
                     dc.b    0
-OKT_Play_1:
+OKT_Play:
                     move.b  (OK_StartDMAFlg,pc),d0
                     beq     lbC023956
                     move.w  #DMAF_SETCLR|DMAF_AUDIO,(_CUSTOM|DMACON)
@@ -19129,8 +19100,6 @@ lbW017A58:
                     dc.l    lbC01E09E
                     dc.w    2,76
                     dc.l    lbC02191E
-;                    dc.w    2,80
-;                    dc.l    inc_replay_type
                     dc.w    2,83
                     dc.l    lbC021C72
                     dc.w    2,31
