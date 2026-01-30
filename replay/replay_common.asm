@@ -78,7 +78,7 @@ OKT_init:
                     dbra    d0,.OKT_get_samples_infos
                     move.l  #'SPEE',d0
                     bsr     .OKT_search_hunk
-                    move.w  (a0)+,(OKT_speed-OKT_vars,a6)
+                    move.w  (a0)+,(OKT_default_speed-OKT_vars,a6)
                     move.l  #'SLEN',d0
                     bsr     .OKT_search_hunk
                     move.w  (a0)+,(OKT_patterns_number-OKT_vars,a6)
@@ -194,7 +194,7 @@ OKT_init_variables:
                     clr.w   (OKT_song_pos-OKT_vars,a6)
                     bsr     OKT_set_current_pattern
                     move.w  #-1,(OKT_next_song_pos-OKT_vars,a6)
-                    move.w  (OKT_speed-OKT_vars,a6),(OKT_current_speed-OKT_vars,a6)
+                    move.w  (OKT_default_speed-OKT_vars,a6),(OKT_current_speed-OKT_vars,a6)
                     clr.w   (OKT_action_cycle-OKT_vars,a6)
                     sf      (OKT_filter_status-OKT_vars,a6)
                     clr.w   (OKT_dmacon-OKT_vars,a6)
@@ -238,7 +238,7 @@ OKT_new_row:
                     cmp.w   (OKT_song_length-OKT_vars,a6),d0
                     bne     .OKT_no_song_end
                     clr.w   (OKT_song_pos-OKT_vars,a6)
-                    move.w  (OKT_speed-OKT_vars,a6),(OKT_current_speed-OKT_vars,a6)
+                    move.w  (OKT_default_speed-OKT_vars,a6),(OKT_current_speed-OKT_vars,a6)
 .OKT_no_song_end:
                     bsr     OKT_set_current_pattern
 .OKT_no_new_pattern:
@@ -714,7 +714,7 @@ OKT_port_d:
 OKT_arp_s:
                     move.w  (CHAN_NOTE_S,a3),d2
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
-                    move.b  (OKT_div_table_s,pc,d0.w),d0
+                    move.b  (OKT_arp_div_table,pc,d0.w),d0
                     bne     .OKT_step_2
                     ; step 1: add the first value
                     and.w   #$F0,d1
@@ -731,7 +731,8 @@ OKT_arp_s:
                     and.w   #$F,d1
                     add.w   d1,d2
                     bra     OKT_set_arp_s
-OKT_div_table_s:
+OKT_arp_div_table:
+                    dc.b    0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
                     dc.b    0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
 
 ; ===========================================================================
@@ -763,7 +764,7 @@ OKT_arp2_s:
 OKT_arp3_s:
                     move.w  (CHAN_NOTE_S,a3),d2
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
-                    move.b  (OKT_div_table_3_s,pc,d0.w),d0
+                    move.b  (OKT_arp_div_table_3,pc,d0.w),d0
                     bne     .OKT_step_1
                     ; step 1: don't change anything
                     rts
@@ -784,7 +785,8 @@ OKT_arp3_s:
 .OKT_step_3:
                     ; step 4: play the note
                     bra     OKT_set_arp_s
-OKT_div_table_3_s:
+OKT_arp_div_table_3:
+                    dc.b    0,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3
                     dc.b    0,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3
 
 ; ===========================================================================
@@ -833,7 +835,8 @@ OKT_set_arp_s:
 OKT_arp_d:
                     move.w  (CHAN_BASE_NOTE_D,a3),d2
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
-                    move.b  (OKT_div_table_d,pc,d0.w),d0
+                    lea     (OKT_arp_div_table-OKT_vars,a6),a0
+                    move.b  (a0,d0.w),d0
                     bne     .OKT_step_1
                     and.w   #$F0,d1
                     lsr.w   #4,d1
@@ -850,8 +853,6 @@ OKT_arp_d:
                     add.w   d1,d2
                     move.w  d2,(CHAN_NOTE_D,a3)
                     rts
-OKT_div_table_d:
-                    dc.b    0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
 
 ; ===========================================================================
 OKT_arp2_d:
@@ -882,7 +883,8 @@ OKT_arp2_d:
 OKT_arp3_d:
                     move.w  (CHAN_BASE_NOTE_D,a3),d2
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
-                    move.b  (OKT_div_table_3_d,pc,d0.w),d0
+                    lea     (OKT_arp_div_table_3-OKT_vars,a6),a0
+                    move.b  (a0,d0.w),d0
                     bne     .OKT_step_1
                     rts
 .OKT_step_1:
@@ -901,8 +903,6 @@ OKT_arp3_d:
 .OKT_step_3:
                     move.w  d2,(CHAN_NOTE_D,a3)
                     rts
-OKT_div_table_3_d:
-                    dc.b    0,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3
 
 ; ===========================================================================
 OKT_slide_u_once_d:
@@ -944,7 +944,7 @@ OKT_pos_jump:
 OKT_set_speed:
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
                     bne     .OKT_no_change
-                    and.w   #$F,d1
+                    and.w   #$1F,d1
                     beq     .OKT_no_change
                     move.w  d1,(OKT_current_speed-OKT_vars,a6)
 .OKT_no_change:
@@ -1068,7 +1068,7 @@ OKT_search_hunk_ptr:
                     dc.l    0
 OKT_channels_modes:
                     dcb.b   8,0
-OKT_speed:
+OKT_default_speed:
                     dc.w    0
 OKT_song_length:
                     dc.w    0

@@ -3,9 +3,34 @@ A complete disassembly of the Amiga music tool Oktalyzer originally programmed b
 This is an ongoing effort to improve it, modify it to use the hardware mixing of the Amiga Vampire cards
 and extract an asm replay routine.
 
-Done so far:
+TODO:
 
-- Fixed to work on AGA and RTG machines.
-- Fixed a few bugs.
+- Integrate the new replay into the tracker.
+- Add 'help' gadgets onto the the different screens.
+- Remove the constraints of the sample types (remove the samples types).
+- Patch the older songs volume effects for double channels:
+  oxx will be converted to vxx (as we don't need hw channels volumes backup anymore).
+  v00 will always be duplicated, vxx values won't be if there's an effect on the other channel.
+- OKTASON1 for new Amiga songs (so songs volumes columns aren't fixed again).
+- OKTASON2 for Vampire songs (16 bit samples and maybe more).
+- 8/16 bit samples in the vampire version (keep the sample type word in infos).
+- Add the possibility to load wave samples (8 bit but also 16 bit for Vampire).
+- Add a clear way to set the samples repeat start & length.
+- Set new colors for the default config.
+- Remove the 15 samples/8 tracks modules loading and check for 1 track to 8 tracks modules signatures (and load them).
+- Decode the rest of the source.
+- Understand what the effects editor is for.
+- Add new patterns effects.
+
+DONE:
+
++ Fix the tracker for AGA and RTG.
++ Make a frequency independant new replay.
++ Fix the mirror x/mirror y commands inversion in prefs.
++ Polyphony is randomized when clicking on Left-Right command with right mouse button.
++ CLI/WB requester is now correctly positioned on top right regardless of the width of the screen.
++ Chip/Fast memory display will show 'Plenty!' message if there's a too great amount to be available.
++ Add independant volumes to doubled channels.
++ Increase the speed to 31.
 
 A work in progress...

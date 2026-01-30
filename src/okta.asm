@@ -2705,31 +2705,35 @@ do_draw_available_memory_and_song_metrics:
                     EXEC    AvailMem
                     ; too much memory to display
                     cmp.l   #9999999,d0
-                    blt     .enough_digits_chip
-                    lea     (plenty_chip_text,pc),a0
-                    jsr     (draw_text_with_coords_struct)
-                    bra     .not_enough_digits_chip
-.enough_digits_chip:
+                    blt     .enough_chip
+                    lea     (plenty_text,pc),a0
+                    move.w  #73,d0
+                    move.w  #1,d1
+                    jsr     (draw_text)
+                    bra     .too_much_chip
+.enough_chip:
                     move.l  d0,d2
                     moveq   #73,d0
                     moveq   #1,d1
                     jsr     (draw_7_digits_decimal_number_leading_zeroes)
-.not_enough_digits_chip:
+.too_much_chip:
                     moveq   #MEMF_FAST,d1
                     or.l    (largest_mem_avail,pc),d1
                     EXEC    AvailMem
                     ; too much memory to display
                     cmp.l   #9999999,d0
-                    blt     .enough_digits_fast
-                    lea     (plenty_fast_text,pc),a0
-                    jsr     (draw_text_with_coords_struct)
-                    bra     .not_enough_digits_fast
-.enough_digits_fast:
+                    blt     .enough_fast
+                    lea     (plenty_text,pc),a0
+                    move.w  #73,d0
+                    move.w  #2,d1
+                    jsr     (draw_text)
+                    bra     .too_much_fast
+.enough_fast:
                     move.l  d0,d2
                     moveq   #73,d0
                     moveq   #2,d1
                     jsr     (draw_7_digits_decimal_number_leading_zeroes)
-.not_enough_digits_fast:
+.too_much_fast:
                     move.w  (current_song_metrics_index,pc),d0
                     bne     .patterns
                     bsr     get_patterns_metrics
@@ -2778,10 +2782,8 @@ get_samples_metrics:
                     addq.w  #4,a0
                     dbra    d1,.loop
                     rts
-plenty_chip_text:
-                    dc.b    73,1,'Plenty!',0
-plenty_fast_text:
-                    dc.b    73,2,'Plenty!',0
+plenty_text:
+                    dc.b    'Plenty!',0
 
 ; ===========================================================================
 lbC01FF8C:
@@ -8154,7 +8156,7 @@ lbC0247B8:
                     move.l  (lbL01B7D2),a0
                     jsr     (display_messagebox)
 lbC0247D6:
-                    moveq   #$2F,d0
+                    moveq   #47,d0
                     move.l  (pattern_bitplane_offset,pc),d1
                     subi.l  #main_screen,d1
                     divu.w  #(SCREEN_BYTES*8),d1
@@ -8176,7 +8178,7 @@ lbC0247D6:
                     jsr     (display_messagebox)
 lbC02482C:
                     lea     (lbW01B7DC),a0
-                    moveq   #$2F,d0
+                    moveq   #47,d0
                     move.w  (lbW024874,pc),d1
                     moveq   #2,d2
                     moveq   #2,d3
@@ -8201,7 +8203,7 @@ lbW024874:
 lbC024876:
                     jsr     (display_messagebox)
 lbC02487C:
-                    moveq   #$2F,d0
+                    moveq   #47,d0
                     move.l  (pattern_bitplane_offset,pc),d1
                     subi.l  #main_screen,d1
                     divu.w  #(SCREEN_BYTES*8),d1
@@ -14802,7 +14804,7 @@ samples_load_mode:
 samples_save_format:
                     dc.w    0
 prefs_palette:
-                    dc.w    $0DD,$004,$08A,$004,$19E,$004
+                    dc.w    $F98,$000,$976,$000,$579,$000
 polyphony:
                     dc.b    0,1,2,3,4,5,6,7
 mouse_repeat_delay:
