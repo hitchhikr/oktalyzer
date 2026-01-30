@@ -35,25 +35,29 @@ CHAN_SMP_PROC_LEN_D:rs.l    1           ; 18
 CHAN_LEN:           rs.b    0           ; 22
 
 ; ===========================================================================
-OKT_SET_AUDIO_ADR   macro
+OKT_SET_AUDIO_ADR   MACRO
                     move.l  \1,(OKT_AUDIO_ADR,\2)
-                    endm
+                    ENDM
 
-OKT_SET_AUDIO_LEN   macro
+OKT_SET_AUDIO_LEN   MACRO
                     move.w  \1,(OKT_AUDIO_LEN,\2)
-                    endm
+                    ENDM
 
-OKT_SET_AUDIO_PER   macro
+OKT_SET_AUDIO_PER   MACRO
                     move.w  \1,(OKT_AUDIO_PER,\2)
-                    endm
+                    ENDM
 
-OKT_SET_AUDIO_CTRL  macro
+OKT_SET_AUDIO_VOL   MACRO
+                    move.w  \1,(OKT_AUDIO_VOL,\2)
+                    ENDM
+
+OKT_SET_AUDIO_CTRL  MACRO
                     move.w  \1,(OKT_AUDIO_CTRL,\2)
-                    endm
+                    ENDM
 
-OKT_SET_AUDIO_DMA   macro
+OKT_SET_AUDIO_DMA   MACRO
                     move.w  \1,OKT_AUDIO_DMA
-                    endm
+                    ENDM
 
 ; ===========================================================================
 OKT_init:
@@ -335,6 +339,7 @@ OKT_set_hw_regs:
                     move.b  (a0,d3.w),d0
                     mulu.w  d2,d0
                     lsr.w   #6,d0
+                    OKT_SET_AUDIO_PAN
                     OKT_SET_AUDIO_VOL d0,a1
                     lea     (CHAN_LEN,a3),a3
                     lea     (OKT_AUDIO_SIZE,a1),a1
@@ -344,6 +349,7 @@ OKT_set_hw_regs:
                     move.b  (a0,d3.w),d0
                     mulu.w  d2,d0
                     lsr.w   #6,d0
+                    OKT_SET_AUDIO_PAN
                     OKT_SET_AUDIO_VOL d0,a1
                     lea     (CHAN_LEN,a3),a3
                     lea     (OKT_AUDIO_SIZE,a1),a1
