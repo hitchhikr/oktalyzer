@@ -22,6 +22,7 @@ To do:
 - Understand what the effects editor is for.
 - Add new patterns effects.
 - Change the version number and the bottom picture.
+- Display a requester when saving over a file that already exists.
 - And maybe more...
 
 Done:
