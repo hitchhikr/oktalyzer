@@ -20038,6 +20038,7 @@ effects_ed_text:
                     dc.b    CMD_TEXT,1,15,'Effect Conversion Filter Term Table',0
                     dc.b    5,1,16,78,14
                     dc.b    CMD_END
+                    even
 lbW0195F4:
                     dc.l    lbW019606
                     dc.w    %1
