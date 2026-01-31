@@ -13,12 +13,14 @@ To do:
 - 'OKTASON1' header tag for new Amiga songs (so songs volume columns aren't fixed again).
 - 'OKTASON2' header tag for Vampire songs (16 bit samples and maybe more).
 - 16 bit samples support in the Vampire version (keep the sample type word in infos).
-- Add the possibility to load riff samples (8 bit but also 16 bit for Vampire).
+- The possibility to load riff samples (8 bit but also 16 bit for Vampire).
 - Add a way to set the samples repeat start & length from range selected with the mouse.
 - Remove the 15 samples/8 tracks modules loading and check for 1 track to 8 tracks modules signatures (and load them).
 - Decode the rest of the source.
 - Add new pattern effects.
 - Change the version number and the bottom picture.
+- Selecting pattern blocks with the mouse.
+- Using (Shift)TAB key to navigate among the tracks.
 - And maybe more...
 
 Done:
