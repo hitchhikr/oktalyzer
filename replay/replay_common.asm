@@ -7,10 +7,10 @@
 
 ; ===========================================================================
 _LVOSupervisor	    equ	    -30
-CIATALO             equ     $400
-CIATAHI             equ     $500
+CIATBLO             equ     $600
+CIATBHI             equ     $700
 CIAICR              equ     $D00
-CIACRA              equ     $E00
+CIACRB              equ     $F00
 SMPS_NUMBER         equ     36
 		            rsreset
 SMP_NAME:           rs.b    20

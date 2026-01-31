@@ -47,20 +47,20 @@ OKT_custom_init:
                     move.l  (a0),(OKT_old_irq-OKT_vars,a6)
                     lea     (OKT_cia_int-OKT_vars,a6),a2
                     move.l	a2,(a0)
-                    lea     $BFD000+CIATALO,a3
+                    lea     $BFD000+CIATBLO,a3
                     lea     (OKT_old_cia_timer-OKT_vars,a6),a2
-                    move.b  #$7F,CIAICR-CIATALO(a3)
+                    move.b  #$7F,CIAICR-CIATBLO(a3)
                     move.b  (a3),(a2)+
-                    move.b  CIATAHI-CIATALO(a3),(a2)
+                    move.b  CIATBHI-CIATBLO(a3),(a2)
                     move.l	#1773447,d0
 ; NTSC
 ;                    move.l  #1789773,d0
                     divu    #125,d0
                     move.b  d0,(a3)
                     lsr.w   #8,d0
-                    move.b  d0,CIATAHI-CIATALO(a3)
-                    move.b  #%10000001,CIAICR-CIATALO(a3)
-                    move.b  #%10001,CIACRA-CIATALO(a3)
+                    move.b  d0,CIATBHI-CIATBLO(a3)
+                    move.b  #%10000010,CIAICR-CIATBLO(a3)
+                    move.b  #%10001,CIACRB-CIATBLO(a3)
                     move.w  #$E000,($9A-$A0,a1)
                     move.w  #$8200,($96-$A0,a1)
                     moveq   #1,d0
@@ -83,11 +83,11 @@ OKT_stop:
                     move.w  d0,($458-$400,a2)
                     move.w  d0,($468-$400,a2)
                     move.w  d0,($478-$400,a2)
-                    lea     $BFD000+CIATALO,a0
+                    lea     $BFD000+CIATBLO,a0
                     lea     (OKT_old_cia_timer-OKT_vars,a6),a1
                     move.b  (a1)+,(a0)
-                    move.b  (a1),CIATAHI-CIATALO(a0)
-                    move.b  #%10000,CIACRA-CIATALO(a0)
+                    move.b  (a1),CIATBHI-CIATBLO(a0)
+                    move.b  #%10000,CIACRB-CIATBLO(a0)
                     move.l  (OKT_vbr-OKT_vars,a6),a0
                     move.l  (OKT_old_irq-OKT_vars,a6),(a0)
                     move.w	#$C000,($DFF09A)
