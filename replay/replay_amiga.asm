@@ -21,7 +21,6 @@ OKT_AUDIO_PER       equ     6
 OKT_AUDIO_VOL       equ     8
 OKT_AUDIO_SIZE      equ     $10
 OKT_AUDIO_HW_CHANS  equ     4
-OKT_AUDIO_ALL_HW    equ     0
 OKT_IN_TRACKER      equ     0
 MEMF_ANY            equ     0
 MEMF_CHIP           equ     2

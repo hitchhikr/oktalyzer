@@ -4073,6 +4073,9 @@ do_load_song:
                     subq.l  #4,a0
                     cmpi.l  #'SNG2',(a0)+
                     beq     .load_okta_mod
+                    subq.l  #4,a0
+                    cmpi.l  #'SNG3',(a0)+
+                    beq     .load_okta_mod
                     bsr     error_ok_struct_error
                     bra     lbC020E96
 
@@ -4596,7 +4599,7 @@ lbC02146A:
                     lea     (current_file_name),a0
                     jsr     (open_file_for_writing)
                     bmi     .lbC0214AA
-                    lea     (OKTASONG_MSG,pc),a0
+                    lea     (oktalyzer_song_header_text,pc),a0
                     moveq   #8,d0
                     jsr     (write_to_file)
                     bmi     .lbC0214AA
@@ -4613,8 +4616,13 @@ lbC02146A:
                     jmp     (close_file)
 SaveSong_MSG:
                     dc.b    'Save Song',0
-OKTASONG_MSG:
+            IFD OKT_AUDIO_ALL_HW
+oktalyzer_song_header_text:
+                    dc.b    'OKTASNG3'
+            ELSE
+oktalyzer_song_header_text:
                     dc.b    'OKTASNG2'
+            ENDC
 lbC0214C8:
                     move.l  a0,a5
 lbC0214CA:
@@ -12946,8 +12954,8 @@ lbC0289C4:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     ; sample mode
-                    tst.w   (30,a0)
-                    beq     lbC029EBE
+;                    tst.w   (30,a0)
+;                    beq     lbC029EBE
                     clr.l   (24,a0)
                     bra     lbC028B58
 lbC0289EE:
@@ -12958,8 +12966,8 @@ lbC0289EE:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     ; sample mode
-                    tst.w   (30,a0)
-                    beq     lbC029EBE
+;                    tst.w   (30,a0)
+;                    beq     lbC029EBE
                     moveq   #0,d0
                     move.w  (24,a0),d0
                     add.l   d0,d0
@@ -12992,8 +13000,8 @@ lbC028A58:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     ; sample mode
-                    tst.w   (30,a0)
-                    beq     lbC029EBE
+;                    tst.w   (30,a0)
+;                    beq     lbC029EBE
                     moveq   #0,d0
                     move.w  (24,a0),d0
                     add.l   d0,d0
@@ -13084,8 +13092,8 @@ lbC028B1E:
                     lsl.w   #5,d1
                     add.w   d1,a0
                     ; sample mode
-                    tst.w   (30,a0)
-                    beq     lbC029EBE
+;                    tst.w   (30,a0)
+;                    beq     lbC029EBE
                     subq.w  #1,d0
                     beq     lbC028B42
                     subq.w  #1,d0
@@ -14713,8 +14721,8 @@ lbC029EAE:
                     jmp     (error_what_position)
 lbC029EB6:
                     jmp     (error_sample_too_long)
-lbC029EBE:
-                    jmp     (error_only_in_mode_4_b)
+;lbC029EBE:
+;                    jmp     (error_only_in_mode_4_b)
 lbC029EC6:
                     jmp     (error_zero_not_found)
 lbL029ECE:
