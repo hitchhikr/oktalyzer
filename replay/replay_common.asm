@@ -65,7 +65,10 @@ OKT_init:
                     lea     (OKT_vars,pc),a6
                     cmp.l   #'OKTA',(a0)+
                     bne     .OKT_error
-                    cmp.l   #'SON2',(a0)+
+                    cmp.l   #'SNG2',(a0)+
+                    beq     .OKT_ok
+                    subq.l  #4,a0
+                    cmp.l   #'SNG3',(a0)+
                     beq     .OKT_ok
                     subq.l  #4,a0
                     cmp.l   #'SONG',(a0)+
@@ -1079,8 +1082,7 @@ OKT_channels_volumes:
 ; ===
 OKT_filter_status:
                     dc.b    0
-OKT_processor:
-                    dc.b    0
+                    even
 OKT_dmacon:
                     dc.w    0
 OKT_patterns_number:

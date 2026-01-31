@@ -22,6 +22,7 @@ To do:
 - Selecting pattern blocks with the mouse.
 - Using (Shift)TAB key to navigate among the tracks.
 - Add scrollbars in files requesters.
+- Create an option to display rows numbers in decimal or hexdecimal.
 - And maybe more...
 
 Done:

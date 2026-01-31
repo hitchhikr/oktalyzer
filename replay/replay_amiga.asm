@@ -21,7 +21,6 @@ OKT_AUDIO_PER       equ     6
 OKT_AUDIO_VOL       equ     8
 OKT_AUDIO_SIZE      equ     $10
 OKT_AUDIO_HW_CHANS  equ     4
-OKT_IN_TRACKER      equ     0
 MEMF_ANY            equ     0
 MEMF_CHIP           equ     2
 MEMF_CLEAR          equ     $10000
@@ -102,7 +101,6 @@ OKT_init_buffers:
 
                     lea     (OKT_vars,pc),a6
                     move.l  (OKT_volumes_scaling_table_l-OKT_vars,a6),a0
-                    ; interleaved table
                     move.l  (OKT_volumes_scaling_table_r-OKT_vars,a6),a1
                     moveq   #65-1,d6
                     move.l  #256,d2
@@ -311,8 +309,6 @@ OKT_get_vbr:
                     rts
 .OKT_get_it:
                     move.b  297(a6),d0
-                    lea     OKT_processor(pc),a1
-                    move.b  d0,(a1)
                     btst    #0,d0
                     beq.b   .OKT_no_processor
                     dc.w    $4E7A,$0801
@@ -333,7 +329,7 @@ OKT_audio_int:
                     move.w  #$f00,$dff180
                     bsr     OKT_main
                     move.w  #0,$dff180
-                    lea	    $DFF0A0,a1
+                    lea     $DFF0A0,a1
                     move.l  (OKT_final_mixing_buffers-OKT_vars,a6),a0
                     tst.b   (OKT_buffer_flip-OKT_vars,a6)
                     beq     .OKT_buffer_2
@@ -406,7 +402,11 @@ OKT_mix_buffers:
                     move.b  (a0,d0.w),d0
                     moveq   #64,d1
                     sub.b   d0,d1
-                    lsl.w   #8,d1
+                    lsl.l   #8,d1
+                    btst    #1,(OKT_processor-OKT_vars,a6)
+                    beq     .OKT_020_table_l
+                    lsl.l   #2,d1
+.OKT_020_table_l:
                     move.l  (OKT_volumes_scaling_table_r,pc),a5
                     add.l   d1,a5
                     bsr     OKT_create_channel_waveform_data
@@ -428,7 +428,11 @@ OKT_mix_buffers:
                     move.b  (a0,d0.w),d0
                     moveq   #64,d1
                     sub.b   d0,d1
-                    lsl.w   #8,d1
+                    lsl.l   #8,d1
+                    btst    #1,(OKT_processor-OKT_vars,a6)
+                    beq     .OKT_020_table_r
+                    lsl.l   #2,d1
+.OKT_020_table_r:
                     add.l   d1,a5
                     bsr     OKT_create_channel_waveform_data
                     movem.l (a7)+,d7/a5
@@ -518,16 +522,15 @@ OKT_create_channel_waveform_data:
                     move.w  #$4e75,(a4)
                     btst    #1,(OKT_processor-OKT_vars,a6)
                     beq     .OKT_no_cut_code
-                    movem.l a0/a1/a2/a3/a6,-(a7)
+                    movem.l a0/a1/a2/a3/a5/a6,-(a7)
                     move.l  4.w,a6
                     jsr     (_LVOCacheClearU,a6)
-                    movem.l (a7)+,a0/a1/a2/a3/a6
+                    movem.l (a7)+,a0/a1/a2/a3/a5/a6
 .OKT_no_cut_code:
                     ; source waveform
                     move.l  (CHAN_SMP_PROC_D,a3),a0
                     move.l  (OKT_code_ptr-OKT_vars,a6),a4
                     moveq   #0,d0
-                    moveq   #0,d1
                     move.w  (CHAN_NOTE_D,a3),d3
                     add.w   d3,d3
                     add.w   d3,d3
@@ -538,13 +541,13 @@ OKT_create_channel_waveform_data:
                     beq     .OKT_no_patch
                     move.l  (OKT_patched_addr-OKT_vars,a6),a4
                     move.w  (OKT_patched_instr-OKT_vars,a6),(a4)
-                    clr.l   (OKT_patched_addr)
+                    clr.l   (OKT_patched_addr-OKT_vars,a6)
                     btst    #1,(OKT_processor-OKT_vars,a6)
                     beq     .OKT_no_patch
-                    movem.l a0/a1/a2/a3/a6,-(a7)
+                    movem.l a0/a1/a2/a3/a5/a6,-(a7)
                     move.l  4.w,a6
                     jsr     (_LVOCacheClearU,a6)
-                    movem.l (a7)+,a0/a1/a2/a3/a6
+                    movem.l (a7)+,a0/a1/a2/a3/a5/a6
 .OKT_no_patch:
                     ; new source pos
                     move.l  (CHAN_SMP_PROC_D,a3),d0
@@ -922,7 +925,8 @@ OKT_lengths_ptr:
                     dc.l    0
 OKT_buffer_flip:
                     dc.b    0
-                    even
+OKT_processor:
+                    dc.b    0
 OKT_patched_addr:
                     dc.l    0
 OKT_patched_instr:

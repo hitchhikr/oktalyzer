@@ -2527,9 +2527,9 @@ draw_channel_inactive_status:
 ; ===========================================================================
 draw_current_speed:
                     move.w  d0,d2
-                    moveq   #14,d0
+                    moveq   #13,d0
                     moveq   #5,d1
-                    bra     draw_one_char_alpha_numeric
+                    bra     draw_2_digits_hex_number
 
 ; ===========================================================================
 draw_current_sample_infos:
@@ -5572,7 +5572,7 @@ lbL021FFC:
 
 ; ===========================================================================
 inc_replay_speed:
-                    cmpi.w  #15,(OKT_Speed)
+                    cmpi.w  #31,(OKT_Speed)
                     beq     .max
                     addq.w  #1,(OKT_Speed)
 .max:

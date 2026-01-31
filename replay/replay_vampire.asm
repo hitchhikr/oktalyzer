@@ -22,7 +22,6 @@ OKT_AUDIO_PER       equ     $C
 OKT_AUDIO_SIZE      equ     $10
 OKT_AUDIO_HW_CHANS  equ     8
 OKT_AUDIO_ALL_HW    equ     1
-OKT_IN_TRACKER      equ     0
 
 ; ===========================================================================
 OKT_SET_AUDIO_PAN   MACRO
@@ -106,8 +105,6 @@ OKT_get_vbr:
                     rts
 .OKT_get_it:
                     move.b  297(a6),d0
-                    lea     OKT_processor(pc),a1
-                    move.b  d0,(a1)
                     btst    #0,d0
                     beq.b   .OKT_no_processor
                     ; turn vampire extras on
