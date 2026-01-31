@@ -207,7 +207,7 @@ OKT_custom_init:
                     add.l   #$70,d0
                     move.l  d0,(OKT_vbr-OKT_vars,a6)
                     sf      (OKT_buffer_flip-OKT_vars,a6)
-                    lea     ($DFF0A0),a1
+                    lea     (OKT_AUDIO_BASE),a1
                     move.w  #$4780,($9A-$A0,a1)
                     move.w  #$F,($96-$A0,a1)
                     move.w  #$FF,($9E-$A0,a1)
@@ -274,9 +274,9 @@ OKT_custom_init:
 
 ; ===========================================================================
 OKT_stop:
-                    movem.l d0/d1/a0/a1/a2/a6,-(a7)
+                    movem.l d0/a0/a1/a2/a6,-(a7)
                     lea     (OKT_vars,pc),a6
-                    lea     ($DFF096),a2
+                    lea     (OKT_AUDIO_DMA),a2
                     move.w  #$7FFF,($9C-$96,a2)
                     move.w  #$6780,($9A-$96,a2)
                     move.w  #%1111,(a2)
@@ -296,7 +296,7 @@ OKT_stop:
                     move.l  (OKT_vbr-OKT_vars,a6),a0
                     move.l  (OKT_old_irq-OKT_vars,a6),(a0)
                     move.w	#$C000,($9A-$96,a2)
-                    movem.l (a7)+,d0/d1/a0/a1/a2/a6
+                    movem.l (a7)+,d0/a0/a1/a2/a6
                     rts
 
 ; ===========================================================================
@@ -327,7 +327,7 @@ OKT_audio_int:
                     beq     .OKT_no_int
                     move.w	d0,$9C-$1E(a1)
                     bsr     OKT_main
-                    lea     $DFF0A0,a1
+                    lea     OKT_AUDIO_BASE,a1
                     move.l  (OKT_final_mixing_buffers-OKT_vars,a6),a0
                     tst.b   (OKT_buffer_flip-OKT_vars,a6)
                     beq     .OKT_buffer_2

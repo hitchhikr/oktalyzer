@@ -40,10 +40,9 @@ OKT_custom_init:
                     bsr     OKT_get_vbr
                     add.l   #$78,d0
                     move.l  d0,(OKT_vbr-OKT_vars,a6)
-                    lea     ($DFF0A0),a1
-                    move.w  #$4000,($9A-$A0,a1)
-                    move.w  #%11111111,($296-$A0,a1)
-                    move.w  #$FF,($9E-$A0,a1)
+                    move.w  #$4000,($DFF09A)
+                    move.w  #%11111111,(OKT_AUDIO_DMA)
+                    move.w  #$FF,($DFF09E)
                     move.l  (OKT_vbr-OKT_vars,a6),a0
                     move.l  (a0),(OKT_old_irq-OKT_vars,a6)
                     lea     (OKT_cia_int-OKT_vars,a6),a2
@@ -69,21 +68,21 @@ OKT_custom_init:
 
 ; ===========================================================================
 OKT_stop:
-                    movem.l d0/d1/a0/a1/a2/a6,-(a7)
+                    movem.l d0/a0/a1/a2/a6,-(a7)
                     lea     (OKT_vars,pc),a6
-                    lea     ($DFF296),a2
-                    move.w  #$7FFF,($9C-$96,a2)
-                    move.w  #$4000,($9A-$96,a2)
+                    lea     (OKT_AUDIO_BASE),a2
+                    move.w  #$7FFF,($DFF09C)
+                    move.w  #$4000,($DFF09A)
                     move.w  #%11111111,(a2)
                     moveq   #0,d0
-                    move.w  d0,($408-$96,a2)
-                    move.w  d0,($418-$96,a2)
-                    move.w  d0,($428-$96,a2)
-                    move.w  d0,($438-$96,a2)
-                    move.w  d0,($448-$96,a2)
-                    move.w  d0,($458-$96,a2)
-                    move.w  d0,($468-$96,a2)
-                    move.w  d0,($478-$96,a2)
+                    move.w  d0,($408-$400,a2)
+                    move.w  d0,($418-$400,a2)
+                    move.w  d0,($428-$400,a2)
+                    move.w  d0,($438-$400,a2)
+                    move.w  d0,($448-$400,a2)
+                    move.w  d0,($458-$400,a2)
+                    move.w  d0,($468-$400,a2)
+                    move.w  d0,($478-$400,a2)
                     lea     $BFD000+CIATALO,a0
                     lea     (OKT_old_cia_timer-OKT_vars,a6),a1
                     move.b  (a1)+,(a0)
@@ -91,8 +90,8 @@ OKT_stop:
                     move.b  #%10000,CIACRA-CIATALO(a0)
                     move.l  (OKT_vbr-OKT_vars,a6),a0
                     move.l  (OKT_old_irq-OKT_vars,a6),(a0)
-                    move.w	#$C000,($9A-$96,a2)
-                    movem.l (a7)+,d0/d1/a0/a1/a2/a6
+                    move.w	#$C000,($DFF09A)
+                    movem.l (a7)+,d0/a0/a1/a2/a6
                     rts
 
 ; ===========================================================================
