@@ -125,9 +125,7 @@ OKT_cia_int:
                     lea     $DFF09C,a0
                     move.w  #$2000,(a0)
                     move.w  #$2000,(a0)
-                    move.w  #$f0,$dff180
                     bsr     OKT_replay_handler
-                    move.w  #$0,$dff180
                     movem.l (a7)+,d0-a6
                     rte
 

@@ -326,9 +326,7 @@ OKT_audio_int:
                     and.w   (OKT_audio_int_single_bit,pc),d0
                     beq     .OKT_no_int
                     move.w	d0,$9C-$1E(a1)
-                    move.w  #$f00,$dff180
                     bsr     OKT_main
-                    move.w  #0,$dff180
                     lea     $DFF0A0,a1
                     move.l  (OKT_final_mixing_buffers-OKT_vars,a6),a0
                     tst.b   (OKT_buffer_flip-OKT_vars,a6)
@@ -365,9 +363,7 @@ OKT_cia_int:
                     lea     $DFF09C,a0
                     move.w  #$2000,(a0)
                     move.w  #$2000,(a0)
-                    move.w  #$f0,$dff180
                     bsr     OKT_replay_handler
-                    move.w  #$0,$dff180
                     movem.l (a7)+,d0-a6
                     rte
 
