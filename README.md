@@ -10,8 +10,8 @@ To do:
 - Patch the older songs volume effects for double channels:<br>
   oxx will be converted to vxx (as we don't need hw channels volumes backup anymore).<br>
   v00 will always be duplicated, vxx values won't be if there's an effect on the other channel.
-- 'OKTASON1' header tag for new Amiga songs (so songs volume columns aren't fixed again).
-- 'OKTASON2' header tag for Vampire songs (16 bit samples and maybe more).
+- 'OKTASNG1' header tag for new Amiga songs (so songs volume columns aren't fixed again).
+- 'OKTASNG2' header tag for Vampire songs (16 bit samples and maybe more).
 - 16 bit samples support in the Vampire version (keep the sample type word in infos).
 - The possibility to load riff samples (8 bit but also 16 bit for Vampire).
 - Add a way to set the samples repeat start & length from range selected with the mouse.
@@ -22,7 +22,7 @@ To do:
 - Selecting pattern blocks with the mouse.
 - Using (Shift)TAB key to navigate among the tracks.
 - Add scrollbars in files requesters.
-- Create an option to display rows numbers in decimal or hexdecimal.
+- Create an option to display rows numbers in decimal or hexadecimal.
 - And maybe more...
 
 Done:
