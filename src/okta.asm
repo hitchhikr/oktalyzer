@@ -11793,13 +11793,14 @@ copy_rootblock_to_track_buffer:
 bootblock_data:
                     BBID_DOS
                     ; checksum,rootblock
-                    dc.l    $C0200F19,880
+                    dc.l    $C0200F19
+                    dc.l    880
                     lea     (.dos_name,pc),a1
                     jsr     (_LVOFindResident,a6)
                     tst.l   d0
                     beq     .error
                     move.l  d0,a0
-                    move.l  (22,a0),a0
+                    move.l  (RT_INIT,a0),a0
                     moveq   #OK,d0
 .exit:
                     rts

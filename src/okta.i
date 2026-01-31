@@ -20,6 +20,7 @@
                     include "devices/input.i"
                     include "devices/inputevent.i"
                     include "exec/io.i"
+                    include "exec/resident.i"
                     include "lvo/exec_lib.i"
                     include "lvo/dos_lib.i"
                     include "lvo/graphics_lib.i"
