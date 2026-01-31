@@ -36,7 +36,6 @@ OKT_init_buffers:
                     move.l  4.w,a0
                     move.b  297(a0),d0
                     move.b  d0,(OKT_processor)
-
                     move.l  #OKT_CODE_LENGTH,d0
                     moveq   #MEMF_ANY,d1
                     move.l  4.w,a6
@@ -45,7 +44,6 @@ OKT_init_buffers:
                     beq     .OKT_error
                     lea     (OKT_scaling_code_buffer,pc),a0
                     move.l  d0,(a0)
-
                     move.l  #OKT_SCALING_LINES,d0
                     moveq   #MEMF_ANY,d1
                     move.l  4.w,a6
@@ -54,7 +52,6 @@ OKT_init_buffers:
                     beq     .OKT_error
                     lea     (OKT_scaling_code_lines,pc),a0
                     move.l  d0,(a0)
-
                     move.l  #512,d0
                     move.l  #MEMF_CLEAR|MEMF_ANY,d1
                     move.l  4.w,a6
@@ -63,7 +60,6 @@ OKT_init_buffers:
                     beq     .OKT_error
                     lea     (OKT_channels_notes_buffers,pc),a0
                     move.l  d0,(a0)
-
                     move.l  #256*65,d0
                     btst    #1,(OKT_processor)
                     beq     .OKT_alloc_table_020_l
@@ -76,7 +72,6 @@ OKT_init_buffers:
                     beq     .OKT_error
                     lea     (OKT_volumes_scaling_table_l,pc),a0
                     move.l  d0,(a0)
-
                     move.l  #256*65,d0
                     btst    #1,(OKT_processor)
                     beq     .OKT_alloc_table_020_r
@@ -89,7 +84,6 @@ OKT_init_buffers:
                     beq     .OKT_error
                     lea     (OKT_volumes_scaling_table_r,pc),a0
                     move.l  d0,(a0)
-
                     move.l  #512*8,d0
                     move.l  #MEMF_CLEAR|MEMF_CHIP,d1
                     move.l  4.w,a6
@@ -98,7 +92,6 @@ OKT_init_buffers:
                     beq     .OKT_error
                     lea     (OKT_final_mixing_buffers,pc),a0
                     move.l  d0,(a0)
-
                     lea     (OKT_vars,pc),a6
                     move.l  (OKT_volumes_scaling_table_l-OKT_vars,a6),a0
                     move.l  (OKT_volumes_scaling_table_r-OKT_vars,a6),a1
@@ -135,7 +128,6 @@ OKT_init_buffers:
                     dbf     d7,.OKT_make_volumes_table_inner
                     subq.l  #4,d2
                     dbf     d6,.OKT_make_volumes_table_outer
-
                     move.l  (OKT_scaling_code_buffer-OKT_vars,a6),a0
                     move.l  a0,a1
                     add.l   #OKT_CODE_POINTERS,a1
@@ -319,12 +311,6 @@ OKT_get_vbr:
                     moveq   #0,d0
                     rte
 
-total:
-                    dc.w    0
-mini:
-                    dc.w    0
-
-
 ; ===========================================================================
 OKT_audio_int:
                     movem.l	d0-a6,-(a7)
@@ -345,7 +331,7 @@ OKT_audio_int:
                     btst    #0,d1
                     beq     .OKT_channel_1
                     move.l  a0,(a1)
-.OKT_channel_1:
+.OKT_channel_1:²
                     lea     (512*2,a0),a0
                     btst    #1,d1
                     beq     .OKT_channel_2
@@ -940,7 +926,6 @@ OKT_scaling_code_lines:
                     dc.l    0
 OKT_channels_notes_buffers:
                     dc.l    0
-tt:
 OKT_volumes_scaling_table_l:
                     dc.l    0
 OKT_volumes_scaling_table_r:
