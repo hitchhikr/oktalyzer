@@ -11,7 +11,7 @@ OKT_SCALING_CODE:   rs.b    70800
 OKT_CODE_POINTERS:  rs.l    36
 OKT_LENGTHS:        rs.w    36*2
 OKT_CODE_LENGTH:    rs.b    0
-OKT_SCALING_MINES   equ     19552
+OKT_SCALING_LINES   equ     19552
 OKT_BUFFERS_LENGTH  equ     312
 OKT_AUDIO_BASE      equ     $DFF0A0
 OKT_AUDIO_DMA       equ     $DFF096
@@ -46,7 +46,7 @@ OKT_init_buffers:
                     lea     (OKT_scaling_code_buffer,pc),a0
                     move.l  d0,(a0)
 
-                    move.l  #OKT_SCALING_MINES,d0
+                    move.l  #OKT_SCALING_LINES,d0
                     moveq   #MEMF_ANY,d1
                     move.l  4.w,a6
                     jsr     (_LVOAllocMem,a6)
@@ -123,18 +123,19 @@ OKT_init_buffers:
                     move.b  d0,(a0)+
                     move.b  d1,(a1)+
                     btst    #1,(OKT_processor-OKT_vars,a6)
-                    beq     .OKT_sel_020_code
+                    beq     .OKT_sel_020_table
                     move.b  d0,(a0)+
                     move.b  d0,(a0)+
                     move.b  d0,(a0)+
                     move.b  d1,(a1)+
                     move.b  d1,(a1)+
                     move.b  d1,(a1)+
-.OKT_sel_020_code:
+.OKT_sel_020_table:
                     addq.l  #1,d3
                     dbf     d7,.OKT_make_volumes_table_inner
                     subq.l  #4,d2
                     dbf     d6,.OKT_make_volumes_table_outer
+
                     move.l  (OKT_scaling_code_buffer-OKT_vars,a6),a0
                     move.l  a0,a1
                     add.l   #OKT_CODE_POINTERS,a1
@@ -189,7 +190,7 @@ OKT_release_buffers:
                     move.l  (OKT_scaling_code_lines,pc),d0
                     beq     .OKT_empty_5
                     move.l  d0,a1
-                    move.l  #OKT_SCALING_MINES,d0
+                    move.l  #OKT_SCALING_LINES,d0
                     jsr     (_LVOFreeMem,a6)
 .OKT_empty_5:
                     move.l  (OKT_scaling_code_buffer,pc),d0
@@ -229,6 +230,7 @@ OKT_custom_init:
                     move.w  d0,($B6-$A0,a1)
                     move.w  d0,($C6-$A0,a1)
                     move.w  d0,($D6-$A0,a1)
+                    bset    #1,$bfe001
                     move.l  (OKT_vbr-OKT_vars,a6),a0
                     ; we use a level 6 interrupt if there are
                     ; no doubled channels in song
@@ -316,6 +318,12 @@ OKT_get_vbr:
 .OKT_no_processor:
                     moveq   #0,d0
                     rte
+
+total:
+                    dc.w    0
+mini:
+                    dc.w    0
+
 
 ; ===========================================================================
 OKT_audio_int:
@@ -594,7 +602,7 @@ OKT_mix_000_lr:
                     lea     (a5),a4
                     movem.l d7/a2/a5/a6,-(a7)
                 REPT 6
-                    movem.l (a4),d0-d7/a2/a3/a5/a6
+                    movem.l (a4),d0-d7/a0/a2/a3/a5/a6
                     add.l   (a1)+,d0
                     add.l   (a1)+,d1
                     add.l   (a1)+,d2
@@ -603,21 +611,14 @@ OKT_mix_000_lr:
                     add.l   (a1)+,d5
                     add.l   (a1)+,d6
                     add.l   (a1)+,d7
+                    add.l   (a1)+,a0
                     add.l   (a1)+,a2
                     add.l   (a1)+,a3
                     add.l   (a1)+,a5
                     add.l   (a1)+,a6
-                    movem.l d0-d7/a2/a3/a5/a6,(a4)
-                    lea     (48,a4),a4
+                    movem.l d0-d7/a0/a2/a3/a5/a6,(a4)
+                    lea     (52,a4),a4
                 ENDR
-                    movem.l (a4),d0-d5
-                    add.l   (a1)+,d0
-                    add.l   (a1)+,d1
-                    add.l   (a1)+,d2
-                    add.l   (a1)+,d3
-                    add.l   (a1)+,d4
-                    add.l   (a1),d5
-                    movem.l d0-d5,(a4)
                     movem.l (a7)+,d7/a2/a5/a6
                     rts
 
@@ -650,9 +651,9 @@ OKT_mix_020_lr:
                     move.l  (OKT_channels_notes_buffers,pc),a1
                     lea     (a5),a4
                     movem.l d7/a2/a5/a6,-(a7)
-                    moveq   #7-1,d7
+                    moveq   #6-1,d7
 .OKT_loop:
-                    movem.l (a4),d0-d6/a2/a3/a5/a6
+                    movem.l (a4),d0-d6/a0/a2/a3/a5/a6
                     add.l   (a1)+,d0
                     add.l   (a1)+,d1
                     add.l   (a1)+,d2
@@ -660,16 +661,22 @@ OKT_mix_020_lr:
                     add.l   (a1)+,d4
                     add.l   (a1)+,d5
                     add.l   (a1)+,d6
+                    add.l   (a1)+,a0
                     add.l   (a1)+,a2
                     add.l   (a1)+,a3
                     add.l   (a1)+,a5
                     add.l   (a1)+,a6
-                    movem.l d0-d6/a2/a3/a5/a6,(a4)
-                    lea     (44,a4),a4
+                    movem.l d0-d6/a0/a2/a3/a5/a6,(a4)
+                    lea     (48,a4),a4
                     dbf     d7,.OKT_loop
-                    move.l  (a4),d0
-                    add.l   (a1),d0
-                    move.l  d0,(a4)
+                    movem.l (a4),d0-d5
+                    add.l   (a1)+,d0
+                    add.l   (a1)+,d1
+                    add.l   (a1)+,d2
+                    add.l   (a1)+,d3
+                    add.l   (a1)+,d4
+                    add.l   (a1),d5
+                    movem.l d0-d5,(a4)
                     movem.l (a7)+,d7/a2/a5/a6
                     rts
 
@@ -933,6 +940,7 @@ OKT_scaling_code_lines:
                     dc.l    0
 OKT_channels_notes_buffers:
                     dc.l    0
+tt:
 OKT_volumes_scaling_table_l:
                     dc.l    0
 OKT_volumes_scaling_table_r:
