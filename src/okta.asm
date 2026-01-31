@@ -19193,8 +19193,8 @@ patterns_ed_help_text_1:
                     dc.b    CMD_TEXT,0,25, '                          AL_F8  Octave Down Inst   SH_HELP   Here I am!',0
                     dc.b    CMD_TEXT,0,26, 'SH_L       Load Sample    AL_F9  Octave Up Inst     AL_HELP   Play Help Page',0
                     dc.b    CMD_TEXT,0,27, 'SH_S       Save Sample    SH_F10 Change Instrument  AM_HELP   Effect Help Page',0
-                    dc.b    CMD_TEXT,0,28, 'SH_E       Edit Sample    AL_F10 Change Effect      AM_F10    Effect Editor',0
-                    dc.b    CMD_TEXT,0,29, 'AL_0-9/a-z Set  Sample',0
+                    dc.b    CMD_TEXT,0,28, 'SH_E       Edit Sample    AL_F10 Change Effect',0
+                    dc.b    CMD_TEXT,0,29, 'AL_0-9/a-z Set  Sample    AM_F10 Effect Editor',0
                     dc.b    CMD_TEXT,0,30, 'CT_CURSUD  Add/Sub Sample',0
                     dc.b    CMD_END
 patterns_ed_help_text_2:
