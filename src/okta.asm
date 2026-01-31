@@ -2556,8 +2556,8 @@ draw_current_sample_infos:
                     jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     move.l  (a7),a0
                     ; sample mode
-                    tst.w   (30,a0)
-                    beq     .empty
+;                    tst.w   (30,a0)
+;                    beq     .empty
                     ; 4 or B
                     lea     (.infos_header_text,pc),a0
                     moveq   #40,d0
@@ -4071,7 +4071,7 @@ do_load_song:
                     cmpi.l  #'SONG',(a0)+
                     beq     .load_okta_mod
                     subq.l  #4,a0
-                    cmpi.l  #'SON2',(a0)+
+                    cmpi.l  #'SNG2',(a0)+
                     beq     .load_okta_mod
                     bsr     error_ok_struct_error
                     bra     lbC020E96
@@ -4614,7 +4614,7 @@ lbC02146A:
 SaveSong_MSG:
                     dc.b    'Save Song',0
 OKTASONG_MSG:
-                    dc.b    'OKTASON2'
+                    dc.b    'OKTASNG2'
 lbC0214C8:
                     move.l  a0,a5
 lbC0214CA:

@@ -21,6 +21,7 @@ To do:
 - Change the version number and the bottom picture.
 - Selecting pattern blocks with the mouse.
 - Using (Shift)TAB key to navigate among the tracks.
+- Add scrollbars in files requesters.
 - And maybe more...
 
 Done:
