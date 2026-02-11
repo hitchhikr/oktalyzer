@@ -35,7 +35,7 @@ Done:
 - CLI/WB requester is now correctly positioned on top right coords regardless of the width of the screen.
 - Chip/Fast memory display will show 'Plenty!' message if there's a too great amount of memory available.
 - Added independant channels volume support to doubled channels.
-- Increased the speed upper limit to 31.
+- Increased the speed upper limit to 31 (1F).
 - Now displays a requester when trying to save over a file that already exists.
 - Set a new colorscheme for the default config.
 - Integrated the new replay into the tracker.
