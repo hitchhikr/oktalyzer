@@ -1671,7 +1671,7 @@ lbC01F276:
                     addq.w  #1,d0
                     cmp.w   (OKT_SLen),d0
                     bne     lbC01F28E
-                    bsr     inc_song_positions
+                    bsr     create_new_empty_pattern
                     beq     lbC01F28E
                     rts
 lbC01F28E:
@@ -2986,7 +2986,7 @@ get_given_pattern_rows:
                     rts
 
 ; ===========================================================================
-inc_song_positions:
+create_new_empty_pattern:
                     cmpi.w  #64,(OKT_SLen)
                     beq     error_no_more_patterns
                     move.l  (current_default_patterns_size),d0
@@ -4131,7 +4131,7 @@ lbC020DCE:
                     bsr     ask_are_you_sure_requester
                     bne     .cancelled
                     bsr     free_song
-                    bsr     inc_song_positions
+                    bsr     create_new_empty_pattern
                     bmi     exit
                     bra     display_pattern
 .cancelled:
@@ -4169,7 +4169,7 @@ do_load_song:
                     cmpi.l  #'SNG3',(a0)+
                     beq     .load_okta_mod
                     bsr     error_ok_struct_error
-                    bra     lbC020E96
+                    bra     .done
 
 ; ===========================================================================
 .load_okta_mod:
@@ -4187,8 +4187,10 @@ do_load_song:
                     lea     (SAMP_MSG,pc),a0
                     bsr     lbC021364
                     bmi     lbC020EA6
+                    ; read patterns data
                     bsr     lbC0211F6
                     bmi     lbC020EA6
+                    ; read samples data
                     bsr     lbC0212A2
                     bmi     lbC020EA6
                     jsr     (close_file)
@@ -4196,7 +4198,7 @@ do_load_song:
                     bra     display_main_menu
 .error:
                     bsr     display_dos_error
-lbC020E96:
+.done:
                     jsr     (close_file)
                     bra     lbC02001C
 lbC020EA2:
@@ -4204,7 +4206,7 @@ lbC020EA2:
 lbC020EA6:
                     jsr     (close_file)
                     bsr     free_all_samples_and_song
-                    bsr     inc_song_positions
+                    bsr     create_new_empty_pattern
                     bmi     exit
                     rts
 LoadSong_MSG:
@@ -4217,7 +4219,7 @@ load_st_mod:
                     lea     (OKT_channels_modes),a0
                     clr.l   (a0)
                     clr.l   (4,a0)
-                    tst.b   (st_load_tracks_mode)
+                    tst.b   (st_load_default_samples_type)
                     beq     lbC020EF0
                     ; only single channels
                     move.l  #$10001,(a0)
@@ -4237,7 +4239,7 @@ lbC020EF0:
 lbC020F18:
                     jsr     (close_file)
                     bsr     free_all_samples_and_song
-                    bsr     inc_song_positions
+                    bsr     create_new_empty_pattern
                     bmi     exit
                     rts
 lbC020F2C:
@@ -4265,7 +4267,7 @@ lbC020F4A:
                     move.w  d0,(26,a5)
                     ; 4 mode
                     moveq   #1,d0
-                    tst.b   (st_load_tracks_mode)
+                    tst.b   (st_load_default_samples_type)
                     beq     lbC020F90
                     ; 8 mode
                     moveq   #0,d0
@@ -4298,7 +4300,7 @@ lbC020FCC:
 lbC020FCE:
                     dbra    d1,lbC020FCC
                     move.w  #6,(OKT_default_speed)
-                    tst.b   (st_load_tracks_mode)
+                    tst.b   (st_load_default_samples_type)
                     beq     lbC020FF2
                     lea     (OKT_patterns,pc),a0
                     moveq   #128-1,d0
@@ -4352,7 +4354,7 @@ lbC021048:
                     move.w  (default_pattern_length),d0
                     mulu.w  (current_channels_size),d0
                     move.l  d0,(current_default_patterns_size)
-                    bsr     inc_song_positions
+                    bsr     create_new_empty_pattern
                     bmi     lbC0210BE
                     move.w  (OKT_SLen),d0
                     subq.w  #1,d0
@@ -4423,7 +4425,7 @@ lbC021144:
                     move.l  a0,a3
                     move.w  #256,d3
                     move.l  a0,a1
-                    tst.b   (st_load_tracks_mode)
+                    tst.b   (st_load_default_samples_type)
                     beq     lbC021160
                     add.w   d3,d3
                     lea     (lbL01A146),a1
@@ -4434,7 +4436,7 @@ lbC021162:
                     addq.w  #4,a0
                     addq.w  #4,a1
                     dbra    d3,lbC021162
-                    tst.b   (st_load_tracks_mode)
+                    tst.b   (st_load_default_samples_type)
                     beq     lbC0211A4
                     lea     (lbL01A146),a0
                     lea     (1024,a0),a5
@@ -4491,7 +4493,7 @@ lbC0211D0:
 lbC0211F6:
                     move.w  (default_pattern_length),-(a7)
                     move.l  (current_default_patterns_size),-(a7)
-lbC021202:
+.loop:
                     move.w  (lbW01B730),d7
                     cmp.w   (OKT_SLen),d7
                     beq     lbC021278
@@ -4503,6 +4505,7 @@ lbC021202:
                     cmpi.l  #'PBOD',(a0)
                     bne     lbC021288
                     lea     (song_chunk_header_loaded_data),a0
+                    ; pattern row length
                     moveq   #2,d0
                     jsr     (read_from_file)
                     bmi     lbC02128E
@@ -4510,15 +4513,17 @@ lbC021202:
                     move.w  d0,(default_pattern_length)
                     mulu.w  (current_channels_size),d0
                     move.l  d0,(current_default_patterns_size)
-                    bsr     inc_song_positions
+                    bsr     create_new_empty_pattern
                     bmi     lbC021292
                     move.w  (OKT_SLen),d0
                     subq.w  #1,d0
                     bsr     get_given_pattern_rows
+                    ; read the data
                     mulu.w  (current_channels_size),d0
                     jsr     (read_from_file)
                     bmi     lbC02128E
-                    bra     lbC021202
+                    ; TODO: patch them here
+                    bra     .loop
 lbC021278:
                     move.l  (a7)+,(current_default_patterns_size)
                     move.w  (a7)+,(default_pattern_length)
@@ -4652,31 +4657,19 @@ lbC0213D0:
                     bra     lbC021396
 CMOD_MSG:
                     dc.b    'CMOD'
-                    dc.l    8
-                    dc.l    OKT_channels_modes
-                    dc.l    1
+                    dc.l    8,OKT_channels_modes,1
                     dc.l    0
 SAMP_MSG:
                     dc.b    'SAMP'
-                    dc.l    1152
-                    dc.l    OKT_samples
-                    dc.l    0
+                    dc.l    1152,OKT_samples,0
                     dc.b    'SPEE'
-                    dc.l    2
-                    dc.l    OKT_default_speed
-                    dc.l    6
+                    dc.l    2,OKT_default_speed,6
                     dc.b    'SLEN'
-                    dc.l    2
-                    dc.l    lbW01B730
-                    dc.l    1
+                    dc.l    2,lbW01B730,1
                     dc.b    'PLEN'
-                    dc.l    2
-                    dc.l    OKT_song_length
-                    dc.l    1
+                    dc.l    2,OKT_song_length,1
                     dc.b    'PATT'
-                    dc.l    128
-                    dc.l    OKT_patterns
-                    dc.l    0
+                    dc.l    128,OKT_patterns,0
                     dc.l    0
 lbC02145E:
                     move.l  #lbC02146A,(current_cmd_ptr)
@@ -5788,7 +5781,7 @@ lbC022160:
                     bsr     dec_song_position
                     bra     display_main_menu
 lbC022168:
-                    bra     inc_song_positions
+                    bra     create_new_empty_pattern
 lbC02216C:
                     moveq   #-1,d0
                     bra     lbC022172
@@ -15664,7 +15657,7 @@ text_font:
 etext_font:
 st_load_samples_mode:
                     dc.b    -1
-st_load_tracks_mode:
+st_load_default_samples_type:
                     dc.b    0
 
 ; ===========================================================================
@@ -15856,7 +15849,7 @@ switch_st_samples_mode:
                     not.b   (st_load_samples_mode)
                     bra     display_st_load_modes
 switch_st_tracks_mode:
-                    not.b   (st_load_tracks_mode)
+                    not.b   (st_load_default_samples_type)
 display_st_load_modes:
                     lea     (.samples_15_text,pc),a0
                     tst.b   (st_load_samples_mode)
@@ -15865,7 +15858,7 @@ display_st_load_modes:
 .load_15_samples:
                     jsr     (draw_text_with_coords_struct)
                     lea     (.channels_4_text,pc),a0
-                    tst.b   (st_load_tracks_mode)
+                    tst.b   (st_load_default_samples_type)
                     beq     .load_4_channels
                     lea     (.channels_8_text,pc),a0
 .load_4_channels:
@@ -16903,7 +16896,7 @@ go_set_prefs:
                     tst.l   (OKT_patterns_list)
                     bne     .ok
                     ; create at least one pattern
-                    jsr     (inc_song_positions)
+                    jsr     (create_new_empty_pattern)
                     beq     .ok
                     ; fatal error
                     jmp     (exit)
