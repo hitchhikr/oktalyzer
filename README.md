@@ -1,6 +1,6 @@
 A complete disassembly of the Amiga music tool Oktalyzer originally programmed by Armin 'TIP' Sander.
 
-This is an ongoing effort to improve it, modify it to use the hardware mixing and 16 bit samples
+This is an ongoing effort to improve it, modify it to use the hardware mixing and 16 bit samples<br>
 of the Amiga Vampire cards and extract an asm replay routine.
 
 To do:
