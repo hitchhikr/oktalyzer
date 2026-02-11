@@ -9,8 +9,6 @@ To do:
   oxx will be converted to vxx (as we don't need hw channels volumes backup anymore).<br>
   v00 will always be duplicated, vxx values won't be if there's an effect on the other channel.
 - Remove the constraints of the sample types.
-- 'OKTASNG1' header tag for new Amiga songs (so songs volume columns aren't fixed again).
-- 'OKTASNG2' header tag for Vampire songs (16 bit samples and maybe more).
 - 16 bit samples support in the Vampire version (keep the sample type word in infos).
 - The possibility to load riff samples (8 bit but also 16 bit for Vampire).
 - Add a way to set the samples repeat start & length from range selected with the mouse.
@@ -39,5 +37,7 @@ Done:
 - Now displays a requester when trying to save over a file that already exists.
 - Set a new colorscheme for the default config.
 - Integrated the new replay into the tracker.
+- 'OKTASNG2' header tag for new Amiga songs (so songs volume columns aren't fixed again).
+- 'OKTASNG3' header tag for Vampire songs (16 bit samples and maybe more).
 
 A work in progress...
