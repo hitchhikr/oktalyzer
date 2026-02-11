@@ -526,14 +526,14 @@ OKT_fill_single_channels:
 OKT_fill_single_channel_data:
                     moveq   #0,d3
                     move.b  (a2),d3
-                    beq     .OKT_no_set
+                    beq     .OKT_no_data
                     subq.w  #1,d3
                     moveq   #0,d0
                     move.b  (1,a2),d0
                     add.w   d0,d0
                     add.w   d0,d0
                     move.l  (a0,d0.w),d2
-                    beq     .OKT_no_set
+                    beq     .OKT_no_data
                     lsl.w   #3,d0
                     lea     (OKT_samples-OKT_vars,a6),a1
                     add.w   d0,a1
@@ -541,7 +541,7 @@ OKT_fill_single_channel_data:
                     move.l  (SMP_LEN,a1),d1
                     lsr.l   #1,d1
                     tst.w   d1
-                    beq     .OKT_no_set
+                    beq     .OKT_no_data
                     OKT_SET_AUDIO_DMA d5
                     or.w    d5,d4
                     ; start sample address
@@ -571,7 +571,7 @@ OKT_fill_single_channel_data:
                     OKT_SET_AUDIO_LEN d1,a4
                     move.l  #OKT_empty_waveform,(CHAN_SMP_REP_START,a3)
                     move.w  #2/2,(CHAN_SMP_REP_LEN_S,a3)
-.OKT_no_set:
+.OKT_no_data:
                     rts
 .OKT_real_repeat:
                     move.w  d0,(CHAN_SMP_REP_LEN_S,a3)
@@ -1024,7 +1024,7 @@ OKT_volume_fade:
                     cmp.b   #64,(a0)
                     bls     OKT_volume_fade_done
                     move.b  #64,(a0)
-                    bra     OKT_volume_fade_done
+                    rts
 
 ; ===========================================================================
 ; set global volume
