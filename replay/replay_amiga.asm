@@ -11,8 +11,10 @@ OKT_SCALING_CODE:   rs.b    70800
 OKT_CODE_POINTERS:  rs.l    36
 OKT_LENGTHS:        rs.w    36*2
 OKT_CODE_LENGTH:    rs.b    0
+
 OKT_SCALING_LINES   equ     19552
 OKT_BUFFERS_LENGTH  equ     312
+
 OKT_AUDIO_BASE      equ     $DFF0A0
 OKT_AUDIO_DMA       equ     $DFF096
 OKT_AUDIO_ADR       equ     0
@@ -21,6 +23,7 @@ OKT_AUDIO_PER       equ     6
 OKT_AUDIO_VOL       equ     8
 OKT_AUDIO_SIZE      equ     $10
 OKT_AUDIO_HW_CHANS  equ     4
+
 MEMF_ANY            equ     0
 MEMF_CHIP           equ     2
 MEMF_CLEAR          equ     $10000
@@ -200,6 +203,19 @@ OKT_custom_init:
                     add.l   #$70,d0
                     move.l  d0,(OKT_vbr-OKT_vars,a6)
                     sf      (OKT_buffer_flip-OKT_vars,a6)
+                    move.l  (OKT_channels_notes_buffers-OKT_vars,a6),a0
+                    moveq   #0,d1
+                    move.w  #512-1,d0
+.OKT_clear_notes_buffers:
+                    move.b  d1,(a0)+
+                    dbra    d0,.OKT_clear_notes_buffers
+                    move.l  (OKT_final_mixing_buffers-OKT_vars,a6),a0
+                    moveq   #0,d1
+                    move.w  #512-1,d0
+.OKT_clear_mix_buffers:
+                    move.l  d1,(a0)+
+                    move.l  d1,(a0)+
+                    dbra    d0,.OKT_clear_mix_buffers
                     lea     (OKT_AUDIO_BASE),a1
                     move.w  #$4780,($9A-$A0,a1)
                     move.w  #$F,($96-$A0,a1)
@@ -331,7 +347,7 @@ OKT_audio_int:
                     btst    #0,d1
                     beq     .OKT_channel_1
                     move.l  a0,(a1)
-.OKT_channel_1:²
+.OKT_channel_1:
                     lea     (512*2,a0),a0
                     btst    #1,d1
                     beq     .OKT_channel_2
@@ -367,12 +383,9 @@ OKT_main:
                     move.l  (OKT_final_mixing_buffers-OKT_vars,a6),a5
                     lea     (512,a5),a5
                     not.b   (OKT_buffer_flip-OKT_vars,a6)
-                    bne     OKT_mix_buffers
+                    bne     .OKT_mix_buffers
                     move.l  (OKT_final_mixing_buffers-OKT_vars,a6),a5
-                    bra     OKT_mix_buffers
-
-; ===========================================================================
-OKT_mix_buffers:
+.OKT_mix_buffers:
                     lea     (OKT_channels_data-OKT_vars,a6),a2
                     moveq   #8-1,d7
 .OKT_mix_channels_buffers:
@@ -385,7 +398,7 @@ OKT_mix_buffers:
 .OKT_sel_020_code:
                     movem.l d7/a5,-(a7)
                     lea     (a5),a1
-                    move.l  a2,a3
+                    lea     (a2),a3
                     lea     (OKT_channels_volumes-OKT_vars,a6),a0
                     moveq   #0,d0
                     move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d0
@@ -526,7 +539,7 @@ OKT_create_channel_waveform_data:
                     add.w   d3,d3
                     move.l  (a4,d3.w),a4
                     jsr     (a4)
-                    ; restore the patch code if any
+                    ; restore the patched code if any
                     tst.l   OKT_patched_addr
                     beq     .OKT_no_patch
                     move.l  (OKT_patched_addr-OKT_vars,a6),a4
@@ -666,6 +679,7 @@ OKT_mix_020_lr:
                     movem.l (a7)+,d7/a2/a5/a6
                     rts
 
+; ===========================================================================
 OKT_mix_020_empty:
                     lea     (a5),a4
                     movem.l d7/a2/a5/a6,-(a7)
@@ -696,7 +710,7 @@ OKT_mix_020_empty:
 OKT_generate_scaling_code:
                     move.l  (OKT_code_ptr-OKT_vars,a6),a2
                     move.l  (OKT_scaling_code_buffer-OKT_vars,a6),a0
-                    lea     (OKT_scaling_freqs_table,pc),a5
+                    lea     (OKT_scaling_freqs_table-OKT_vars,a6),a5
                     move.l  (OKT_lengths_ptr-OKT_vars,a6),a3
                     lea     (OKT_store_bytes_table-OKT_vars,a6),a4
                     btst    #1,(OKT_processor-OKT_vars,a6)

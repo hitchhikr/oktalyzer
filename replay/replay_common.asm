@@ -175,8 +175,8 @@ OKT_init_variables:
                     clr.w   (OKT_double_channels-OKT_vars,a6)
 .OKT_get_channels_size:
                     tst.w   (a0)
-                    sne     CHAN_TYPE(a1)
-                    sne     CHAN_TYPE+CHAN_LEN(a1)
+                    sne     (CHAN_TYPE,a1)
+                    sne     (CHAN_TYPE+CHAN_LEN,a1)
                     beq     .OKT_not_doubled
                     or.w    d3,(OKT_double_channels-OKT_vars,a6)
                     tst.w   (OKT_audio_int_single_bit-OKT_vars,a6)
@@ -238,6 +238,8 @@ OKT_new_row:
                     bgt     .OKT_no_new_pattern
 .OKT_pattern_end:
                     clr.w   (OKT_pattern_row-OKT_vars,a6)
+                    mulu.w  (OKT_rows_size,pc),d0
+                    sub.l   d0,(OKT_current_pattern)
                     tst.w   (OKT_next_song_pos-OKT_vars,a6)
                     bmi     .OKT_no_pos_jump
                     move.w  (OKT_next_song_pos-OKT_vars,a6),(OKT_song_pos-OKT_vars,a6)
@@ -258,8 +260,8 @@ OKT_new_row:
 
 ; ===========================================================================
 OKT_get_current_pattern:
-                    lea     (OKT_patterns-OKT_vars,a6),a0
                     move.w  (OKT_song_pos-OKT_vars,a6),d0
+                    lea     (OKT_patterns-OKT_vars,a6),a0
                     move.b  (a0,d0.w),d0
                     bra     OKT_get_pattern_address_and_length
 
@@ -307,15 +309,15 @@ OKT_set_hw_regs:
                     ; set hw volumes
                     move.w  (OKT_global_volume-OKT_vars,a6),d2
                     lea     (OKT_channels_volumes-OKT_vars,a6),a0
-                    lea     (OKT_channels_data-OKT_vars,a6),a3
                     lea     (OKT_AUDIO_BASE),a1
+                    lea     (OKT_channels_data-OKT_vars,a6),a3
                 IFD OKT_AUDIO_ALL_HW
                     lea     (OKT_panning_table-OKT_vars,a6),a4
                 ENDC
                     moveq   #0,d3
                     moveq   #8-1,d7
 .OKT_loop:
-                    tst.b   CHAN_TYPE(a3)
+                    tst.b   (CHAN_TYPE,a3)
                     bne     .OKT_skip_double_channel
                     moveq   #0,d0
                     move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d3
@@ -414,7 +416,7 @@ OKT_fill_double_channels:
                 ENDC
                     moveq   #8-1,d7
 .OKT_loop:
-                    tst.b   CHAN_TYPE(a3)
+                    tst.b   (CHAN_TYPE,a3)
                     bne     .OKT_fill_data
                     addq.w  #4,a2
                     lea     (CHAN_LEN*2,a3),a3
@@ -503,7 +505,7 @@ OKT_fill_single_channels:
                     lea     (OKT_periods_table-OKT_vars,a6),a5
                     moveq   #8-1,d7
 .OKT_loop:
-                    tst.b   CHAN_TYPE(a3)
+                    tst.b   (CHAN_TYPE,a3)
                     bne     .OKT_skip_double_channel
                     bsr     OKT_fill_single_channel_data
                     addq.w  #4,a2
@@ -591,12 +593,12 @@ OKT_handle_effects_double_channels:
                     addq.w  #2,a2
                     lea     (OKT_channels_data-OKT_vars,a6),a3
                 IFD OKT_AUDIO_ALL_HW
-                    lea     (OKT_periods_table-OKT_vars,a6),a5
                     lea     (OKT_AUDIO_BASE),a4
+                    lea     (OKT_periods_table-OKT_vars,a6),a5
                 ENDC
                     moveq   #8-1,d7
 .OKT_loop:
-                    tst.b   CHAN_TYPE(a3)
+                    tst.b   (CHAN_TYPE,a3)
                     bne     .OKT_process_effect
                     addq.w  #4,a2
                     lea     (CHAN_LEN*2,a3),a3
@@ -666,11 +668,11 @@ OKT_handle_effects_single_channels:
                     move.l  (OKT_current_pattern-OKT_vars,a6),a2
                     addq.w  #2,a2
                     lea     (OKT_channels_data-OKT_vars,a6),a3
-                    lea     (OKT_periods_table-OKT_vars,a6),a5
                     lea     (OKT_AUDIO_BASE),a4
+                    lea     (OKT_periods_table-OKT_vars,a6),a5
                     moveq   #8-1,d7
 .OKT_loop:
-                    tst.b   CHAN_TYPE(a3)
+                    tst.b   (CHAN_TYPE,a3)
                     beq     .OKT_process_effect
                     addq.w  #8,a2
                     lea     (CHAN_LEN*2,a3),a3
@@ -678,6 +680,8 @@ OKT_handle_effects_single_channels:
                     subq.w  #1,d7
                     dbra    d7,.OKT_loop
                     rts
+
+; ===========================================================================
 .OKT_process_effect:
                     moveq   #0,d0
                     ; effect number
@@ -1046,25 +1050,25 @@ OKT_periods_table:
 OKT_panning_table:  dc.w    $af,$50,$50,$af,$af,$50,$50,$af
                     dc.w    $af,$50,$50,$af,$af,$50,$50,$af
                 ENDC
-OKT_old_cia_timer:
-                    dcb.b   2,0
 OKT_global_volume:
                     dc.w    64
+OKT_old_cia_timer:
+                    dcb.b   2,0
 OKT_vbr:
                     dc.l    0
 OKT_old_irq:
                     dc.l    0
-OKT_action_cycle:
-                    dc.w    0
-OKT_current_pattern:
-                    dc.l    0
-OKT_rows_size:
-                    dc.w    0
 OKT_audio_int_bit:
                     dc.w    0
 OKT_audio_int_single_bit:
                     dc.w    0
 OKT_double_channels:
+                    dc.w    0
+OKT_action_cycle:
+                    dc.w    0
+OKT_current_pattern:
+                    dc.l    0
+OKT_rows_size:
                     dc.w    0
 OKT_pattern_row:
                     dc.w    0

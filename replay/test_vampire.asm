@@ -14,12 +14,12 @@ start:
                     move.w  #$7fff,$dff09a
                     lea	    music,a0
                     bsr	    OKT_init
-                    beq     .error
+                    beq     .error_init
 .loop:
                     btst    #6,$bfe001
                     bne     .loop
                     bsr	    OKT_stop
-.error:
+.error_init:
                     move.w  #$7fff,$dff096
                     move.w  #$7fff,$dff09a
                     move.w  (a7)+,d0

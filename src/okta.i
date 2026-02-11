@@ -49,12 +49,6 @@ DIR_SAMPLES         equ     1
 DIR_PREFS           equ     2
 DIR_EFFECTS         equ     3
 
-MIX_BUFFERS_1       equ     4
-MIX_BUFFERS_LEN_1   equ     626
-
-MIX_BUFFERS_2       equ     2
-MIX_BUFFERS_LEN_2   equ     2240
-
 MIDI_OFF            equ     0
 MIDI_IN             equ     1
 MIDI_OUT            equ     2
@@ -127,7 +121,14 @@ EVT_KEY_RELEASED    equ     14
 RESP_EVT_ROUT_1     equ     10
 RESP_EVT_ROUT_2     equ     14
 
+VIS_DRAW_VUMETERS   equ     1<<0
+VIS_DRAW_ROW        equ     1<<1
+VIS_DRAW_POS        equ     1<<2
+VIS_TRIG_VUMETERS   equ     1<<3
+VIS_DRAW_SPEED      equ     1<<4
+
 OKT_IN_TRACKER      equ     1
+SMPS_NUMBER         equ     36
 
 		            rsreset
 SMP_NAME:           rs.b    20
@@ -150,6 +151,50 @@ CHAN_BASE_NOTE_D:   rs.w    1           ; 12
 CHAN_SMP_PROC_D:    rs.l    1           ; 14
 CHAN_SMP_PROC_LEN_D:rs.l    1           ; 18
 CHAN_LEN:           rs.b    0           ; 22
+
+		            rsreset
+OKT_SCALING_CODE:   rs.b    70800
+OKT_CODE_POINTERS:  rs.l    36
+OKT_LENGTHS:        rs.w    36*2
+OKT_CODE_LENGTH:    rs.b    0
+
+OKT_SCALING_LINES   equ     19552
+OKT_BUFFERS_LENGTH  equ     312
+
+; ===========================================================================
+OKT_AUDIO_BASE      equ     $DFF0A0
+OKT_AUDIO_DMA       equ     $DFF096
+OKT_AUDIO_ADR       equ     0
+OKT_AUDIO_LEN       equ     4
+OKT_AUDIO_PER       equ     6
+OKT_AUDIO_VOL       equ     8
+OKT_AUDIO_SIZE      equ     $10
+OKT_AUDIO_HW_CHANS  equ     4
+
+; ===========================================================================
+OKT_SET_AUDIO_ADR   MACRO
+                    move.l  \1,(OKT_AUDIO_ADR,\2)
+                    ENDM
+
+OKT_SET_AUDIO_LEN   MACRO
+                    move.w  \1,(OKT_AUDIO_LEN,\2)
+                    ENDM
+
+OKT_SET_AUDIO_PER   MACRO
+                    move.w  \1,(OKT_AUDIO_PER,\2)
+                    ENDM
+
+OKT_SET_AUDIO_VOL   MACRO
+                    move.w  \1,(OKT_AUDIO_VOL,\2)
+                    ENDM
+
+OKT_SET_AUDIO_CTRL  MACRO
+                    move.w  \1,(OKT_AUDIO_CTRL,\2)
+                    ENDM
+
+OKT_SET_AUDIO_DMA   MACRO
+                    move.w  \1,OKT_AUDIO_DMA
+                    ENDM
 
 ; ===========================================================================
 EXEC                MACRO
