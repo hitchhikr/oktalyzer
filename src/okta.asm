@@ -63,7 +63,7 @@ start:
 .no_message:
                     moveq   #0,d0
                     rts
-                    dc.b    0,'$VER: version 1.153',0
+                    dc.b    0,'$VER: version 1.154',0
                     even
 workbench_message:
                     dc.l    0
