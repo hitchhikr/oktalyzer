@@ -12,8 +12,9 @@
 
 ; ===========================================================================
 		            rsreset
-OKT_AUDIO_BASE      equ     $DFF400
-OKT_AUDIO_DMA       equ     $DFF296
+_CUSTOM             equ     $DFF000
+OKT_AUDIO_BASE      equ     $400
+OKT_AUDIO_DMA       equ     $296
 OKT_AUDIO_ADR       equ     0
 OKT_AUDIO_LEN       equ     4
 OKT_AUDIO_VOL       equ     8
@@ -21,7 +22,9 @@ OKT_AUDIO_CTRL      equ     $A
 OKT_AUDIO_PER       equ     $C
 OKT_AUDIO_SIZE      equ     $10
 OKT_AUDIO_HW_CHANS  equ     8
-OKT_AUDIO_ALL_HW    equ     1
+OKT_AUDIO_VAMPIRE   equ     1
+
+OKT_SONG_ID         equ     'SNG3'
 
 ; ===========================================================================
 OKT_SET_AUDIO_PAN   MACRO
@@ -41,7 +44,7 @@ OKT_custom_init:
                     add.l   #$78,d0
                     move.l  d0,(OKT_vbr-OKT_vars,a6)
                     move.w  #$4000,($DFF09A)
-                    move.w  #%11111111,(OKT_AUDIO_DMA)
+                    move.w  #%11111111,(_CUSTOM|OKT_AUDIO_DMA)
                     move.w  #$FF,($DFF09E)
                     move.l  (OKT_vbr-OKT_vars,a6),a0
                     move.l  (a0),(OKT_old_irq-OKT_vars,a6)
@@ -61,16 +64,15 @@ OKT_custom_init:
                     move.b  d0,CIATBHI-CIATBLO(a3)
                     move.b  #%10000010,CIAICR-CIATBLO(a3)
                     move.b  #%10001,CIACRB-CIATBLO(a3)
-                    move.w  #$E000,($9A-$A0,a1)
-                    move.w  #$8200,($96-$A0,a1)
-                    moveq   #1,d0
+                    move.w  #$E000,($DFF09A)
+                    move.w  #$8200,($DFF096)
                     rts
 
 ; ===========================================================================
 OKT_stop:
                     movem.l d0/a0/a1/a2/a6,-(a7)
                     lea     (OKT_vars,pc),a6
-                    lea     (OKT_AUDIO_BASE),a2
+                    lea     (_CUSTOM|OKT_AUDIO_BASE),a2
                     move.w  #$7FFF,($DFF09C)
                     move.w  #$4000,($DFF09A)
                     move.w  #%11111111,(a2)

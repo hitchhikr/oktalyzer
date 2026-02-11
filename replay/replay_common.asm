@@ -56,7 +56,7 @@ OKT_SET_AUDIO_CTRL  MACRO
                     ENDM
 
 OKT_SET_AUDIO_DMA   MACRO
-                    move.w  \1,OKT_AUDIO_DMA
+                    move.w  \1,_CUSTOM|OKT_AUDIO_DMA
                     ENDM
 
 ; ===========================================================================
@@ -65,15 +65,8 @@ OKT_init:
                     lea     (OKT_vars,pc),a6
                     cmp.l   #'OKTA',(a0)+
                     bne     .OKT_error
-                    cmp.l   #'SNG2',(a0)+
-                    beq     .OKT_ok
-                    subq.l  #4,a0
-                    cmp.l   #'SNG3',(a0)+
-                    beq     .OKT_ok
-                    subq.l  #4,a0
-                    cmp.l   #'SONG',(a0)+
+                    cmp.l   #OKT_SONG_ID,(a0)+
                     bne     .OKT_error
-.OKT_ok:
                     move.l  a0,(OKT_search_hunk_ptr-OKT_vars,a6)
                     move.l  #'CMOD',d0
                     bsr     .OKT_search_hunk
@@ -168,15 +161,18 @@ OKT_init_variables:
                     lea     (OKT_channels_data-OKT_vars,a6),a1
                     moveq   #4-1,d0
                     moveq   #0,d1
+                IFND OKT_AUDIO_VAMPIRE
                     move.w  #%10000000,d2
                     moveq   #%1,d3
                     clr.w   (OKT_audio_int_bit-OKT_vars,a6)
                     clr.w   (OKT_audio_int_single_bit-OKT_vars,a6)
                     clr.w   (OKT_double_channels-OKT_vars,a6)
+                ENDC
 .OKT_get_channels_size:
                     tst.w   (a0)
                     sne     (CHAN_TYPE,a1)
                     sne     (CHAN_TYPE+CHAN_LEN,a1)
+                IFND OKT_AUDIO_VAMPIRE
                     beq     .OKT_not_doubled
                     or.w    d3,(OKT_double_channels-OKT_vars,a6)
                     tst.w   (OKT_audio_int_single_bit-OKT_vars,a6)
@@ -185,10 +181,11 @@ OKT_init_variables:
 .OKT_only_one_int_bit:
                     or.w    d2,(OKT_audio_int_bit-OKT_vars,a6)
 .OKT_not_doubled:
-                    add.w   (a0)+,d1
-                    lea     (CHAN_LEN*2,a1),a1
                     add.w   d2,d2
                     add.w   d3,d3
+                ENDC
+                    add.w   (a0)+,d1
+                    lea     (CHAN_LEN*2,a1),a1
                     dbra    d0,.OKT_get_channels_size
                     addq.w  #4,d1
                     add.w   d1,d1
@@ -297,7 +294,7 @@ OKT_set_hw_regs:
 .OKT_no_new_row:
                     bsr     OKT_handle_effects_double_channels
                     bsr     OKT_handle_effects_single_channels
-                IFND OKT_AUDIO_ALL_HW
+                IFND OKT_AUDIO_VAMPIRE
                     move.b  (OKT_filter_status-OKT_vars,a6),d0
                     beq     .OKT_blink
                     bclr    #1,($BFE001)
@@ -309,9 +306,9 @@ OKT_set_hw_regs:
                     ; set hw volumes
                     move.w  (OKT_global_volume-OKT_vars,a6),d2
                     lea     (OKT_channels_volumes-OKT_vars,a6),a0
-                    lea     (OKT_AUDIO_BASE),a1
+                    lea     (_CUSTOM|OKT_AUDIO_BASE),a1
                     lea     (OKT_channels_data-OKT_vars,a6),a3
-                IFD OKT_AUDIO_ALL_HW
+                IFD OKT_AUDIO_VAMPIRE
                     lea     (OKT_panning_table-OKT_vars,a6),a4
                 ENDC
                     moveq   #0,d3
@@ -331,7 +328,7 @@ OKT_set_hw_regs:
                     dbra    d7,.OKT_loop
                     rts
 .OKT_skip_double_channel:
-                IFND OKT_AUDIO_ALL_HW
+                IFND OKT_AUDIO_VAMPIRE
                     ; software channels are hw vol. max
                     moveq   #64,d0
                     mulu.w  d2,d0
@@ -384,7 +381,7 @@ OKT_turn_dma_on:
 .OKT_wait_line:
                     cmp.b   (a0),d1
                     beq     .OKT_wait_line
-                    lea     (OKT_AUDIO_BASE),a4
+                    lea     (_CUSTOM|OKT_AUDIO_BASE),a4
                     lea     (OKT_channels_data+CHAN_SMP_REP_START-OKT_vars,a6),a1
                     moveq   #OKT_AUDIO_HW_CHANS-1,d7
                     moveq   #0,d1
@@ -394,7 +391,7 @@ OKT_turn_dma_on:
                     OKT_SET_AUDIO_ADR CHAN_SMP_REP_START-CHAN_SMP_REP_START(a1),a4
                     OKT_SET_AUDIO_LEN CHAN_SMP_REP_LEN_S-CHAN_SMP_REP_START(a1),a4
 .OKT_set_channel:
-                IFND OKT_AUDIO_ALL_HW
+                IFND OKT_AUDIO_VAMPIRE
                     lea     ((CHAN_LEN*2),a1),a1
                 ELSE
                     lea     (CHAN_LEN,a1),a1
@@ -411,8 +408,8 @@ OKT_fill_double_channels:
                     lea     (OKT_samples-OKT_vars,a6),a1
                     move.l  (OKT_current_pattern-OKT_vars,a6),a2
                     lea     (OKT_channels_data-OKT_vars,a6),a3
-                IFD OKT_AUDIO_ALL_HW
-                    lea     (OKT_AUDIO_BASE),a4
+                IFD OKT_AUDIO_VAMPIRE
+                    lea     (_CUSTOM|OKT_AUDIO_BASE),a4
                 ENDC
                     moveq   #8-1,d7
 .OKT_loop:
@@ -420,14 +417,14 @@ OKT_fill_double_channels:
                     bne     .OKT_fill_data
                     addq.w  #4,a2
                     lea     (CHAN_LEN*2,a3),a3
-                IFD OKT_AUDIO_ALL_HW
+                IFD OKT_AUDIO_VAMPIRE
                     lea     (OKT_AUDIO_SIZE,a4),a4
                 ENDC
                     subq.w  #1,d7
                     dbra    d7,.OKT_loop
                     rts
 .OKT_fill_data:
-                IFND OKT_AUDIO_ALL_HW
+                IFND OKT_AUDIO_VAMPIRE
                     bsr     OKT_fill_double_channel_data
                     subq.w  #1,d7
                     bsr     OKT_fill_double_channel_data
@@ -448,7 +445,7 @@ OKT_fill_double_channels:
                     rts
 
 ; ===========================================================================
-                IFND OKT_AUDIO_ALL_HW
+                IFND OKT_AUDIO_VAMPIRE
 OKT_fill_double_channel_data:
                     moveq   #0,d3
                     move.b  (a2),d3
@@ -501,7 +498,7 @@ OKT_fill_single_channels:
                     lea     (OKT_samples_table-OKT_vars,a6),a0
                     move.l  (OKT_current_pattern-OKT_vars,a6),a2
                     lea     (OKT_channels_data-OKT_vars,a6),a3
-                    lea     (OKT_AUDIO_BASE),a4
+                    lea     (_CUSTOM|OKT_AUDIO_BASE),a4
                     lea     (OKT_periods_table-OKT_vars,a6),a5
                     moveq   #8-1,d7
 .OKT_loop:
@@ -548,7 +545,7 @@ OKT_fill_single_channel_data:
                     or.w    d5,d4
                     ; start sample address
                     OKT_SET_AUDIO_ADR d2,a4
-                IFD OKT_AUDIO_ALL_HW
+                IFD OKT_AUDIO_VAMPIRE
                     OKT_SET_AUDIO_CTRL #%0,a4
                 ENDC
                     ; note index
@@ -592,8 +589,8 @@ OKT_handle_effects_double_channels:
                     move.l  (OKT_current_pattern-OKT_vars,a6),a2
                     addq.w  #2,a2
                     lea     (OKT_channels_data-OKT_vars,a6),a3
-                IFD OKT_AUDIO_ALL_HW
-                    lea     (OKT_AUDIO_BASE),a4
+                IFD OKT_AUDIO_VAMPIRE
+                    lea     (_CUSTOM|OKT_AUDIO_BASE),a4
                     lea     (OKT_periods_table-OKT_vars,a6),a5
                 ENDC
                     moveq   #8-1,d7
@@ -602,7 +599,7 @@ OKT_handle_effects_double_channels:
                     bne     .OKT_process_effect
                     addq.w  #4,a2
                     lea     (CHAN_LEN*2,a3),a3
-                IFD OKT_AUDIO_ALL_HW
+                IFD OKT_AUDIO_VAMPIRE
                     lea     (OKT_AUDIO_SIZE,a4),a4
                 ENDC
                     subq.w  #1,d7
@@ -614,7 +611,7 @@ OKT_handle_effects_double_channels:
                     moveq   #0,d0
                     move.b  (a2),d0
                     add.w   d0,d0
-                IFND OKT_AUDIO_ALL_HW
+                IFND OKT_AUDIO_VAMPIRE
                     lea     (OKT_effects_table_d-OKT_vars,a6),a1
                 ELSE
                     lea     (OKT_effects_table_s-OKT_vars,a6),a1
@@ -627,7 +624,7 @@ OKT_handle_effects_double_channels:
 .OKT_no_effect_l:
                     addq.w  #4,a2
                     lea     (CHAN_LEN,a3),a3
-                IFD OKT_AUDIO_ALL_HW
+                IFD OKT_AUDIO_VAMPIRE
                     lea     (OKT_AUDIO_SIZE,a4),a4
                 ENDC
                     subq.w  #1,d7
@@ -642,12 +639,12 @@ OKT_handle_effects_double_channels:
 .OKT_no_effect_r:
                     addq.w  #4,a2
                     lea     (CHAN_LEN,a3),a3
-                IFD OKT_AUDIO_ALL_HW
+                IFD OKT_AUDIO_VAMPIRE
                     lea     (OKT_AUDIO_SIZE,a4),a4
                 ENDC
                     dbra    d7,.OKT_loop
                     rts
-                IFND OKT_AUDIO_ALL_HW
+                IFND OKT_AUDIO_VAMPIRE
 OKT_effects_table_d:
                     dc.w    0,                                      0,                                  0
                     dc.w    0,                                      0,                                  0
@@ -668,7 +665,7 @@ OKT_handle_effects_single_channels:
                     move.l  (OKT_current_pattern-OKT_vars,a6),a2
                     addq.w  #2,a2
                     lea     (OKT_channels_data-OKT_vars,a6),a3
-                    lea     (OKT_AUDIO_BASE),a4
+                    lea     (_CUSTOM|OKT_AUDIO_BASE),a4
                     lea     (OKT_periods_table-OKT_vars,a6),a5
                     moveq   #8-1,d7
 .OKT_loop:
@@ -855,7 +852,7 @@ OKT_set_arp_s:
                     rts
 
 ; ===========================================================================
-                IFND OKT_AUDIO_ALL_HW
+                IFND OKT_AUDIO_VAMPIRE
 OKT_arp_d:
                     move.w  (CHAN_BASE_NOTE_D,a3),d2
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
@@ -1046,7 +1043,7 @@ OKT_periods_table:
                     dc.w    $358,$328,$2FA,$2D0,$2A6,$280,$25C,$23A,$21A,$1FC,$1E0,$1C5,$1AC,$194
                     dc.w    $17D,$168,$153,$140,$12E,$11D,$10D,$FE,$F0,$E2,$D6,$CA,$BE,$B4,$AA
                     dc.w    $A0,$97,$8F,$87,$7F,$78,$71,0
-                IFD OKT_AUDIO_ALL_HW
+                IFD OKT_AUDIO_VAMPIRE
 OKT_panning_table:  dc.w    $af,$50,$50,$af,$af,$50,$50,$af
                     dc.w    $af,$50,$50,$af,$af,$50,$50,$af
                 ENDC
@@ -1058,12 +1055,14 @@ OKT_vbr:
                     dc.l    0
 OKT_old_irq:
                     dc.l    0
+                IFND OKT_AUDIO_VAMPIRE
 OKT_audio_int_bit:
                     dc.w    0
 OKT_audio_int_single_bit:
                     dc.w    0
 OKT_double_channels:
                     dc.w    0
+                ENDC
 OKT_action_cycle:
                     dc.w    0
 OKT_current_pattern:

@@ -15,14 +15,17 @@ OKT_CODE_LENGTH:    rs.b    0
 OKT_SCALING_LINES   equ     19552
 OKT_BUFFERS_LENGTH  equ     312
 
-OKT_AUDIO_BASE      equ     $DFF0A0
-OKT_AUDIO_DMA       equ     $DFF096
+_CUSTOM             equ     $DFF000
+OKT_AUDIO_BASE      equ     $A0
+OKT_AUDIO_DMA       equ     $96
 OKT_AUDIO_ADR       equ     0
 OKT_AUDIO_LEN       equ     4
 OKT_AUDIO_PER       equ     6
 OKT_AUDIO_VOL       equ     8
 OKT_AUDIO_SIZE      equ     $10
 OKT_AUDIO_HW_CHANS  equ     4
+
+OKT_SONG_ID         equ     'SNG2'
 
 MEMF_ANY            equ     0
 MEMF_CHIP           equ     2
@@ -216,7 +219,8 @@ OKT_custom_init:
                     move.l  d1,(a0)+
                     move.l  d1,(a0)+
                     dbra    d0,.OKT_clear_mix_buffers
-                    lea     (OKT_AUDIO_BASE),a1
+                    lea     (_CUSTOM|OKT_AUDIO_BASE),a1
+                    move.w  #$7FFF,($9C-$A0,a1)
                     move.w  #$4780,($9A-$A0,a1)
                     move.w  #$F,($96-$A0,a1)
                     move.w  #$FF,($9E-$A0,a1)
@@ -266,7 +270,6 @@ OKT_custom_init:
                     move.b  #%10001,CIACRB-CIATBLO(a3)
                     move.w  #$E000,($9A-$A0,a1)
                     move.w  #$8200,($96-$A0,a1)
-                    moveq   #1,d0
                     rts
 .OKT_no_double_channels:
                     move.l  (a0),(OKT_old_irq-OKT_vars,a6)
@@ -286,7 +289,7 @@ OKT_custom_init:
 OKT_stop:
                     movem.l d0/a0/a1/a2/a6,-(a7)
                     lea     (OKT_vars,pc),a6
-                    lea     (OKT_AUDIO_DMA),a2
+                    lea     (_CUSTOM|OKT_AUDIO_DMA),a2
                     move.w  #$7FFF,($9C-$96,a2)
                     move.w  #$6780,($9A-$96,a2)
                     move.w  #%1111,(a2)
@@ -337,7 +340,7 @@ OKT_audio_int:
                     beq     .OKT_no_int
                     move.w	d0,$9C-$1E(a1)
                     bsr     OKT_main
-                    lea     OKT_AUDIO_BASE,a1
+                    lea     (_CUSTOM|OKT_AUDIO_BASE),a1
                     move.l  (OKT_final_mixing_buffers-OKT_vars,a6),a0
                     tst.b   (OKT_buffer_flip-OKT_vars,a6)
                     beq     .OKT_buffer_2

@@ -162,14 +162,26 @@ OKT_SCALING_LINES   equ     19552
 OKT_BUFFERS_LENGTH  equ     312
 
 ; ===========================================================================
-OKT_AUDIO_BASE      equ     $DFF0A0
-OKT_AUDIO_DMA       equ     $DFF096
+                IFD OKT_AUDIO_VAMPIRE
+OKT_AUDIO_BASE      equ     $400
+OKT_AUDIO_DMA       equ     $296
+OKT_AUDIO_ADR       equ     0
+OKT_AUDIO_LEN       equ     4
+OKT_AUDIO_VOL       equ     8
+OKT_AUDIO_CTRL      equ     $A
+OKT_AUDIO_PER       equ     $C
+OKT_AUDIO_SIZE      equ     $10
+OKT_AUDIO_HW_CHANS  equ     8
+                ELSE
+OKT_AUDIO_BASE      equ     $A0
+OKT_AUDIO_DMA       equ     $96
 OKT_AUDIO_ADR       equ     0
 OKT_AUDIO_LEN       equ     4
 OKT_AUDIO_PER       equ     6
 OKT_AUDIO_VOL       equ     8
 OKT_AUDIO_SIZE      equ     $10
 OKT_AUDIO_HW_CHANS  equ     4
+                ENDC
 
 ; ===========================================================================
 OKT_SET_AUDIO_ADR   MACRO
@@ -193,7 +205,18 @@ OKT_SET_AUDIO_CTRL  MACRO
                     ENDM
 
 OKT_SET_AUDIO_DMA   MACRO
-                    move.w  \1,OKT_AUDIO_DMA
+                    move.w  \1,_CUSTOM|OKT_AUDIO_DMA
+                    ENDM
+
+OKT_SET_AUDIO_PAN   MACRO
+                    ; set panning
+                    move.w  d0,d1
+                    mulu    (a4,d3.w*4),d0
+                    lsr.w   #7,d0
+                    lsl.w   #8,d0
+                    mulu    2(a4,d3.w*4),d1
+                    lsr.w   #7,d1
+                    or.w    d1,d0
                     ENDM
 
 ; ===========================================================================
