@@ -129,6 +129,28 @@ RESP_EVT_ROUT_2     equ     14
 
 OKT_IN_TRACKER      equ     1
 
+		            rsreset
+SMP_NAME:           rs.b    20
+SMP_LEN:            rs.l    1           ; 20
+SMP_REP_START:      rs.w    1           ; 24
+SMP_REP_LEN:        rs.w    1           ; 26
+SMP_VOL:            rs.w    1           ; 28
+SMP_TYPE:           rs.w    1           ; 30
+SMP_INFOS_LEN:      rs.b    0           ; 32
+		            rsreset
+CHAN_TYPE:          rs.b    1           ; 0
+                    rs.b    1           ; 1 (pad)
+CHAN_SMP_REP_START: rs.l    1           ; 2
+CHAN_SMP_REP_LEN_D: rs.b    0           ; 6 (long word)
+CHAN_SMP_REP_LEN_S: rs.w    1           ; 6
+CHAN_NOTE_S:        rs.w    1           ; 8
+CHAN_PERIOD_S:      rs.b    0           ; 10
+CHAN_NOTE_D:        rs.w    1           ; 10
+CHAN_BASE_NOTE_D:   rs.w    1           ; 12
+CHAN_SMP_PROC_D:    rs.l    1           ; 14
+CHAN_SMP_PROC_LEN_D:rs.l    1           ; 18
+CHAN_LEN:           rs.b    0           ; 22
+
 ; ===========================================================================
 EXEC                MACRO
                     move.l  a6,-(a7)

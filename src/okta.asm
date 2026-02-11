@@ -1078,7 +1078,7 @@ lbC01EC7A:
                     sf      (1,a5)
                     move.b  d0,(a5)
                     beq     lbC01ECBC
-                    move.b  (lbB021E53,pc),(1,a5)
+                    move.b  (current_sample+1,pc),(1,a5)
                     tst.b   d1
                     beq     lbC01ECBC
                     move.w  d0,d1
@@ -1301,12 +1301,12 @@ lbC01EF1E:
                     add.w   d0,a0
                     ; sample mode
                     ; check mode 8
-                    tst.w   (30,a0)
+                    tst.w   (SMP_TYPE,a0)
                     bne     lbC01EF46
                     move.w  #64,d2
                     bra     lbC01EF4A
 lbC01EF46:
-                    move.w  (28,a0),d2
+                    move.w  (SMP_VOL,a0),d2
 lbC01EF4A:
                     move.w  (current_sample,pc),d0
                     jsr     (lbC0229C4)
@@ -1333,23 +1333,23 @@ lbC01EF5A:
                     move.l  (lbL01A134),d0
                     lsr.l   #1,d0
                     ; sample mode
-                    tst.w   (30,a2)
+                    tst.w   (SMP_TYPE,a2)
                     bne     lbC01EFB6
                     moveq   #64,d3
-                    lea     (OKT_EmptyWaveForm),a1
+                    lea     (OKT_empty_waveform),a1
                     moveq   #1,d1
                     bra     lbC01EFDA
 lbC01EFB6:
-                    move.w  (28,a2),d3
-                    move.w  (26,a2),d1
+                    move.w  (SMP_VOL,a2),d3
+                    move.w  (SMP_REP_LEN,a2),d1
                     bne     lbC01EFCA
-                    lea     (OKT_EmptyWaveForm),a1
+                    lea     (OKT_empty_waveform),a1
                     moveq   #1,d1
                     bra     lbC01EFDA
 lbC01EFCA:
                     move.l  a0,a1
                     moveq   #0,d4
-                    move.w  (24,a2),d4
+                    move.w  (SMP_REP_START,a2),d4
                     move.w  d1,d0
                     add.w   d4,d0
                     add.l   d4,d4
@@ -2042,7 +2042,7 @@ lbC01F790:
                     bra     lbC01F694
 lbC01F798:
                     move.b  (1,a0),d0
-                    cmp.b   (lbB021E53,pc),d0
+                    cmp.b   (current_sample+1,pc),d0
                     bne     lbC01F7B0
 lbC01F7A2:
                     move.b  (a0),d0
@@ -2061,7 +2061,7 @@ lbC01F7BA:
                     bra     lbC01F694
 lbC01F7C2:
                     move.b  (1,a0),d0
-                    cmp.b   (lbB021E53,pc),d0
+                    cmp.b   (current_sample+1,pc),d0
                     bne     lbC01F7D4
 lbC01F7CC:
                     move.b  (a0),d0
@@ -2078,7 +2078,7 @@ lbC01F7DE:
                     bra     lbC01F694
 lbC01F7E6:
                     move.b  (1,a0),d0
-                    cmp.b   (lbB021E53,pc),d0
+                    cmp.b   (current_sample+1,pc),d0
                     bne     lbC01F800
 lbC01F7F0:
                     move.b  (a0),d0
@@ -2097,7 +2097,7 @@ lbC01F80A:
                     bra     lbC01F694
 lbC01F812:
                     move.b  (1,a0),d0
-                    cmp.b   (lbB021E53,pc),d0
+                    cmp.b   (current_sample+1,pc),d0
                     bne     lbC01F82A
 lbC01F81C:
                     move.b  (a0),d0
@@ -2114,7 +2114,7 @@ lbC01F834:
                     tst.b   (a0)
                     beq     lbC01F844
                     move.b  (1,a0),d0
-                    cmp.b   (lbB021E53,pc),d0
+                    cmp.b   (current_sample+1,pc),d0
                     bne     lbC01F844
                     clr.l   (a0)
 lbC01F844:
@@ -2551,13 +2551,13 @@ draw_current_sample_infos:
                     jsr     (draw_text)
                     move.l  (a7),a0
                     ; length
-                    move.l  (20,a0),d2
+                    move.l  (SMP_LEN,a0),d2
                     moveq   #46,d0
                     moveq   #2,d1
                     jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     move.l  (a7),a0
                     ; sample mode
-;                    tst.w   (30,a0)
+;                    tst.w   (SMP_TYPE,a0)
 ;                    beq     .empty
                     ; 4 or B
                     lea     (.infos_header_text,pc),a0
@@ -2568,7 +2568,7 @@ draw_current_sample_infos:
                     move.l  (a7),a0
                     ; repeat start
                     moveq   #0,d2
-                    move.w  (24,a0),d2
+                    move.w  (SMP_REP_START,a0),d2
                     add.l   d2,d2
                     moveq   #46,d0
                     moveq   #3,d1
@@ -2576,14 +2576,14 @@ draw_current_sample_infos:
                     move.l  (a7),a0
                     ; repeat length
                     moveq   #0,d2
-                    move.w  (26,a0),d2
+                    move.w  (SMP_REP_LEN,a0),d2
                     add.l   d2,d2
                     moveq   #46,d0
                     moveq   #4,d1
                     jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     move.l  (a7),a0
                     ; default volume
-                    move.w  (28,a0),d2
+                    move.w  (SMP_VOL,a0),d2
                     moveq   #46,d0
                     moveq   #5,d1
                     jsr     (draw_2_digits_decimal_number_leading_zeroes)
@@ -2602,7 +2602,7 @@ draw_current_sample_infos:
 .sample_mode:
                     move.l  (a7)+,a0
                     ; sample mode
-                    move.w  (30,a0),d0
+                    move.w  (SMP_TYPE,a0),d0
                     lea     (.sample_mode_text,pc),a0
                     move.b  (a0,d0.w),d2
                     moveq   #46,d0
@@ -4153,7 +4153,7 @@ lbC020F2C:
                     moveq   #12,d0
                     jsr     (move_in_file)
                     bmi     lbC02102A
-                    lea     (OKT_samples+32),a5
+                    lea     (OKT_samples+SMP_INFOS_LEN),a5
                     moveq   #15-1,d7
                     tst.b   (st_load_samples_mode)
                     beq     lbC020F4A
@@ -4167,8 +4167,8 @@ lbC020F4A:
                     beq     lbC020F96
                     lsl.w   (22,a5)
                     move.w  (28,a5),d0
-                    move.w  (24,a5),(28,a5)
-                    cmpi.w  #64,(28,a5)
+                    move.w  (24,a5),(SMP_VOL,a5)
+                    cmpi.w  #64,(SMP_VOL,a5)
                     bhi     lbC021024
                     move.w  (26,a5),(24,a5)
                     move.w  d0,(26,a5)
@@ -4180,13 +4180,13 @@ lbC020F4A:
                     moveq   #0,d0
 lbC020F90:
                     ; sample mode
-                    move.w  d0,(30,a5)
+                    move.w  d0,(SMP_TYPE,a5)
                     bra     lbC020F9C
 lbC020F96:
                     move.l  a5,a0
                     bsr     lbC021032
 lbC020F9C:
-                    lea     (32,a5),a5
+                    lea     (SMP_INFOS_LEN,a5),a5
                     dbra    d7,lbC020F4A
                     lea     (OKT_song_length,pc),a5
                     move.l  a5,a0
@@ -4293,7 +4293,7 @@ lbC0210CE:
                     lea     (OKT_samples),a5
                     moveq   #0,d7
 lbC0210D6:
-                    move.l  (20,a5),d0
+                    move.l  (SMP_LEN,a5),d0
                     beq     lbC02111E
                     move.l  d0,(lbL01B732)
                     move.w  d7,(current_sample)
@@ -4306,13 +4306,13 @@ lbC0210D6:
                     jsr     (read_from_file)
                     bmi     lbC021138
                     ; sample mode
-                    cmpi.w  #1,(30,a5)
+                    cmpi.w  #1,(SMP_TYPE,a5)
                     beq     lbC02111E
                     move.l  (lbL021140,pc),a0
                     move.l  (lbL01B732),d0
                     bsr     lbC021F62
 lbC02111E:
-                    lea     (32,a5),a5
+                    lea     (SMP_INFOS_LEN,a5),a5
                     addq.w  #1,d7
                     cmpi.w  #36,d7
                     bne     lbC0210D6
@@ -4451,7 +4451,7 @@ lbC0212AA:
                     movem.l d7/a5,-(a7)
                     bsr     display_main_menu
                     movem.l (a7)+,d7/a5
-                    move.l  (20,a5),d0
+                    move.l  (SMP_LEN,a5),d0
                     beq     lbC021310
                     move.l  d0,(lbL01B732)
                     bsr     lbC021F9E
@@ -4473,7 +4473,7 @@ lbC0212AA:
                     jsr     (read_from_file)
                     bmi     lbC021330
 lbC021310:
-                    lea     (32,a5),a5
+                    lea     (SMP_INFOS_LEN,a5),a5
                     addq.w  #1,d7
                     cmpi.w  #36,d7
                     bne     lbC0212AA
@@ -4705,7 +4705,7 @@ lbC0215BA:
                     move.l  (a5),d0
                     beq     lbC021606
                     move.l  d0,a0
-                    move.l  (20,a4),d0
+                    move.l  (SMP_LEN,a4),d0
                     andi.l  #$FFFFFFFE,d0
                     beq     lbC021606
                     move.l  a0,(lbL01B720)
@@ -4721,7 +4721,7 @@ lbC0215BA:
                     jsr     (write_to_file)
                     bmi     lbC021614
 lbC021606:
-                    lea     (32,a4),a4
+                    lea     (SMP_INFOS_LEN,a4),a4
                     addq.w  #8,a5
                     dbra    d7,lbC0215BA
                     moveq   #OK,d0
@@ -4800,7 +4800,7 @@ do_free_sample:
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
-                    moveq   #(32/4)-1,d0
+                    moveq   #(SMP_INFOS_LEN/4)-1,d0
 .loop:
                     clr.l   (a0)+
                     dbra    d0,.loop
@@ -4845,8 +4845,8 @@ lbC0216DC:
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     add.w   d0,a1
-                    move.l  (20,a0),d0
-                    moveq   #8-1,d2
+                    move.l  (SMP_LEN,a0),d0
+                    moveq   #(SMP_INFOS_LEN/4)-1,d2
 .loop:
                     move.l  (a0)+,(a1)+
                     dbra    d2,.loop
@@ -4878,7 +4878,7 @@ lbC02177E:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     ; sample mode
-                    move.w  (30,a0),(save_sample_mode)
+                    move.w  (SMP_TYPE,a0),(save_sample_mode)
                     bsr     get_current_sample_ptr_address
                     move.l  (a0)+,(lbL01BC60)
                     beq     error_what_sample
@@ -4903,7 +4903,7 @@ lbC02177E:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     ; sample mode changed ?
-                    move.w  (30,a0),d0
+                    move.w  (SMP_TYPE,a0),d0
                     cmp.w   (save_sample_mode),d0
                     bne     lbC02187A
                     bsr     ask_are_you_sure_requester
@@ -4982,7 +4982,7 @@ lbC02189C:
                     movem.l (a5),d2/d3
                     movem.l d0/d1,(a5)
                     movem.l d2/d3,(a3)
-                    moveq   #8-1,d2
+                    moveq   #(SMP_INFOS_LEN/4)-1,d2
 lbC0218F4:
                     move.l  (a4),d0
                     move.l  (a2),d1
@@ -5037,7 +5037,7 @@ lbC02197E:
                     movem.l (a7)+,d0/a0/a1
                     beq     lbC0219B0
                     movem.l d0/a0/a1,-(a7)
-                    bsr     lbC021E38
+                    bsr     inc_sample_number
                     movem.l (a7)+,d0/a0/a1
                     bpl     lbC02197E
                     bra     lbC0219E0
@@ -5050,7 +5050,7 @@ lbC0219B6:
                     move.w  (lbW0219FA,pc),d0
                     cmp.w   (lbW0219F8,pc),d0
                     beq     lbC0219D4
-                    bsr     lbC021E38
+                    bsr     inc_sample_number
                     bpl     lbC02195A
                     bra     lbC0219E0
 lbC0219D4:
@@ -5142,7 +5142,7 @@ lbC021B08:
                     move.w  (current_sample,pc),d2
                     lsl.w   #5,d2
                     ; load with default sample mode
-                    move.w  (samples_load_mode),(30,a0,d2.w)
+                    move.w  (samples_load_mode),(SMP_TYPE,a0,d2.w)
                     bsr     lbC021F9E
                     bmi     lbC021BA6
                     move.l  d0,(lbL021C0E)
@@ -5152,14 +5152,20 @@ lbC021B08:
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     add.w   d0,a1
+                    ; copy sample name
                     moveq   #20-1,d0
 lbC021B44:
                     move.b  (a0)+,(a1)+
                     dbra    d0,lbC021B44
+                    ; SMP_LEN
                     move.l  d1,(a1)+
+                    ; SMP_REP_START
                     move.w  (lbW021C0A,pc),(a1)+
+                    ; SMP_REP_LEN
                     move.w  (lbW021C0C,pc),(a1)+
+                    ; SMP_VOL
                     move.w  #64,(a1)+
+                    ; SMP_TYPE
                     move.w  (samples_load_mode),(a1)+
                     move.b  (lbB021C04,pc),d0
                     beq     lbC021B76
@@ -5279,9 +5285,10 @@ lbC021C92:
                     bsr     overwrite_file_requester
                     bne     lbC021DA2
 
-                    lea     (OKT_samples+30),a0
+                    lea     (OKT_samples+SMP_TYPE),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
+                    ; sample type
                     cmpi.w  #1,(a0,d0.w)
                     beq     lbC021CDA
                     move.l  (lbL01A130),a0
@@ -5305,17 +5312,18 @@ lbC021CDA:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     move.l  a0,a2
+                    ; get sample name
                     moveq   #19-1,d0
 lbC021D26:
                     move.b  (a0)+,(a1)+
                     dbra    d0,lbC021D26
                     sf      (a1)+
                     moveq   #0,d0
-                    move.w  (24,a2),d0
+                    move.w  (SMP_REP_START,a2),d0
                     add.l   d0,d0
                     move.l  d0,(lbL021DCA)
                     moveq   #0,d1
-                    move.w  (26,a2),d1
+                    move.w  (SMP_REP_LEN,a2),d1
                     add.l   d1,d1
                     move.l  d1,(ascii_MSG61)
                     beq     lbC021D54
@@ -5409,7 +5417,9 @@ lbC021E2A:
                     move.w  d0,(current_sample)
                     bsr     lbC02001C
                     bra     display_main_menu
-lbC021E38:
+
+; ===========================================================================
+inc_sample_number:
                     lea     (current_sample,pc),a0
                     cmpi.w  #35,(a0)
                     beq     error_no_more_samples
@@ -5419,10 +5429,10 @@ lbC021E38:
                     moveq   #0,d0
                     rts
 current_sample:
-                    dc.b    0
-lbB021E53:
-                    dc.b    0
-lbC021E54:
+                    dc.w    0
+
+; ===========================================================================
+dec_sample_number:
                     lea     (current_sample,pc),a0
                     tst.w   (a0)
                     beq     error_no_more_samples
@@ -5431,34 +5441,40 @@ lbC021E54:
                     bsr     display_main_menu
                     moveq   #0,d0
                     rts
-lbC021E6C:
-                    lea     (OKT_samples+28),a0
+
+; ===========================================================================
+inc_sample_volume:
+                    lea     (OKT_samples+SMP_VOL),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
                     cmpi.w  #64,(a0)
-                    beq     lbC021E86
+                    beq     .max
                     addq.w  #1,(a0)
                     bra     display_main_menu
-lbC021E86:
+.max:
                     rts
-lbC021E88:
-                    lea     (OKT_samples+28),a0
+
+; ===========================================================================
+dec_sample_volume:
+                    lea     (OKT_samples+SMP_VOL),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
                     tst.w   (a0)
-                    beq     lbC021EA0
+                    beq     .min
                     subq.w  #1,(a0)
                     bra     display_main_menu
-lbC021EA0:
+.min:
                     rts
-lbC021EA2:
+
+; ===========================================================================
+inc_sample_type:
                     tst.l   (lbL01A130)
                     beq     error_what_sample
                     tst.l   (lbL01A134)
                     beq     error_what_sample
-                    lea     (OKT_samples+30),a5
+                    lea     (OKT_samples+SMP_TYPE),a5
                     move.w  (current_sample,pc),d1
                     lsl.w   #5,d1
                     add.w   d1,a5
@@ -5477,12 +5493,14 @@ lbC021EE6:
                     bsr     display_main_menu
                     moveq   #0,d0
                     rts
-lbC021EF4:
+
+; ===========================================================================
+dec_sample_type:
                     tst.l   (lbL01A130)
                     beq     error_what_sample
                     tst.l   (lbL01A134)
                     beq     error_what_sample
-                    lea     (OKT_samples+30),a5
+                    lea     (OKT_samples+SMP_TYPE),a5
                     move.w  (current_sample,pc),d1
                     lsl.w   #5,d1
                     add.w   d1,a5
@@ -5502,6 +5520,8 @@ lbC021F38:
                     bsr     display_main_menu
                     moveq   #0,d0
                     rts
+
+; ===========================================================================
 lbC021F46:
                     bsr     stop_audio_channels
                     move.l  (lbL01A130),a0
@@ -5546,7 +5566,7 @@ lbC021F9E:
                     move.l  a0,(lbL021FFC)
                     moveq   #MEMF_CHIP,d1
                     ; sample mode
-                    tst.w   (30,a0)
+                    tst.w   (SMP_TYPE,a0)
                     bne     lbC021FC4
                     ; mode 8 in chip
                     moveq   #MEMF_ANY,d1
@@ -5560,7 +5580,7 @@ lbC021FC4:
                     move.l  d0,(a0)+
                     move.l  d1,(a0)+
                     move.l  (lbL021FFC,pc),a0
-                    move.l  d1,(20,a0)
+                    move.l  d1,(SMP_LEN,a0)
                     tst.l   d0
                     rts
 lbC021FF0:
@@ -6208,7 +6228,7 @@ lbC022B26:
                     add.w   d2,d2
                     add.w   d2,d2
                     add.w   d2,a0
-                    move.b  (lbB021E53,pc),d1
+                    move.b  (current_sample+1,pc),d1
                     move.b  d0,(a0)+
                     bne     lbC022B46
                     moveq   #0,d1
@@ -6283,7 +6303,7 @@ lbC022BEE:
                     sf      (a0)+
                     bra     lbC022C28
 lbC022C24:
-                    move.b  (lbB021E53,pc),(a0)+
+                    move.b  (current_sample+1,pc),(a0)+
 lbC022C28:
                     bsr     lbC022D06
                     bsr     lbC01FB24
@@ -6408,7 +6428,7 @@ lbC022D66:
                     sf      (a0)+
                     bra     lbC022D8C
 lbC022D88:
-                    move.b  (lbB021E53,pc),(a0)+
+                    move.b  (current_sample+1,pc),(a0)+
 lbC022D8C:
                     lea     (full_note_table),a1
                     lea     (lbW01B2B0),a0
@@ -6439,9 +6459,9 @@ lbC022DE6:
 ; ===========================================================================
 show_pattern_position_bar:
                     tst.b   (pattern_play_flag)
-                    bne     lbC022EF8
+                    bne     last_column
                     move.w  (OKT_pattern_row,pc),d2
-                    bmi     lbC022EF8
+                    bmi     last_column
                     move.w  d2,d0
                     bsr     set_pattern_bitplane_from_given_pos
                     lea     (main_screen+(56*80)),a0
@@ -6451,17 +6471,21 @@ show_pattern_position_bar:
                     move.l  a0,a1
                     lea     (-SCREEN_BYTES,a1),a1
                     lea     ((SCREEN_BYTES*8),a1),a2
+                    ; don't draw top bar on first row
                     tst.w   d2
-                    beq     lbC022E44
-                REPT 20
+                    beq     first_row_1
+                    ; top
+                REPT (80/4)
                     not.l   (a1)+
                 ENDR
-lbC022E44:
-                REPT 20
+first_row_1:
+                    ; bottom
+                REPT (80/4)
                     not.l   (a2)+
                 ENDR
                     move.w  (lbW01B2B6),d0
-                    bmi     lbC022EF8
+                    bmi     last_column
+                    ; remove the bar on the current caret channel
                     lea     (caret_current_positions),a1
                     mulu.w  #5,d0
                     move.b  (a1,d0.w),d1
@@ -6470,6 +6494,8 @@ lbC022E44:
                     lea     (-SCREEN_BYTES,a0),a0
                     lea     ((SCREEN_BYTES*8),a0),a1
                     moveq   #%00000001,d0
+                    ; close the bar vertically on the left
+                    ; of the curent channel
                     eor.b   d0,(-((SCREEN_BYTES*7)+1),a1)
                     eor.b   d0,(-((SCREEN_BYTES*6)+1),a1)
                     eor.b   d0,(-((SCREEN_BYTES*5)+1),a1)
@@ -6478,16 +6504,20 @@ lbC022E44:
                     eor.b   d0,(-((SCREEN_BYTES*2)+1),a1)
                     eor.b   d0,(-((SCREEN_BYTES*1)+1),a1)
                     tst.w   d2
-                    beq     lbC022EC2
+                    beq     first_row_2
+                    ; top
                 REPT 8
                     not.b   (a0)+
                 ENDR
-lbC022EC2:
+first_row_2:
+                    ; bottom
                 REPT 8
                     not.b   (a1)+
                 ENDR
                     cmpi.w  #72,d1
-                    beq     lbC022EF8
+                    beq     last_column
+                    ; close the bar vertically on the right
+                    ; of the curent channel
                     move.b  #%10000000,d0
                     eor.b   d0,(-(SCREEN_BYTES*7),a1)
                     eor.b   d0,(-(SCREEN_BYTES*6),a1)
@@ -6496,7 +6526,7 @@ lbC022EC2:
                     eor.b   d0,(-(SCREEN_BYTES*3),a1)
                     eor.b   d0,(-(SCREEN_BYTES*2),a1)
                     eor.b   d0,(-(SCREEN_BYTES*1),a1)
-lbC022EF8:
+last_column:
                     rts
 current_song_position:
                     dc.w    0
@@ -6504,7 +6534,7 @@ current_song_position:
 ; ===========================================================================
 ; ===========================================================================
 ; ===========================================================================
-OKT_ReplayHandler:
+OKT_replay_handler:
                     bsr     draw_vumeters
                     bsr     OKT_set_hw_regs
                     addq.w  #1,(OKT_action_cycle)
@@ -6702,7 +6732,7 @@ OKT_fill_double_channel_data:
                     ; sample mode
                     ; no midi out in mode 4
                     ; only in mode 8 or b
-                    cmpi.w  #1,(30,a1)
+                    cmpi.w  #1,(SMP_TYPE,a1)
                     beq     .OKT_empty
                     move.b  (1,a2),d0
                     move.b  d3,d1
@@ -6715,7 +6745,7 @@ OKT_fill_double_channel_data:
                     move.b  (3,a2),d2
 .OKT_max:
                     ; sample length
-                    move.l  (20,a1),d3
+                    move.l  (SMP_LEN,a1),d3
                     jsr     (lbC022AA6,pc)
 .OKT_empty:
                     movem.l (a7)+,d0-d4/a0/a1
@@ -6731,10 +6761,10 @@ OKT_fill_double_channel_data:
                     add.w   d0,d0
                     ; sample mode
                     ; not in 4 mode
-                    cmpi.w  #1,(30,a1,d0.w)
+                    cmpi.w  #1,(SMP_TYPE,a1,d0.w)
                     beq     .OKT_no_data
                     move.l  d2,(2,a3)
-                    move.l  (20,a1,d0.w),(6,a3)
+                    move.l  (SMP_LEN,a1,d0.w),(6,a3)
                     move.w  d3,(10,a3)
                     move.w  d3,(12,a3)
 .OKT_done_midi_out:
@@ -6805,17 +6835,17 @@ OKT_turn_dma_on:
                     btst    #1,d0
                     beq     .OKT_SetChan2
                     move.l  (28,a1),(AUD1LCH-VHPOSR,a0)
-                    move.w  (32,a1),(AUD1LEN-VHPOSR,a0)
+                    move.w  (28+4,a1),(AUD1LEN-VHPOSR,a0)
 .OKT_SetChan2:
                     btst    #2,d0
                     beq     .OKT_SetChan3
-                    move.l  (56,a1),(AUD2LCH-VHPOSR,a0)
-                    move.w  (60,a1),(AUD2LEN-VHPOSR,a0)
+                    move.l  ((28*2),a1),(AUD2LCH-VHPOSR,a0)
+                    move.w  ((28*2)+4,a1),(AUD2LEN-VHPOSR,a0)
 .OKT_SetChan3:
                     btst    #3,d0
                     beq     .OKT_SetChan4
-                    move.l  (84,a1),(AUD3LCH-VHPOSR,a0)
-                    move.w  (88,a1),(AUD3LEN-VHPOSR,a0)
+                    move.l  ((28*3),a1),(AUD3LCH-VHPOSR,a0)
+                    move.w  ((28*3)+4,a1),(AUD3LEN-VHPOSR,a0)
 .OKT_SetChan4:
                     rts
 
@@ -6871,7 +6901,7 @@ OKT_fill_single_channel_data:
                     ; sample mode
                     ; not in 8 mode
                     ; only in 4 and b modes
-                    tst.w   (30,a1)
+                    tst.w   (SMP_TYPE,a1)
                     beq     .OKT_empty
                     ; sample assigned to corresponding MIDI channel
                     move.b  (1,a2),d0
@@ -6879,8 +6909,8 @@ OKT_fill_single_channel_data:
                     move.b  d3,d1
                     addq.b  #1,d1
                     ; volume
-                    move.b  (29,a1),d2
-                    ; volume effect
+                    move.b  (SMP_VOL+1,a1),d2
+                    ; volume effect1
                     cmpi.b  #31,(2,a2)
                     bne     .OKT_max
                     cmpi.b  #64,(3,a2)
@@ -6889,7 +6919,7 @@ OKT_fill_single_channel_data:
                     move.b  (3,a2),d2
 .OKT_max:
                     ; length
-                    move.l  (20,a1),d3
+                    move.l  (SMP_LEN,a1),d3
                     jsr     (lbC022AA6,pc)
 .OKT_empty:
                     movem.l (a7)+,d0-d4/a0/a1
@@ -6906,9 +6936,9 @@ OKT_fill_single_channel_data:
                     add.w   d0,a1
                     ; sample mode
                     ; not in 8 mode
-                    tst.w   (30,a1)
+                    tst.w   (SMP_TYPE,a1)
                     beq     .OKT_no_data
-                    move.l  (20,a1),d1
+                    move.l  (SMP_LEN,a1),d1
                     lsr.l   #1,d1
                     tst.w   d1
                     beq     .OKT_no_data
@@ -6924,24 +6954,28 @@ OKT_fill_single_channel_data:
                     lea     (OKT_channels_volumes,pc),a0
                     moveq   #0,d0
                     move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d0
-                    move.b  (29,a1),(a0,d0.w)
+                    move.b  (SMP_VOL+1,a1),(a0,d0.w)
                     move.l  (a7)+,a0
 .OKT_done_midi_out:
                     bsr     trigger_vumeter
                     cmpi.b  #MIDI_OUT,(midi_mode)
                     beq     .OKT_no_data
-                    move.w  (26,a1),d0
+                    moveq   #0,d0
+                    ; repeat length
+                    move.w  (SMP_REP_LEN,a1),d0
                     bne     .OKT_real_repeat
+                    ; length before repeat
                     move.w  d1,(4,a4)
-                    move.l  #OKT_EmptyWaveForm,(2,a3)
+                    move.l  #OKT_empty_waveform,(2,a3)
                     move.w  #2/2,(6,a3)
 .OKT_no_data:
                     rts
 .OKT_real_repeat:
                     move.w  d0,(6,a3)
                     moveq   #0,d1
-                    move.w  (24,a1),d1
+                    move.w  (SMP_REP_START,a1),d1
                     add.w   d1,d0
+                    ; length
                     move.w  d0,(4,a4)
                     add.l   d1,d1
                     add.l   d2,d1
@@ -7454,7 +7488,7 @@ OKT_Play:
                     move.w  #DMAF_SETCLR|DMAF_AUDIO,(_CUSTOM|DMACON)
                     sf      (OK_StartDMAFlg)
 lbC023956:
-                    bsr     OKT_ReplayHandler
+                    bsr     OKT_replay_handler
                     cmpi.b  #MIDI_OUT,(midi_mode)
                     beq     lbC0239AA
                     lea     (OKT_channels_data),a2
@@ -12526,7 +12560,7 @@ lbC02837A:
                     lsl.w   #5,d0
                     ; sample mode
                     ; set in 4 mode
-                    cmpi.w  #1,(30,a0,d0.w)
+                    cmpi.w  #1,(SMP_TYPE,a0,d0.w)
                     seq     (lbB029EE6)
                     bsr     lbC0284F6
                     cmpi.l  #SCREEN_WIDTH,(lbL01A134)
@@ -12950,9 +12984,10 @@ lbC0289C4:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     ; sample mode
-;                    tst.w   (30,a0)
+;                    tst.w   (SMP_TYPE,a0)
 ;                    beq     lbC029EBE
-                    clr.l   (24,a0)
+                    ; SMP_REP_START+SMP_REP_LEN
+                    clr.l   (SMP_REP_START,a0)
                     bra     lbC028B58
 lbC0289EE:
                     tst.l   (lbL01A130)
@@ -12962,13 +12997,13 @@ lbC0289EE:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     ; sample mode
-;                    tst.w   (30,a0)
+;                    tst.w   (SMP_TYPE,a0)
 ;                    beq     lbC029EBE
                     moveq   #0,d0
-                    move.w  (24,a0),d0
+                    move.w  (SMP_REP_START,a0),d0
                     add.l   d0,d0
                     moveq   #0,d1
-                    move.w  (26,a0),d1
+                    move.w  (SMP_REP_LEN,a0),d1
                     add.l   d1,d1
                     add.l   d0,d1
                     move.l  (lbL01A130),a0
@@ -12985,8 +13020,8 @@ lbC028A2A:
                     move.w  (current_sample),d1
                     lsl.w   #5,d1
                     add.w   d1,a0
-                    add.w   d0,(24,a0)
-                    sub.w   d0,(26,a0)
+                    add.w   d0,(SMP_REP_START,a0)
+                    sub.w   d0,(SMP_REP_LEN,a0)
                     bra     lbC028B58
 lbC028A58:
                     tst.l   (lbL01A130)
@@ -12996,13 +13031,13 @@ lbC028A58:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     ; sample mode
-;                    tst.w   (30,a0)
+;                    tst.w   (SMP_TYPE,a0)
 ;                    beq     lbC029EBE
                     moveq   #0,d0
-                    move.w  (24,a0),d0
+                    move.w  (SMP_REP_START,a0),d0
                     add.l   d0,d0
                     moveq   #0,d1
-                    move.w  (26,a0),d1
+                    move.w  (SMP_REP_LEN,a0),d1
                     add.l   d1,d1
                     add.l   d0,d1
                     move.l  (lbL01A130),a0
@@ -13018,7 +13053,7 @@ lbC028A92:
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
-                    move.w  d1,(26,a0)
+                    move.w  d1,(SMP_REP_LEN,a0)
                     bra     lbC028B58
 lbC028ABC:
                     moveq   #0,d0
@@ -13031,8 +13066,8 @@ lbC028AC4:
 lbC028AC6:
                     bsr     lbC028B1E
                     bmi     lbC028AD6
-                    sub.w   d0,(24,a0)
-                    add.w   d0,(26,a0)
+                    sub.w   d0,(SMP_REP_START,a0)
+                    add.w   d0,(SMP_REP_LEN,a0)
                     bra     lbC028B58
 lbC028AD6:
                     rts
@@ -13047,8 +13082,8 @@ lbC028AE0:
 lbC028AE2:
                     bsr     lbC028B1E
                     bmi     lbC028AF0
-                    add.w   d0,(24,a0)
-                    sub.w   d0,(26,a0)
+                    add.w   d0,(SMP_REP_START,a0)
+                    sub.w   d0,(SMP_REP_LEN,a0)
                     bra     lbC028B58
 lbC028AF0:
                     rts
@@ -13063,7 +13098,7 @@ lbC028AFA:
 lbC028AFC:
                     bsr     lbC028B1E
                     bmi     lbC028B06
-                    sub.w   d0,(26,a0)
+                    sub.w   d0,(SMP_REP_LEN,a0)
                     bra     lbC028B58
 lbC028B06:
                     rts
@@ -13078,7 +13113,7 @@ lbC028B10:
 lbC028B12:
                     bsr     lbC028B1E
                     bmi     lbC028B1C
-                    add.w   d0,(26,a0)
+                    add.w   d0,(SMP_REP_LEN,a0)
                     bra     lbC028B58
 lbC028B1C:
                     rts
@@ -13088,7 +13123,7 @@ lbC028B1E:
                     lsl.w   #5,d1
                     add.w   d1,a0
                     ; sample mode
-;                    tst.w   (30,a0)
+;                    tst.w   (SMP_TYPE,a0)
 ;                    beq     lbC029EBE
                     subq.w  #1,d0
                     beq     lbC028B42
@@ -13115,12 +13150,12 @@ lbC028B5A:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     ; sample mode
-                    tst.w   (30,a0)
+                    tst.w   (SMP_TYPE,a0)
                     beq     lbC028BBC
-                    tst.w   (26,a0)
+                    tst.w   (SMP_REP_LEN,a0)
                     beq     lbC028BBC
                     moveq   #0,d0
-                    move.w  (24,a0),d0
+                    move.w  (SMP_REP_START,a0),d0
                     add.l   d0,d0
                     lsl.l   #8,d0
                     divu.w  (lbW029ED2),d0
@@ -13130,10 +13165,10 @@ lbC028B5A:
                     bsr     lbC028BE6
                     move.l  (a7)+,a0
                     moveq   #0,d0
-                    move.w  (24,a0),d0
+                    move.w  (SMP_REP_START,a0),d0
                     add.l   d0,d0
                     moveq   #0,d1
-                    move.w  (26,a0),d1
+                    move.w  (SMP_REP_LEN,a0),d1
                     add.l   d1,d1
                     add.l   d1,d0
                     lsl.l   #8,d0
@@ -13170,7 +13205,7 @@ lbC028BF0:
                     move.w  d0,d1
                     lsr.w   #3,d0
                     add.w   d0,a0
-                    moveq   #-$80,d0
+                    moveq   #-%10000000,d0
                     ror.b   d1,d0
                     moveq   #8-1,d1
                     tst.b   (ntsc_flag)
@@ -13237,18 +13272,18 @@ lbC028C8C:
                     add.w   d0,a0
                     ; sample mode
                     ; not in mode 8
-                    tst.w   (30,a0)
+                    tst.w   (SMP_TYPE,a0)
                     beq     lbC028CFC
                     move.l  a0,-(a7)
                     moveq   #0,d2
-                    move.w  (24,a0),d2
+                    move.w  (SMP_REP_START,a0),d2
                     add.l   d2,d2
                     moveq   #45,d0
                     moveq   #10,d1
                     jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     move.l  (a7)+,a0
                     moveq   #0,d2
-                    move.w  (26,a0),d2
+                    move.w  (SMP_REP_LEN,a0),d2
                     add.l   d2,d2
                     moveq   #52,d0
                     moveq   #10,d1
@@ -13331,25 +13366,25 @@ I_MSG:
 ascii_MSG:
                     dc.b    45,10,'------ ------',0
 lbC028E0E:
-                    jsr     (lbC021E38)
+                    jsr     (inc_sample_number)
                     bmi     lbC028E1A
                     bra     lbC02837A
 lbC028E1A:
                     rts
 lbC028E1C:
-                    jsr     (lbC021E54)
+                    jsr     (dec_sample_number)
                     bmi     lbC028E28
                     bra     lbC02837A
 lbC028E28:
                     rts
 lbC028E2A:
-                    jsr     (lbC021EA2)
+                    jsr     (inc_sample_type)
                     bmi     lbC028E36
                     bra     lbC02837A
 lbC028E36:
                     rts
 lbC028E38:
-                    jsr     (lbC021EF4)
+                    jsr     (dec_sample_type)
                     bmi     lbC028E44
                     bra     lbC02837A
 lbC028E44:
@@ -13391,13 +13426,13 @@ lbC028EB2:
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
-                    move.l  (20,a0),d2
+                    move.l  (SMP_LEN,a0),d2
 lbC028ECA:
                     moveq   #0,d0
-                    move.w  (24,a0),d0
+                    move.w  (SMP_REP_START,a0),d0
                     add.l   d0,d0
                     moveq   #0,d1
-                    move.w  (26,a0),d1
+                    move.w  (SMP_REP_LEN,a0),d1
                     add.l   d1,d1
                     add.l   d0,d1
                     cmp.l   d2,d0
@@ -13420,11 +13455,12 @@ lbC028EF6:
                     sub.l   d0,d1
                     lsr.l   #1,d0
                     lsr.l   #1,d1
-                    move.w  d0,(24,a0)
-                    move.w  d1,(26,a0)
+                    move.w  d0,(SMP_REP_START,a0)
+                    move.w  d1,(SMP_REP_LEN,a0)
                     bra     lbC028F0A
 lbC028F06:
-                    clr.l   (24,a0)
+                    ; SMP_REP_START+SMP_REP_LEN
+                    clr.l   (SMP_REP_START,a0)
 lbC028F0A:
                     movem.l (a7)+,d2
                     rts
@@ -14559,8 +14595,8 @@ lbC029C50:
                     add.w   d0,a0
                     ; sample mode
                     ; mode 4
-                    move.w  #1,(30,a0)
-                    move.w  #64,(28,a0)
+                    move.w  #1,(SMP_TYPE,a0)
+                    move.w  #64,(SMP_VOL,a0)
                     bsr     lbC02896C
                     bsr     lbC028324
                     bsr     lbC02837A
@@ -14702,7 +14738,7 @@ lbC029E76:
                     rts
 lbC029E84:
                     sf      -(a0)
-                    move.l  #OKT_EmptyWaveForm,(a1)+
+                    move.l  #OKT_empty_waveform,(a1)+
                     move.w  #1,(a1)+
                     rts
 lbL029E92:
@@ -18892,17 +18928,17 @@ lbB0177C2:
                     dc.l    lbB0177D4
                     dc.w    %1
                     dc.b    40,1,26,1
-                    dc.l    lbC021E38,lbC021E54
+                    dc.l    inc_sample_number,dec_sample_number
 lbB0177D4:
                     dc.l    lbB0177E6
                     dc.w    %1
                     dc.b    40,5,8,1
-                    dc.l    lbC021E6C,lbC021E88
+                    dc.l    inc_sample_volume,dec_sample_volume
 lbB0177E6:
                     dc.l    lbB0177F8
                     dc.w    %1
                     dc.b    40,6,7,1
-                    dc.l    lbC021EA2,lbC021EF4
+                    dc.l    inc_sample_type,dec_sample_type
 lbB0177F8:
                     dc.l    lbB01780A
                     dc.w    %1
@@ -19134,9 +19170,9 @@ lbW017AF2:
                     dc.w    0
 lbW017B6C:
                     dc.w    4,12
-                    dc.l    lbC021E54
+                    dc.l    dec_sample_number
                     dc.w    4,13
-                    dc.l    lbC021E38
+                    dc.l    inc_sample_number
                     dc.w    4,15
                     dc.l    lbC01F122
                     dc.w    4,14
@@ -20488,7 +20524,7 @@ main_screen:
                     ds.b    (1080*80)
 dummy_sprite:
                     ds.b    4
-OKT_EmptyWaveForm:
+OKT_empty_waveform:
                     ds.w    1
 requesters_save_buffer:
                     ds.b    (24*20)
