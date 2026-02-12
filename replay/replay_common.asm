@@ -704,7 +704,7 @@ OKT_handle_effects_single_channels:
                     dbra    d7,.OKT_loop
                     rts
 OKT_effects_table_s:
-                    dc.w    0,                                      OKT_port_d-OKT_effects_table_s,     OKT_port_u-OKT_effects_table_s
+                    dc.w    0,                                      OKT_port_u-OKT_effects_table_s,     OKT_port_d-OKT_effects_table_s
                     dc.w    0,                                      0,                                  0
                     dc.w    0,                                      0,                                  0
                     dc.w    0,                                      OKT_arp_s-OKT_effects_table_s,      OKT_arp2_s-OKT_effects_table_s
@@ -719,21 +719,21 @@ OKT_effects_table_s:
 
 ; ===========================================================================
 OKT_port_u:
-                    add.w   d1,(CHAN_PERIOD_S,a3)
-                    cmp.w   #$358,(CHAN_PERIOD_S,a3)
-                    ble     .OKT_max
-                    move.w  #$358,(CHAN_PERIOD_S,a3)
-.OKT_max:
-                    OKT_SET_AUDIO_PER CHAN_PERIOD_S(a3),a4
-                    rts
-
-; ===========================================================================
-OKT_port_d:
                     sub.w   d1,(CHAN_PERIOD_S,a3)
                     cmp.w   #$71,(CHAN_PERIOD_S,a3)
                     bge     .OKT_min
                     move.w  #$71,(CHAN_PERIOD_S,a3)
 .OKT_min:
+                    OKT_SET_AUDIO_PER CHAN_PERIOD_S(a3),a4
+                    rts
+
+; ===========================================================================
+OKT_port_d:
+                    add.w   d1,(CHAN_PERIOD_S,a3)
+                    cmp.w   #$358,(CHAN_PERIOD_S,a3)
+                    ble     .OKT_max
+                    move.w  #$358,(CHAN_PERIOD_S,a3)
+.OKT_max:
                     OKT_SET_AUDIO_PER CHAN_PERIOD_S(a3),a4
                     rts
 
@@ -999,18 +999,18 @@ OKT_volume_fade_done:
                     rts
 OKT_volume_fade:
                     subi.b  #$40,d1
-                    ;$40 >= $4f
+                    ;$41 >= $4f
                     cmp.b   #$10,d1
                     blt     .OKT_fade_volume_down
-                    ;$50 >= $5f
+                    ;$51 >= $5f
                     subi.b  #$10,d1
                     cmp.b   #$10,d1
                     blt     .OKT_fade_volume_up
-                    ;$60 >= $6f
+                    ;$61 >= $6f
                     subi.b  #$10,d1
                     cmp.b   #$10,d1
                     blt     .OKT_fade_volume_down_once
-                    ;$70 >= $7f
+                    ;$71 >= $7f
                     subi.b  #$10,d1
                     cmp.b   #$10,d1
                     blt     .OKT_fade_volume_up_once

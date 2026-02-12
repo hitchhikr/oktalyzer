@@ -4293,15 +4293,24 @@ lbC020F4A:
                     moveq   #30,d0
                     jsr     (read_from_file)
                     bmi     lbC02102A
+                    ; fix length to 64k
                     andi.l  #$FFFF,(20,a5)
                     beq     lbC020F96
-                    lsl.w   (22,a5)
+                    move.l  (20,a5),d0
+                    add.l   d0,d0
+                    move.l  d0,(20,a5)
                     move.w  (28,a5),d0
+                    move.w  (26,a5),d1
+                    cmp.w   #1,d0
+                    bne     .no_repeat
+                    clr.w   d0
+                    clr.w   d1
+.no_repeat:
                     move.w  (24,a5),(SMP_VOL,a5)
                     cmpi.w  #64,(SMP_VOL,a5)
                     bhi     lbC021024
-                    move.w  (26,a5),(24,a5)
-                    move.w  d0,(26,a5)
+                    move.w  d1,(SMP_REP_START,a5)
+                    move.w  d0,(SMP_REP_LEN,a5)
                     ; 4 mode
 ;                    moveq   #1,d0
 ;                    tst.b   (st_load_default_samples_type)
@@ -4504,29 +4513,90 @@ lbC0211B0:
                     moveq   #0,d1
                     move.w  (a0),d0
                     move.w  d0,d2
+                    ; sample hi-nibble
                     lsr.w   #8,d2
                     andi.w  #$10,d2
                     andi.w  #$EFFF,d0
-                    beq     lbC0211D0
+                    beq     .no_period
                     lea     (OKT_periods_table,pc),a2
-lbC0211C6:
+.search_period:
                     addq.w  #1,d1
                     tst.w   (a2)
                     beq     lbC0211A8
                     cmp.w   (a2)+,d0
-                    bne     lbC0211C6
-lbC0211D0:
+                    bne     .search_period
+.no_period:
+                    ; note
                     move.b  d1,(a1)
                     move.b  (2,a0),d0
+                    ; sample low-nibble
                     andi.b  #$F0,d0
                     lsr.b   #4,d0
                     or.b    d2,d0
+                    ; store it
                     move.b  d0,(1,a1)
                     move.b  (2,a0),d0
-                    andi.b  #$F,d0
-                    move.b  d0,(2,a1)
-                    move.b  (3,a0),(3,a1)
+                    ; fx
+                    andi.w  #$F,d0
+                    add.b   d0,d0
+                    moveq   #0,d1
+                    move.b  .fx_trans_table(pc,d0.w),d1
+                    move.b  d1,(2,a1)
+                    ; fx data
+                    move.b  .fx_trans_table+1(pc,d0.w),d1
+                    moveq   #0,d0
+                    tst.b   d1
+                    beq     .store
+                    bpl     .cap_value
+                    move.b  (3,a0),d0
+                    cmp.b   #-2,d1
+                    bne     .arp
+                    tst.b   d0
+                    bne     .arp
+                    sf.b    (2,a1)
+.arp:
+                    cmp.b   #-3,d1
+                    beq     .store
+                    cmp.b   #-1,d1
+                    bne     .store
+                    ; volume fade
+                    move.b  d0,d1
+                    and.w   #$f,d1
+                    beq     .no_fade_down
+                    add.b   #$40,d1
+                    move.b  d1,d0
+                    bra     .store
+.no_fade_down:
+                    and.w   #$f0,d0
+                    lsr.w   #4,d0
+                    add.b   #$50,d0
+                    bra     .store
+.cap_value:
+                    moveq   #0,d0
+                    move.b  (3,a0),d0
+                    cmp.w   d1,d0
+                    blt     .store
+                    move.b  d1,d0
+.store:
+                    move.b  d0,(3,a1)
                     rts
+.fx_trans_table:
+                    dc.b    $A,-2         ; 0:arpeggio
+                    dc.b    $1,-3         ; 1:port up
+                    dc.b    $2,-3         ; 2:port down
+                    dc.b    $0,0          ; 3:portamento
+                    dc.b    $0,0          ; 4:vibrato
+                    dc.b    $0,0          ; 5:vibrato+volfade
+                    dc.b    $0,0          ; 6:portamento+volfade
+                    dc.b    $0,0          ; 7:tremolo
+                    dc.b    $0,0          ; 8:unused
+                    dc.b    $0,0          ; 9:sample offset
+                    dc.b    $1f,-1        ; A:volume fade
+                    dc.b    $19,-3        ; B:pos jump
+                    dc.b    $1f,$40       ; C:volume
+                    dc.b    0,0           ; D:pattern break
+                    dc.b    0,0           ; E:extra
+                    dc.b    $1C,$1F       ; F:set speed
 
 ; ===========================================================================
 read_patterns_from_okta_song_file:
@@ -7452,36 +7522,48 @@ OKT_handle_effects_single_channels:
                     dbra    d7,.OKT_loop
                     rts
 OKT_effects_table_s:
-                    dc.w    0,                                      OKT_port_d-OKT_effects_table_s,     OKT_port_u-OKT_effects_table_s
+                    ; 0 1 2
+                    dc.w    0,                                      OKT_port_u-OKT_effects_table_s,     OKT_port_d-OKT_effects_table_s
+                    ; 3 4 5
                     dc.w    0,                                      0,                                  0
+                    ; 6 7 8
                     dc.w    0,                                      0,                                  0
+                    ; 9 A B
                     dc.w    0,                                      OKT_arp_s-OKT_effects_table_s,      OKT_arp2_s-OKT_effects_table_s
+                    ; C D E
                     dc.w    OKT_arp3_s-OKT_effects_table_s,         OKT_slide_d_s-OKT_effects_table_s,  0
+                    ; F 10 11
                     dc.w    OKT_filter-OKT_effects_table_s,         0,                                  OKT_slide_u_once_s-OKT_effects_table_s
+                    ; 12 13 14
                     dc.w    0,                                      0,                                  0
+                    ; 15 16 17
                     dc.w    OKT_slide_d_once_s-OKT_effects_table_s, 0,                                  0
+                    ; 18 19 1A
                     dc.w    0,                                      OKT_pos_jump-OKT_effects_table_s,   0
+                    ; 1B 1C 1D
                     dc.w    0,                                      OKT_set_speed-OKT_effects_table_s,  0
+                    ; 1E 1F 20
                     dc.w    OKT_slide_u_s-OKT_effects_table_s,      OKT_set_volume-OKT_effects_table_s, 0
+                    ; 21 22 23
                     dc.w    0,                                      0,                                  0
 
 ; ===========================================================================
 OKT_port_u:
-                    add.w   d1,(CHAN_PERIOD_S,a3)
-                    cmpi.w  #$358,(CHAN_PERIOD_S,a3)
-                    ble     .OKT_max
-                    move.w  #$358,(CHAN_PERIOD_S,a3)
-.OKT_max:
-                    OKT_SET_AUDIO_PER CHAN_PERIOD_S(a3),a4
-                    rts
-
-; ===========================================================================
-OKT_port_d:
                     sub.w   d1,(CHAN_PERIOD_S,a3)
                     cmpi.w  #$71,(CHAN_PERIOD_S,a3)
                     bge     .OKT_min
                     move.w  #$71,(CHAN_PERIOD_S,a3)
 .OKT_min:
+                    OKT_SET_AUDIO_PER CHAN_PERIOD_S(a3),a4
+                    rts
+
+; ===========================================================================
+OKT_port_d:
+                    add.w   d1,(CHAN_PERIOD_S,a3)
+                    cmpi.w  #$358,(CHAN_PERIOD_S,a3)
+                    ble     .OKT_max
+                    move.w  #$358,(CHAN_PERIOD_S,a3)
+.OKT_max:
                     OKT_SET_AUDIO_PER CHAN_PERIOD_S(a3),a4
                     rts
 
@@ -7750,18 +7832,18 @@ OKT_volume_fade_done:
                     rts
 OKT_volume_fade:
                     subi.b  #$40,d1
-                    ;$40 >= $4f
+                    ;$41 >= $4f
                     cmpi.b  #$10,d1
                     blt     .OKT_fade_volume_down
-                    ;$50 >= $5f
+                    ;$51 >= $5f
                     subi.b  #$10,d1
                     cmpi.b  #$10,d1
                     blt     .OKT_fade_volume_up
-                    ;$60 >= $6f
+                    ;$61 >= $6f
                     subi.b  #$10,d1
                     cmpi.b  #$10,d1
                     blt     .OKT_fade_volume_down_once
-                    ;$70 >= $7f
+                    ;$71 >= $7f
                     subi.b  #$10,d1
                     cmpi.b  #$10,d1
                     blt     .OKT_fade_volume_up_once
@@ -15783,7 +15865,7 @@ samples_load_mode:
 samples_save_format:
                     dc.w    0
 prefs_palette:
-                    dc.w    $A98,$000,$976,$000,$579,$000
+                    dc.w    $697,$000,$976,$000,$679,$000
 polyphony:
                     dc.b    0,1,2,3,4,5,6,7
 mouse_repeat_delay:
