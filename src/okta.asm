@@ -2890,7 +2890,7 @@ plenty_text:
                     dc.b    'Plenty!',0
 
 ; ===========================================================================
-lbC01FF8C:
+free_current_sample:
                     bsr     stop_audio_channels
                     move.l  (current_sample_address_ptr),d0
                     beq     .empty
@@ -2902,11 +2902,13 @@ lbC01FF8C:
                     clr.l   (current_sample_size)
                     clr.l   (lbL029ECE)
                     rts
+
+; ===========================================================================
 lbC01FFC0:
                     cmp.l   (current_sample_size),d0
                     beq     lbC020018
                     move.l  d0,(lbL01B29A)
-                    bsr     lbC01FF8C
+                    bsr     free_current_sample
                     move.l  (lbL01B29A),d0
                     cmpi.l  #131070,d0
                     bgt     error_sample_too_long
@@ -2924,7 +2926,7 @@ lbC020018:
                     rts
 lbC02001C:
                     movem.l d2/a2,-(a7)
-                    bsr     lbC01FF8C
+                    bsr     free_current_sample
                     bsr     get_current_sample_ptr_address
                     move.l  (a0)+,a2
                     move.l  a2,d0
@@ -5042,7 +5044,7 @@ lbC02168E:
 ; ===========================================================================
 do_free_sample:
                     bsr     lbC0216BE
-                    bsr     lbC01FF8C
+                    bsr     free_current_sample
                     lea     (OKT_samples),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
@@ -5338,33 +5340,33 @@ lbC021A20:
                     clr.w   (iff_repeat_start)
                     clr.w   (iff_repeat_length)
                     cmpi.l  #2,d0
-                    bge     lbC021A4E
+                    bge     .file_too_short
                     bsr     error_sample_too_short
-                    bra     lbC021BC2
-lbC021A4E:
+                    bra     .bail_out
+.file_too_short:
                     move.l  d0,(iff_sample_size_loaded)
                     move.l  (sample_filename_to_load,pc),a0
                     jsr     (open_file_for_reading)
-                    bmi     lbC021BBA
+                    bmi     .dos_error
                     lea     (iff_chunk_load_data,pc),a0
                     moveq   #12,d0
                     jsr     (read_from_file)
-                    bmi     lbC021BBA
+                    bmi     .dos_error
                     lea     (iff_chunk_load_data,pc),a0
                     cmpi.l  #'FORM',(a0)
-                    bne     lbC021AE2
+                    bne     .not_iff
                     cmpi.l  #'8SVX',(8,a0)
-                    bne     lbC021BAE
+                    bne     .iff_error
                     lea     (VHDR_MSG,pc),a0
                     bsr     read_chunks_content_from_struct
-                    bmi     lbC021BA6
+                    bmi     .done
                     lea     (iff_chunk_load_data,pc),a0
                     ; octave
                     cmpi.b  #1,(14,a0)
-                    bne     lbC021BAE
+                    bne     .iff_error
                     ; compression
                     tst.b   (15,a0)
-                    bne     lbC021BAE
+                    bne     .iff_error
                     move.l  (a0)+,d0
                     lsr.l   #1,d0
                     move.w  d0,(iff_repeat_start)
@@ -5375,22 +5377,23 @@ lbC021A4E:
                     clr.w   (iff_repeat_start)
 .not_bogus:
                     move.l  #'BODY',d0
-                    bsr     lbC021C1E
-                    bmi     lbC021BA6
+                    bsr     search_iff_chunk
+                    bmi     .done
+                    ; chunk size
                     move.l  d0,(iff_sample_size_loaded)
                     st      (iff_body_sample_load_flag)
-lbC021AE2:
+.not_iff:
                     move.l  (iff_sample_size_loaded,pc),d0
                     cmpi.l  #131070,d0
-                    bls     lbC021AF8
+                    bls     .too_big
                     bsr     error_sample_clipped
                     move.l  #131070,d0
-lbC021AF8:
+.too_big:
                     cmpi.l  #2,d0
-                    bcc     lbC021B08
+                    bcc     .too_small
                     bsr     error_sample_too_short
-                    bra     lbC021BA6
-lbC021B08:
+                    bra     .done
+.too_small:
 ;                    lea     (OKT_samples),a0
 ;                    move.w  (current_sample,pc),d2
 ;                    lsl.w   #5,d2
@@ -5401,7 +5404,7 @@ lbC021B08:
 ;                    move.w  #SMP_TYPE_8_BIT,(SMP_TYPE,a0,d2.w)
 ;                ENDC
                     bsr     lbC021F9E
-                    bmi     lbC021BA6
+                    bmi     .done
                     move.l  d0,(iff_sample_address_to_load_ptr)
                     move.l  d1,(iff_sample_size_to_load)
                     move.l  (lbL021C1A,pc),a0
@@ -5430,8 +5433,8 @@ lbC021B08:
                     move.l  (iff_sample_address_to_load_ptr,pc),a0
                     move.l  (iff_sample_size_to_load,pc),d0
                     jsr     (read_from_file)
-                    bmi     lbC021BBA
-                    bra     lbC021B90
+                    bmi     .dos_error
+                    bra     .done
 
 ; ===========================================================================
 .load_raw_sample:
@@ -5446,26 +5449,25 @@ lbC021B08:
                     move.l  (iff_sample_address_to_load_ptr,pc),a1
                     move.l  (iff_sample_size_to_load,pc),d0
                     jsr     (load_file)
-                    bmi     lbC021BBA
+                    bmi     .dos_error
 
 ; ===========================================================================
-lbC021B90:
 ;                    cmpi.w  #1,(samples_load_mode)
-;                    beq     lbC021BA6
+;                    beq     .done
 ;                    move.l  (iff_sample_address_to_load_ptr,pc),a0
 ;                    move.l  (iff_sample_size_to_load,pc),d0
 ;                    bsr     lbC021F62
-lbC021BA6:
+.done:
                     bsr     lbC021BCE
                     moveq   #OK,d0
                     rts
-lbC021BAE:
+.iff_error:
                     jsr     (close_file)
                     bsr     error_iff_struct_error
-                    bra     lbC021BC2
-lbC021BBA:
+                    bra     .bail_out
+.dos_error:
                     bsr     display_dos_error
-lbC021BC2:
+.bail_out:
                     bsr     do_free_sample
                     bsr     lbC021BCE
                     moveq   #ERROR,d0
@@ -5497,40 +5499,42 @@ sample_filename_to_load:
                     dc.l    0
 lbL021C1A:
                     dc.l    0
-lbC021C1E:
+
+; ===========================================================================
+search_iff_chunk:
                     movem.l d5-d7/a3,-(a7)
                     moveq   #0,d6
                     move.l  d0,d7
-                    lea     (lbL021C6A,pc),a3
-lbC021C2A:
+                    lea     (.chunk_header_data,pc),a3
+.loop:
                     move.l  a3,a0
                     moveq   #8,d0
                     jsr     (read_from_file)
-                    bmi     lbC021C54
+                    bmi     .not_found
                     addq.l  #8,d6
                     move.l  (a3),d1
                     move.l  (4,a3),d0
                     cmp.l   d7,d1
-                    beq     lbC021C50
+                    beq     .found
                     move.l  d0,d5
                     jsr     (move_in_file)
-                    bmi     lbC021C54
+                    bmi     .not_found
                     add.l   d5,d6
-                    bra     lbC021C2A
-lbC021C50:
+                    bra     .loop
+.found:
                     tst.l   d0
-                    bra     lbC021C64
-lbC021C54:
+                    bra     .done
+.not_found:
                     bsr     display_dos_error
                     neg.l   d6
                     move.l  d6,d0
                     jsr     (move_in_file)
                     moveq   #ERROR,d0
-lbC021C64:
+.done:
                     movem.l (a7)+,d5-d7/a3
                     rts
-lbL021C6A:
-                    dcb.b   8,0
+.chunk_header_data:
+                    dc.l    0,0
 
 ; ===========================================================================
 save_sample:
@@ -6050,7 +6054,7 @@ play_pattern:
                     sf      (pattern_play_flag)
                     move.w  (current_viewed_pattern),(OKT_song_pos)
 go_play:
-                    bsr     lbC01FF8C
+                    bsr     free_current_sample
 ;                    lea     (replay_int,pc),a0
 ;                    bsr     install_copper_int
                     bsr     clear_vumeters
@@ -15447,7 +15451,7 @@ lbC029B5A:
                     beq     lbC029B72
                     jsr     (ask_are_you_sure_requester)
                     bne     lbC029CAC
-                    jsr     (lbC01FF8C)
+                    jsr     (free_current_sample)
 lbC029B72:
                     bsr     lbC029D30
                     bmi     lbC029CAC
