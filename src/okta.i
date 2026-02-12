@@ -130,6 +130,9 @@ VIS_DRAW_SPEED      equ     1<<4
 OKT_IN_TRACKER      equ     1
 SMPS_NUMBER         equ     36
 
+SMP_TYPE_8_BIT      equ     0
+SMP_TYPE_16_BIT     equ     1
+
 		            rsreset
 SMP_NAME:           rs.b    20
 SMP_LEN:            rs.l    1           ; 20

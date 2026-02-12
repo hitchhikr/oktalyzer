@@ -405,7 +405,6 @@ OKT_turn_dma_on:
 ; ===========================================================================
 OKT_fill_double_channels:
                     lea     (OKT_samples_table-OKT_vars,a6),a0
-                    lea     (OKT_samples-OKT_vars,a6),a1
                     move.l  (OKT_current_pattern-OKT_vars,a6),a2
                     lea     (OKT_channels_data-OKT_vars,a6),a3
                 IFD OKT_AUDIO_VAMPIRE
@@ -461,8 +460,10 @@ OKT_fill_double_channel_data:
                     lsl.w   #3,d0
                     ; starting address
                     move.l  d2,(CHAN_SMP_PROC_D,a3)
+                    lea     (OKT_samples),a1
+                    add.w   d0,a1
                     ; starting length
-                    move.l  (SMP_LEN,a1,d0.w),d0
+                    move.l  (SMP_LEN,a1),d0
                     ; that was a bug
                     bclr    #0,d0
                     move.l  d0,(CHAN_SMP_PROC_LEN_D,a3)
@@ -474,8 +475,13 @@ OKT_fill_double_channel_data:
                     move.l  d0,(CHAN_SMP_REP_LEN_D,a3)
                     move.w  (SMP_REP_START,a1),d1
                     add.l   d1,d1
-                    add.l   d2,d1
+                    tst.l   d0
+                    beq     .OKT_no_repeat
+                    add.l   d1,d0
+                    move.l  d0,(CHAN_SMP_PROC_LEN_D,a3)
+.OKT_no_repeat:
                     ; repeat start address
+                    add.l   d2,d1
                     move.l  d1,(CHAN_SMP_REP_START,a3)
                     move.l  a0,-(a7)
                     lea     (OKT_channels_volumes-OKT_vars,a6),a0

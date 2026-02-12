@@ -69,7 +69,7 @@ start:
 .no_message:
                     moveq   #0,d0
                     rts
-                    dc.b    0,'$VER: version 1.154',0
+                    dc.b    0,'$VER: version 2.0',0
                     even
 workbench_message:
                     dc.l    0
@@ -1044,7 +1044,7 @@ lbC01EB10:
                     tst.b   (lbW01EC46)
                     bne     lbC01EB50
                     move.w  d0,d2
-                    bclr    #$F,d2
+                    bclr    #15,d2
                     cmpi.w  #1,d2
                     beq     lbC01EB60
                     cmpi.w  #4,d2
@@ -1064,16 +1064,28 @@ lbC01EB50:
                     jsr     (a0)
                     bra     lbC01EBEA
 lbC01EB60:
+                    ; delete note+up (BS)
+                    tst.b   (edit_mode_flag)
+                    beq     lbC01EBEA
                     bsr     lbC01EEB0
                     bra     lbC01EBEA
 lbC01EB68:
+                    ; insert note (SH_DEL)
+                    tst.b   (edit_mode_flag)
+                    beq     lbC01EBEA
                     bsr     lbC01EE44
                     bra     lbC01EBEA
 lbC01EB70:
+                    ; insert note+down (RET)
+                    tst.b   (edit_mode_flag)
+                    beq     lbC01EBEA
                     bsr     lbC01EE44
                     bsr     next_pattern_row
                     bra     lbC01EBEA
 lbC01EB7C:
+                    ; clear note+inst+effect (AL_DEL)
+                    tst.b   (edit_mode_flag)
+                    beq     lbC01EBEA
                     clr.l   (a5)
                     bsr     erase_pattern_caret
                     lea     (ascii_MSG1,pc),a0
@@ -1086,6 +1098,9 @@ ascii_MSG1:
                     dc.b    '--- 0000',0
                     even
 lbC01EBA2:
+                    ; clear effect (AM_DEL)
+                    tst.b   (edit_mode_flag)
+                    beq     lbC01EBEA
                     clr.w   (2,a5)
                     bsr     erase_pattern_caret
                     lea     (ascii_MSG2,pc),a0
@@ -1098,6 +1113,9 @@ lbC01EBA2:
 ascii_MSG2:
                     dc.b    '000',0
 lbC01EBC6:
+                    ; DEL+quantpolymove (CT_DEL)
+                    tst.b   (edit_mode_flag)
+                    beq     lbC01EBEA
                     clr.w   (a5)
                     bsr     erase_pattern_caret
                     lea     (ascii_MSG3,pc),a0
@@ -1642,9 +1660,9 @@ lbC01F21A:
                     lea     (GotoPattern_MSG,pc),a0
                     jsr     (lbC0248CC)
                     bmi     lbC01F24E
-                    cmp.w   (OKT_SLen),d0
+                    cmp.w   (number_of_patterns),d0
                     bcs     lbC01F23C
-                    move.w  (OKT_SLen),d0
+                    move.w  (number_of_patterns),d0
                     subq.w  #1,d0
 lbC01F23C:
                     cmp.w   (current_viewed_pattern),d0
@@ -1669,7 +1687,7 @@ lbC01F274:
 lbC01F276:
                     move.w  (current_viewed_pattern),d0
                     addq.w  #1,d0
-                    cmp.w   (OKT_SLen),d0
+                    cmp.w   (number_of_patterns),d0
                     bne     lbC01F28E
                     bsr     create_new_empty_pattern
                     beq     lbC01F28E
@@ -2552,7 +2570,7 @@ display_main_menu:
                     jsr     (draw_3_digits_decimal_number_leading_zeroes)
                     move.w  (OKT_default_speed),d0
                     bsr     draw_current_speed
-                    move.w  (OKT_SLen),d2
+                    move.w  (number_of_patterns),d2
                     moveq   #13,d0
                     moveq   #6,d1
                     jsr     (draw_2_digits_decimal_number_leading_zeroes)
@@ -2690,13 +2708,18 @@ draw_current_sample_infos:
                     bsr     lbC020C92
 .sample_mode:
                     move.l  (a7)+,a0
+                IFD OKT_AUDIO_VAMPIRE
                     ; sample mode
                     move.w  (SMP_TYPE,a0),d0
                     lea     (.sample_mode_text,pc),a0
-                    move.b  (a0,d0.w),d2
+                    add.w   d0,d0
+                    add.w   d0,d0
+                    add.w   d0,a0
                     moveq   #46,d0
                     moveq   #6,d1
-                    jmp     (draw_one_char)
+                    jmp     (draw_text)
+                ENDC
+                    rts
 .empty_name_text:
                     dc.b    46,1,'--------------------',0
 .infos_header_text:
@@ -2711,8 +2734,8 @@ draw_current_sample_infos:
                     dc.b    CMD_END
                     even
 .sample_mode_text:
-                    dc.b    '84B'
-                    even
+                    dc.b    '8B ',0
+                    dc.b    '16B',0
 
 ; ===========================================================================
 draw_available_memory:
@@ -2987,7 +3010,7 @@ get_given_pattern_rows:
 
 ; ===========================================================================
 create_new_empty_pattern:
-                    cmpi.w  #64,(OKT_SLen)
+                    cmpi.w  #64,(number_of_patterns)
                     beq     error_no_more_patterns
                     move.l  (current_default_patterns_size),d0
                     ; +2 to store the rows number
@@ -2999,11 +3022,11 @@ create_new_empty_pattern:
                     move.l  d0,a1
                     move.w  (default_pattern_length),(a1)
                     lea     (OKT_patterns_list),a0
-                    move.w  (OKT_SLen),d0
+                    move.w  (number_of_patterns),d0
                     add.w   d0,d0
                     add.w   d0,d0
                     move.l  a1,(a0,d0.w)
-                    addq.w  #1,(OKT_SLen)
+                    addq.w  #1,(number_of_patterns)
                     bsr     display_main_menu
                     moveq   #0,d0
                     rts
@@ -3088,9 +3111,9 @@ free_current_pattern:
 
 ; ===========================================================================
 dec_song_position:
-                    tst.w   (OKT_SLen)
+                    tst.w   (number_of_patterns)
                     beq     .empty
-                    move.w  (OKT_SLen),d0
+                    move.w  (number_of_patterns),d0
                     subq.w  #1,d0
                     add.w   d0,d0
                     add.w   d0,d0
@@ -3102,7 +3125,7 @@ dec_song_position:
                     mulu.w  (current_channels_size),d0
                     addq.l  #2,d0
                     EXEC    FreeMem
-                    subq.w  #1,(OKT_SLen)
+                    subq.w  #1,(number_of_patterns)
 .empty:
                     rts
 
@@ -4156,18 +4179,23 @@ do_load_song:
                     jsr     (read_from_file)
                     bmi     .error
                     lea     (song_chunk_header_loaded_data),a0
+                    st      (pattern_patch_flag)
                     cmpi.l  #'OKTA',(a0)+
                     bne     load_st_mod
+                    ; Original
                     cmpi.l  #'SONG',(a0)+
                     beq     .load_okta_mod
-                    ; Amiga
+                    sf      (pattern_patch_flag)
+                    ; Newer Amiga
                     subq.l  #4,a0
                     cmpi.l  #'SNG2',(a0)+
                     beq     .load_okta_mod
-                    ; Vampire
+            IFD OKT_AUDIO_VAMPIRE
+                    ; Only on Vampire
                     subq.l  #4,a0
                     cmpi.l  #'SNG3',(a0)+
                     beq     .load_okta_mod
+            ENDC
                     bsr     error_ok_struct_error
                     bra     .done
 
@@ -4176,22 +4204,23 @@ do_load_song:
                     jsr     (backup_prefs)
                     bsr     free_all_samples_and_song
                     lea     (CMOD_MSG,pc),a0
-                    bsr     lbC021342
+                    bsr     fill_chunks_default_values_from_struct
                     lea     (SAMP_MSG,pc),a0
-                    bsr     lbC021342
+                    bsr     fill_chunks_default_values_from_struct
                     lea     (CMOD_MSG,pc),a0
-                    bsr     lbC021364
+                    bsr     read_chunks_content_from_struct
                     bmi     lbC020EA2
                     jsr     (set_prefs_without_user_validation)
                     bsr     free_song
                     lea     (SAMP_MSG,pc),a0
-                    bsr     lbC021364
+                    bsr     read_chunks_content_from_struct
                     bmi     lbC020EA6
                     ; read patterns data
-                    bsr     lbC0211F6
+                    bsr     read_patterns_from_okta_song_file
                     bmi     lbC020EA6
+                    bsr     patch_older_patterns
                     ; read samples data
-                    bsr     lbC0212A2
+                    bsr     read_samples_from_okta_song_file
                     bmi     lbC020EA6
                     jsr     (close_file)
                     bsr     lbC02001C
@@ -4211,19 +4240,23 @@ lbC020EA6:
                     rts
 LoadSong_MSG:
                     dc.b    'Load Song',0
+pattern_patch_flag:
+                    dc.b     0
+                    even
 
 ; ===========================================================================
 load_st_mod:
                     jsr     (backup_prefs)
                     bsr     free_all_samples_and_song
                     lea     (OKT_channels_modes),a0
+                    ; single channels
                     clr.l   (a0)
                     clr.l   (4,a0)
                     tst.b   (st_load_default_samples_type)
                     beq     lbC020EF0
-                    ; only single channels
-                    move.l  #$10001,(a0)
-                    move.l  #$10001,(4,a0)
+                    ; double channels
+                    move.l  #(1<<16)+1,(a0)
+                    move.l  #(1<<16)+1,(4,a0)
 lbC020EF0:
                     jsr     (set_prefs_without_user_validation)
                     bsr     free_song
@@ -4266,14 +4299,14 @@ lbC020F4A:
                     move.w  (26,a5),(24,a5)
                     move.w  d0,(26,a5)
                     ; 4 mode
-                    moveq   #1,d0
-                    tst.b   (st_load_default_samples_type)
-                    beq     lbC020F90
-                    ; 8 mode
-                    moveq   #0,d0
-lbC020F90:
-                    ; sample mode
-                    move.w  d0,(SMP_TYPE,a5)
+;                    moveq   #1,d0
+;                    tst.b   (st_load_default_samples_type)
+;                    beq     lbC020F90
+;                    ; 8 mode
+;                    moveq   #0,d0
+;lbC020F90:
+;                    ; sample mode
+                    move.w  #SMP_TYPE_8_BIT,(SMP_TYPE,a5)
                     bra     lbC020F9C
 lbC020F96:
                     move.l  a5,a0
@@ -4348,7 +4381,7 @@ lbC02103C:
                     move.l  (current_default_patterns_size),-(a7)
 lbC021048:
                     move.w  (lbW01B730),d7
-                    cmp.w   (OKT_SLen),d7
+                    cmp.w   (number_of_patterns),d7
                     beq     lbC0210A4
                     move.w  #$40,(default_pattern_length)
                     move.w  (default_pattern_length),d0
@@ -4356,7 +4389,7 @@ lbC021048:
                     move.l  d0,(current_default_patterns_size)
                     bsr     create_new_empty_pattern
                     bmi     lbC0210BE
-                    move.w  (OKT_SLen),d0
+                    move.w  (number_of_patterns),d0
                     subq.w  #1,d0
                     bsr     get_given_pattern_rows
                     mulu.w  (current_channels_size),d0
@@ -4388,22 +4421,22 @@ lbC0210CE:
 lbC0210D6:
                     move.l  (SMP_LEN,a5),d0
                     beq     lbC02111E
-                    move.l  d0,(lbL01B732)
+                    move.l  d0,(length_of_sample_to_load)
                     move.w  d7,(current_sample)
                     bsr     lbC021F9E
                     bmi     lbC02113C
                     bsr     get_current_sample_ptr_address
                     move.l  (a0),a0
-                    move.l  a0,(lbL021140)
-                    move.l  (lbL01B732),d0
+                    move.l  a0,(address_of_sample_to_load)
+                    move.l  (length_of_sample_to_load),d0
                     jsr     (read_from_file)
                     bmi     lbC021138
                     ; sample mode
-                    cmpi.w  #1,(SMP_TYPE,a5)
-                    beq     lbC02111E
-                    move.l  (lbL021140,pc),a0
-                    move.l  (lbL01B732),d0
-                    bsr     lbC021F62
+;                    cmpi.w  #1,(SMP_TYPE,a5)
+;                    beq     lbC02111E
+;                    move.l  (address_of_sample_to_load,pc),a0
+;                    move.l  (length_of_sample_to_load),d0
+;                    bsr     lbC021F62
 lbC02111E:
                     lea     (SMP_INFOS_LEN,a5),a5
                     addq.w  #1,d7
@@ -4418,7 +4451,7 @@ lbC021138:
 lbC02113C:
                     moveq   #ERROR,d0
                     rts
-lbL021140:
+address_of_sample_to_load:
                     dc.l    0
 lbC021144:
                     movem.l d2/d3/a2-a5,-(a7)
@@ -4490,13 +4523,15 @@ lbC0211D0:
                     move.b  d0,(2,a1)
                     move.b  (3,a0),(3,a1)
                     rts
-lbC0211F6:
+
+; ===========================================================================
+read_patterns_from_okta_song_file:
                     move.w  (default_pattern_length),-(a7)
                     move.l  (current_default_patterns_size),-(a7)
 .loop:
                     move.w  (lbW01B730),d7
-                    cmp.w   (OKT_SLen),d7
-                    beq     lbC021278
+                    cmp.w   (number_of_patterns),d7
+                    beq     .done
                     lea     (song_chunk_header_loaded_data),a0
                     moveq   #8,d0
                     jsr     (read_from_file)
@@ -4515,16 +4550,15 @@ lbC0211F6:
                     move.l  d0,(current_default_patterns_size)
                     bsr     create_new_empty_pattern
                     bmi     lbC021292
-                    move.w  (OKT_SLen),d0
+                    move.w  (number_of_patterns),d0
                     subq.w  #1,d0
                     bsr     get_given_pattern_rows
                     ; read the data
                     mulu.w  (current_channels_size),d0
                     jsr     (read_from_file)
                     bmi     lbC02128E
-                    ; TODO: patch them here
                     bra     .loop
-lbC021278:
+.done:
                     move.l  (a7)+,(current_default_patterns_size)
                     move.w  (a7)+,(default_pattern_length)
                     moveq   #OK,d0
@@ -4539,7 +4573,9 @@ lbC021292:
                     move.w  (a7)+,(default_pattern_length)
                     moveq   #ERROR,d0
                     rts
-lbC0212A2:
+
+; ===========================================================================
+read_samples_from_okta_song_file:
                     lea     (OKT_samples),a5
                     moveq   #0,d7
 lbC0212AA:
@@ -4548,8 +4584,8 @@ lbC0212AA:
                     bsr     display_main_menu
                     movem.l (a7)+,d7/a5
                     move.l  (SMP_LEN,a5),d0
-                    beq     lbC021310
-                    move.l  d0,(lbL01B732)
+                    beq     .no_patch
+                    move.l  d0,(length_of_sample_to_load)
                     bsr     lbC021F9E
                     bmi     lbC021334
                     lea     (song_chunk_header_loaded_data),a0
@@ -4559,16 +4595,36 @@ lbC0212AA:
                     lea     (song_chunk_header_loaded_data),a0
                     cmpi.l  #'SBOD',(a0)+
                     bne     lbC02132A
-                    move.l  (lbL01B732),d0
+                    ; compare chunk length with header length
+                    move.l  (length_of_sample_to_load),d0
                     cmp.l   (a0),d0
                     blt     lbC02132A
-                    move.l  (a0),(lbL01B732)
+                    
+                    move.l  (a0),(length_of_sample_to_load)
                     bsr     get_current_sample_ptr_address
+                    ; address to load to
                     move.l  (a0),a0
-                    move.l  (lbL01B732),d0
+                    move.l  a0,(address_of_sample_to_load)
+                    move.l  (length_of_sample_to_load),d0
                     jsr     (read_from_file)
                     bmi     lbC021330
-lbC021310:
+                    tst.b   (pattern_patch_flag)
+                    beq     .no_patch
+                    ; restore mode 8 samples from 4 to 8 bit
+                    ; in older modules
+                    tst.w   (SMP_TYPE,a5)
+                    bne     .no_patch
+                    move.l  (length_of_sample_to_load),d0
+                    move.l  (address_of_sample_to_load),a0
+.patch_loop:
+                    move.b  (a0),d1
+                    asl.b   #1,d1
+                    move.b  d1,(a0)+
+                    subq.l  #1,d0
+                    bne     .patch_loop
+                    ; set to 8 bit
+                    move.w  #SMP_TYPE_8_BIT,(SMP_TYPE,a5)
+.no_patch:
                     lea     (SMP_INFOS_LEN,a5),a5
                     addq.w  #1,d7
                     cmpi.w  #SMPS_NUMBER,d7
@@ -4587,74 +4643,179 @@ lbC021334:
                     bsr     display_main_menu
                     moveq   #ERROR,d0
                     rts
-lbC021342:
+
+; ===========================================================================
+patch_older_patterns:
+                    tst.b   (pattern_patch_flag)
+                    beq     .no_patch
+                    ; patch the volumes of the pattern for older modules
+                    ; with doubled channels since we can now
+                    ; handle independant volumes for such channels
+                    lea     (channels_kept_volumes,pc),a0
+                    move.l  #$40404040,(a0)+
+                    move.l  #$40404040,(a0)
+                    move.w  (OKT_song_length),d5
+                    subq.w  #1,d5
+                    moveq   #0,d2
+.main_loop:
+                    ; get corresponding pattern
+                    lea     (OKT_patterns),a0
+                    moveq   #0,d0
+                    move.b  (a0,d2.w),d0
+                    bsr     get_given_pattern_rows
+                    ; d0 = rows
+                    ; a0 = pattern data
+                    move.w  d0,d7
+                    subq.w  #1,d7
+.patch_loop:
+                    lea     (channels_kept_volumes,pc),a2
+                    lea     (OKT_channels_modes),a1
+                    moveq   #4-1,d6
+.patch_loop_channel:
+                    tst.w   (a1)+
+                    beq     .single_channel
+                    ; effect number
+                    move.b  2(a0),d0
+                    move.b  2+4(a0),d1
+                    ; convert o effects
+                    cmp.b   #$18,d0
+                    bne     .no_old_volume
+                    move.b  #$1f,2(a0)
+                    cmp.b   #$18,d1
+                    bne     .no_old_volume
+                    move.b  #$1f,2+4(a0)
+.no_old_volume:
+                    move.b  2(a0),d0
+                    move.b  2+4(a0),d1
+                    ; volume on left channel ?
+                    cmp.b   #$1f,d0
+                    bne     .no_volume_channel_l
+                    tst.b   d1
+                    bne     .no_volume_channel_l
+                    move.b  d0,2+4(a0)
+                    ; copy the fx datum
+                    move.b  3(a0),3+4(a0)
+                    ; save it
+                    move.b  3(a0),(a2)
+                    move.b  3(a0),1(a2)
+                    bra     .no_volume_channel_r
+.no_volume_channel_l:
+                    ; volume on right channel ?
+                    cmp.b   #$1f,d1
+                    bne     .no_volume_channel_r
+                    tst.b   d0
+                    bne     .no_volume_channel_r
+                    move.b  d1,2(a0)
+                    ; copy the fx datum
+                    move.b  3+4(a0),3(a0)
+                    ; save it
+                    move.b  3+4(a0),(a2)
+                    move.b  3+4(a0),1(a2)
+.no_volume_channel_r:
+                    ; fix a bug in older Oktalyzer:
+                    ; default sample volume wasn't reloaded on
+                    ; doubled channels new notes, so the previous
+                    ; volume was kept
+                    move.b  2(a0),d0
+                    bne     .no_kept_volume_l
+                    move.b  #$1f,2(a0)
+                    move.b  (a2),3(a0)
+.no_kept_volume_l:
+                    move.b  2+4(a0),d1
+                    bne     .no_kept_volume_r
+                    move.b  #$1f,2+4(a0)
+                    move.b  1(a2),3+4(a0)
+.no_kept_volume_r:
+                    addq.l  #4,a0
+                    addq.l  #1,a2
+.single_channel:
+                    addq.l  #4,a0
+                    addq.l  #1,a2
+                    dbf     d6,.patch_loop_channel
+                    dbf     d7,.patch_loop
+                    addq.w  #1,d2
+                    dbf     d5,.main_loop
+.no_patch:
+                    rts
+channels_kept_volumes:
+                    dcb.b   8,0
+
+; ===========================================================================
+fill_chunks_default_values_from_struct:
                     move.l  a0,a5
-lbC021344:
+.loop_chunks:
                     tst.l   (a5)
-                    beq     lbC021362
+                    beq     .done
                     move.l  (4,a5),d0
                     move.l  (8,a5),a0
                     move.w  (14,a5),d1
-lbC021354:
+.loop_fill:
                     subq.l  #2,d0
-                    bmi     lbC02135C
+                    bmi     .done_fill
                     move.w  d1,(a0)+
-                    bra     lbC021354
-lbC02135C:
+                    bra     .loop_fill
+.done_fill:
                     lea     (16,a5),a5
-                    bra     lbC021344
-lbC021362:
+                    bra     .loop_chunks
+.done:
                     rts
-lbC021364:
+
+; ===========================================================================
+read_chunks_content_from_struct:
                     move.l  a0,a5
-lbC021366:
+.loop:
                     lea     (song_chunk_header_loaded_data),a0
+                    ; read chunk header
                     moveq   #8,d0
                     jsr     (read_from_file)
-                    bmi     lbC0213A2
+                    bmi     .error
                     movem.l (song_chunk_header_loaded_data),d0/d1
                     cmp.l   (a5),d0
-                    bne     lbC0213AA
+                    bne     .next_chunk
                     cmp.l   (4,a5),d1
-                    bne     lbC0213B6
+                    bne     .read_partial_content
+                    ; read chunk content
+.read_content_from_file_chunk_size:
                     move.l  d1,d0
                     move.l  (8,a5),a0
                     jsr     (read_from_file)
-                    bmi     lbC0213A2
-lbC021396:
+                    bmi     .error
+.next_struct_entry:
                     lea     (16,a5),a5
                     tst.l   (a5)
-                    bne     lbC021366
+                    bne     .loop
                     moveq   #OK,d0
                     rts
-lbC0213A2:
+.error:
                     bsr     display_dos_error
                     moveq   #ERROR,d0
                     rts
-lbC0213AA:
+.next_chunk:
                     move.l  d1,d0
                     jsr     (move_in_file)
-                    bmi     lbC0213A2
-                    bra     lbC021366
-lbC0213B6:
+                    bmi     .error
+                    bra     .loop
+.read_partial_content:
                     sub.l   (4,a5),d1
-                    bpl     lbC0213D0
+                    bpl     .read_content_from_struct_chunk_size
                     add.l   (4,a5),d1
-                    move.l  d1,d0
-                    move.l  (8,a5),a0
-                    jsr     (read_from_file)
-                    bmi     lbC0213A2
-                    bra     lbC021396
-lbC0213D0:
+                    bra     .read_content_from_file_chunk_size
+.read_content_from_struct_chunk_size:
                     move.l  d1,(lbL01B2AC)
                     move.l  (4,a5),d0
                     move.l  (8,a5),a0
                     jsr     (read_from_file)
-                    bmi     lbC0213A2
+                    bmi     .error
                     move.l  (lbL01B2AC),d0
                     jsr     (move_in_file)
-                    bmi     lbC0213A2
-                    bra     lbC021396
+                    bmi     .error
+                    bra     .next_struct_entry
+
+; ===========================================================================
+; chunk ID.l
+; chunk size.l
+; dest.l
+; default value.w
 CMOD_MSG:
                     dc.b    'CMOD'
                     dc.l    8,OKT_channels_modes,1
@@ -4671,6 +4832,8 @@ SAMP_MSG:
                     dc.b    'PATT'
                     dc.l    128,OKT_patterns,0
                     dc.l    0
+
+; ===========================================================================
 lbC02145E:
                     move.l  #lbC02146A,(current_cmd_ptr)
                     rts
@@ -4742,7 +4905,7 @@ CMOD_MSG0:
                     dc.l    OKT_default_speed
                     dc.b    'SLEN'
                     dc.l    2
-                    dc.l    OKT_SLen
+                    dc.l    number_of_patterns
                     dc.b    'PLEN'
                     dc.l    2
                     dc.l    OKT_song_length
@@ -4753,7 +4916,7 @@ CMOD_MSG0:
 lbC021548:
                     moveq   #0,d7
 lbC02154A:
-                    cmp.w   (OKT_SLen),d7
+                    cmp.w   (number_of_patterns),d7
                     beq     lbC0215A8
                     move.w  d7,d0
                     bsr     get_given_pattern_rows
@@ -4962,7 +5125,7 @@ lbC02177E:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     ; sample mode
-                    move.w  (SMP_TYPE,a0),(save_sample_mode)
+                    ;move.w  (SMP_TYPE,a0),(save_sample_mode)
                     bsr     get_current_sample_ptr_address
                     move.l  (a0)+,(lbL01BC60)
                     beq     error_what_sample
@@ -4987,9 +5150,9 @@ lbC02177E:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     ; sample mode changed ?
-                    move.w  (SMP_TYPE,a0),d0
-                    cmp.w   (save_sample_mode),d0
-                    bne     lbC02187A
+                    ;move.w  (SMP_TYPE,a0),d0
+                    ;cmp.w   (save_sample_mode),d0
+                    ;bne     lbC02187A
                     bsr     ask_are_you_sure_requester
                     bne     lbC02187E
                     bsr     get_current_sample_ptr_address
@@ -5189,7 +5352,7 @@ lbC021A4E:
                     cmpi.l  #'8SVX',(8,a0)
                     bne     lbC021BAE
                     lea     (VHDR_MSG,pc),a0
-                    bsr     lbC021364
+                    bsr     read_chunks_content_from_struct
                     bmi     lbC021BA6
                     lea     (lbL021BF0,pc),a0
                     cmpi.b  #1,(14,a0)
@@ -5226,7 +5389,11 @@ lbC021B08:
                     move.w  (current_sample,pc),d2
                     lsl.w   #5,d2
                     ; load with default sample mode
+                IFD OKT_AUDIO_VAMPIRE
                     move.w  (samples_load_mode),(SMP_TYPE,a0,d2.w)
+                ELSE
+                    move.w  #SMP_TYPE_8_BIT,(SMP_TYPE,a0,d2.w)
+                ENDC
                     bsr     lbC021F9E
                     bmi     lbC021BA6
                     move.l  d0,(lbL021C0E)
@@ -5250,7 +5417,11 @@ lbC021B44:
                     ; SMP_VOL
                     move.w  #64,(a1)+
                     ; SMP_TYPE
+                IFD OKT_AUDIO_VAMPIRE
                     move.w  (samples_load_mode),(a1)+
+                ELSE
+                    move.w  #SMP_TYPE_8_BIT,(a1)+
+                ENDC
                     move.b  (lbB021C04,pc),d0
                     beq     lbC021B76
                     move.l  (lbL021C0E,pc),a0
@@ -5266,11 +5437,11 @@ lbC021B76:
                     jsr     (load_file)
                     bmi     lbC021BBA
 lbC021B90:
-                    cmpi.w  #1,(samples_load_mode)
-                    beq     lbC021BA6
-                    move.l  (lbL021C0E,pc),a0
-                    move.l  (lbL021C12,pc),d0
-                    bsr     lbC021F62
+;                    cmpi.w  #1,(samples_load_mode)
+;                    beq     lbC021BA6
+;                    move.l  (lbL021C0E,pc),a0
+;                    move.l  (lbL021C12,pc),d0
+;                    bsr     lbC021F62
 lbC021BA6:
                     bsr     lbC021BCE
                     moveq   #OK,d0
@@ -5292,9 +5463,7 @@ lbC021BCE:
                     bra     display_main_menu
 VHDR_MSG:
                     dc.b    'VHDR'
-                    dc.l    20
-                    dc.l    lbL021BF0
-                    dc.l    0
+                    dc.l    20,lbL021BF0,0
                     dc.l    0
 lbL021BF0:
                     dcb.l   5,0
@@ -5369,16 +5538,16 @@ lbC021C92:
                     bsr     overwrite_file_requester
                     bne     lbC021DA2
 
-                    lea     (OKT_samples+SMP_TYPE),a0
-                    move.w  (current_sample,pc),d0
-                    lsl.w   #5,d0
+;                    lea     (OKT_samples+SMP_TYPE),a0
+;                    move.w  (current_sample,pc),d0
+;                    lsl.w   #5,d0
                     ; sample type
-                    cmpi.w  #1,(a0,d0.w)
-                    beq     lbC021CDA
-                    move.l  (lbL01A130),a0
-                    move.l  (lbL01A134),d0
-                    bsr     lbC021F90
-lbC021CDA:
+;                    cmpi.w  #1,(a0,d0.w)
+;                    beq     lbC021CDA
+;                    move.l  (lbL01A130),a0
+;                    move.l  (lbL01A134),d0
+;                    bsr     lbC021F90
+;lbC021CDA:
                     tst.w   (samples_save_format)
                     bne     lbC021D88
                     lea     (current_file_name),a0
@@ -5553,92 +5722,94 @@ dec_sample_volume:
                     rts
 
 ; ===========================================================================
-inc_sample_type:
-                    tst.l   (lbL01A130)
-                    beq     error_what_sample
-                    tst.l   (lbL01A134)
-                    beq     error_what_sample
-                    lea     (OKT_samples+SMP_TYPE),a5
-                    move.w  (current_sample,pc),d1
-                    lsl.w   #5,d1
-                    add.w   d1,a5
-                    move.w  (a5),d0
-                    bne     lbC021ED8
-                    bsr     lbC021F70
-                    addq.w  #1,(a5)
-                    bra     lbC021EE6
-lbC021ED8:
-                    cmp.w   #1,d0
-                    bne     lbC021EE6
-                    bsr     lbC021F46
-                    addq.w  #1,(a5)
-lbC021EE6:
-                    jsr     (lbC028324)
-                    bsr     display_main_menu
-                    moveq   #0,d0
-                    rts
+;inc_sample_type:
+;                    tst.l   (lbL01A130)
+;                    beq     error_what_sample
+;                    tst.l   (lbL01A134)
+;                    beq     error_what_sample
+;                    lea     (OKT_samples+SMP_TYPE),a5
+;                    move.w  (current_sample,pc),d1
+;                    lsl.w   #5,d1
+;                    add.w   d1,a5
+;                    move.w  (a5),d0
+;                    bne     lbC021ED8
+;                    bsr     lbC021F70
+;                    addq.w  #1,(a5)
+;                    bra     lbC021EE6
+;lbC021ED8:
+;                    cmp.w   #1,d0
+;                    bne     lbC021EE6
+;                    bsr     lbC021F46
+;                    addq.w  #1,(a5)
+;lbC021EE6:
+;                    jsr     (lbC028324)
+;                    bsr     display_main_menu
+;                    moveq   #0,d0
+;                    rts
 
 ; ===========================================================================
-dec_sample_type:
-                    tst.l   (lbL01A130)
-                    beq     error_what_sample
-                    tst.l   (lbL01A134)
-                    beq     error_what_sample
-                    lea     (OKT_samples+SMP_TYPE),a5
-                    move.w  (current_sample,pc),d1
-                    lsl.w   #5,d1
-                    add.w   d1,a5
-                    move.w  (a5),d0
-                    cmp.w   #2,d0
-                    bne     lbC021F2A
-                    bsr     lbC021F70
-                    subq.w  #1,(a5)
-                    bra     lbC021F38
-lbC021F2A:
-                    cmp.w   #1,d0
-                    bne     lbC021F38
-                    bsr     lbC021F46
-                    subq.w  #1,(a5)
-lbC021F38:
-                    jsr     (lbC028324)
-                    bsr     display_main_menu
-                    moveq   #0,d0
-                    rts
+;dec_sample_type:
+;                    tst.l   (lbL01A130)
+;                    beq     error_what_sample
+;                    tst.l   (lbL01A134)
+;                    beq     error_what_sample
+;                    lea     (OKT_samples+SMP_TYPE),a5
+;                    move.w  (current_sample,pc),d1
+;                    lsl.w   #5,d1
+;                    add.w   d1,a5
+;                    move.w  (a5),d0
+;                    cmp.w   #2,d0
+;                    bne     lbC021F2A
+;                    bsr     lbC021F70
+;                    subq.w  #1,(a5)
+;                    bra     lbC021F38
+;lbC021F2A:
+;                    cmp.w   #1,d0
+;                    bne     lbC021F38
+;                    bsr     lbC021F46
+;                    subq.w  #1,(a5)
+;lbC021F38:
+;                    jsr     (lbC028324)
+;                    bsr     display_main_menu
+;                    moveq   #0,d0
+;                    rts
 
 ; ===========================================================================
-lbC021F46:
-                    bsr     stop_audio_channels
-                    move.l  (lbL01A130),a0
-                    move.l  (lbL01A134),d0
-                    bsr     lbC021F62
-                    jsr     (lbC028324)
-                    bra     display_main_menu
-lbC021F62:
-                    subq.l  #1,d0
-                    bmi     lbC021F6E
-                    move.b  (a0),d1
-                    asr.b   #1,d1
-                    move.b  d1,(a0)+
-                    bra     lbC021F62
-lbC021F6E:
-                    rts
-lbC021F70:
-                    bsr     stop_audio_channels
-                    move.l  (lbL01A130),a0
-                    move.l  (lbL01A134),d0
-                    bsr     lbC021F90
-                    jsr     (lbC028324)
-                    bsr     display_main_menu
-                    bra     error_left_one_bit
-lbC021F90:
-                    subq.l  #1,d0
-                    bmi     lbC021F9C
-                    move.b  (a0),d1
-                    add.b   d1,d1
-                    move.b  d1,(a0)+
-                    bra     lbC021F90
-lbC021F9C:
-                    rts
+;lbC021F46:
+;                    bsr     stop_audio_channels
+;                    move.l  (lbL01A130),a0
+;                    move.l  (lbL01A134),d0
+;                    bsr     lbC021F62
+;                    jsr     (lbC028324)
+;                    bra     display_main_menu
+;lbC021F62:
+;                    subq.l  #1,d0
+;                    bmi     lbC021F6E
+;                    move.b  (a0),d1
+;                    asr.b   #1,d1
+;                    move.b  d1,(a0)+
+;                    bra     lbC021F62
+;lbC021F6E:
+;                    rts
+;lbC021F70:
+;                    bsr     stop_audio_channels
+;                    ;move.l  (lbL01A130),a0
+;                    ;move.l  (lbL01A134),d0
+;                    ;bsr     lbC021F90
+;                    jsr     (lbC028324)
+;                    bsr     display_main_menu
+;                    bra     error_left_one_bit
+;lbC021F90:
+;                    subq.l  #1,d0
+;                    bmi     lbC021F9C
+;                    move.b  (a0),d1
+;                    add.b   d1,d1
+;                    move.b  d1,(a0)+
+;                    bra     lbC021F90
+;lbC021F9C:
+;                    rts
+
+; ===========================================================================
 lbC021F9E:
                     move.l  d0,-(a7)
                     bsr     lbC0216BE
@@ -5648,14 +5819,14 @@ lbC021F9E:
                     lsl.w   #5,d2
                     add.w   d2,a0
                     move.l  a0,(lbL021FFC)
-                    moveq   #MEMF_CHIP,d1
+                    move.l  #MEMF_CLEAR|MEMF_CHIP,d1
                     ; sample mode
-                    tst.w   (SMP_TYPE,a0)
-                    bne     lbC021FC4
-                    ; mode 8 in chip
-                    moveq   #MEMF_ANY,d1
-lbC021FC4:
-                    ori.l   #MEMF_CLEAR,d1
+;                    tst.w   (SMP_TYPE,a0)
+;                    bne     lbC021FC4
+;                    ; mode 8 in chip
+;                    moveq   #MEMF_CHIP,d1
+;lbC021FC4:
+;                    ori.l   #,d1
                     EXEC    AllocMem
                     move.l  (a7)+,d1
                     tst.l   d0
@@ -5707,7 +5878,7 @@ lbC022044:
 lbC022058:
                     lea     (OKT_patterns),a0
                     move.w  (current_song_position),d0
-                    move.w  (OKT_SLen),d1
+                    move.w  (number_of_patterns),d1
                     subq.w  #1,d1
                     cmp.b   (a0,d0.w),d1
                     beq     error_no_more_patterns
@@ -5765,7 +5936,7 @@ lbC022130:
                     sf      (a0)
                     bra     lbC022098
 lbC022136:
-                    move.w  (OKT_SLen),d0
+                    move.w  (number_of_patterns),d0
                     subq.w  #1,d0
                     lea     (OKT_patterns,pc),a0
                     moveq   #128-1,d1
@@ -6675,9 +6846,7 @@ OKT_init_variables:
 
 ; ===========================================================================
 OKT_replay_handler:
-                    ; !!!!
                     or.b    #VIS_DRAW_VUMETERS,refresh_visual
-                    ;bsr     draw_vumeters
                     bsr     OKT_set_hw_regs
                     addq.w  #1,(OKT_action_cycle)
                     move.w  (OKT_current_speed,pc),d0
@@ -6695,16 +6864,9 @@ OKT_new_row:
                     add.w   (OKT_rows_size,pc),a1
                     move.l  a1,(OKT_current_pattern)
                     move.w  (lbW01B2BA),(lbW01B2B6)
-                    ; !!!!
                     move.w  (OKT_pattern_row),bar_to_draw_pos
                     move.w  (OKT_last_pattern_row),bar_to_erase_pos
                     or.b    #VIS_DRAW_ROW,refresh_visual
-                    
-                    ;move.w  (OKT_pattern_row),d2
-                    ;bsr     show_pattern_position_bar
-                    ;move.w  (OKT_last_pattern_row,pc),d2
-                    ;bsr     show_pattern_position_bar
-                    
                     move.w  (OKT_pattern_row),(OKT_last_pattern_row)
                     addq.w  #1,(OKT_pattern_row)
                     bsr     OKT_get_current_pattern
@@ -6754,24 +6916,10 @@ OKT_get_current_pattern:
 OKT_set_current_pattern:
                     tst.b   (pattern_play_flag)
                     beq     .OKT_play_pattern
-                    ; !!!!
                     or.b    #VIS_DRAW_POS,refresh_visual
                     lea     (OKT_patterns),a0
                     move.w  (OKT_song_pos,pc),d0
                     move.b  (a0,d0.w),d0
-
-;                    move.w  (OKT_song_pos,pc),d2
-;                    moveq   #12,d0
-;                    moveq   #1,d1
-;                    jsr     (draw_3_digits_decimal_number_leading_zeroes)
-;                    lea     (OKT_patterns),a0
-;                    move.w  (OKT_song_pos,pc),d2
-;                    move.b  (a0,d2.w),d2
-;                    move.w  d2,-(a7)
-;                    moveq   #13,d0
-;                    moveq   #2,d1
-;                    jsr     (draw_2_digits_decimal_number_leading_zeroes)
-;                    move.w  (a7)+,d0
                     bra     .OKT_play_song
 .OKT_play_pattern:
                     move.w  (OKT_song_pos,pc),d0
@@ -6911,7 +7059,6 @@ OKT_turn_dma_on:
 ; ===========================================================================
 OKT_fill_double_channels:
                     lea     (OKT_samples_table),a0
-                    lea     (OKT_samples),a1
                     lea     (OKT_pattern_line_buffer),a2
                     lea     (OKT_channels_data),a3
                 IFD OKT_AUDIO_VAMPIRE
@@ -6970,11 +7117,6 @@ OKT_fill_double_channel_data:
                     lsl.w   #5,d0
                     lea     (OKT_samples),a1
                     add.w   d0,a1
-                    ; sample mode
-                    ; no midi out in mode 4
-                    ; only in mode 8 or b
-                    ;cmpi.w  #1,(SMP_TYPE,a1)
-                    ;beq     .OKT_empty
                     move.b  (1,a2),d0
                     move.b  d3,d1
                     addq.b  #1,d1
@@ -6994,20 +7136,19 @@ OKT_fill_double_channel_data:
 .OKT_no_midi_out:
                     ; ===
                     moveq   #0,d0
+                    ; sample
                     move.b  (1,a2),d0
                     lsl.w   #3,d0
                     move.l  (a0,d0.w),d2
                     beq     .OKT_no_data
                     add.w   d0,d0
                     add.w   d0,d0
-                    ; sample mode
-                    ; not in 4 mode
-                    ;cmpi.w  #1,(SMP_TYPE,a1,d0.w)
-                    ;beq     .OKT_no_data
                     ; starting address
                     move.l  d2,(CHAN_SMP_PROC_D,a3)
+                    lea     (OKT_samples),a1
+                    add.w   d0,a1
                     ; starting length
-                    move.l  (SMP_LEN,a1,d0.w),d0
+                    move.l  (SMP_LEN,a1),d0
                      ; that was a bug
                     bclr    #0,d0
                     move.l  d0,(CHAN_SMP_PROC_LEN_D,a3)
@@ -7019,8 +7160,13 @@ OKT_fill_double_channel_data:
                     move.l  d0,(CHAN_SMP_REP_LEN_D,a3)
                     move.w  (SMP_REP_START,a1),d1
                     add.l   d1,d1
-                    add.l   d2,d1
+                    tst.l   d0
+                    beq     .OKT_no_repeat
+                    add.l   d1,d0
+                    move.l  d0,(CHAN_SMP_PROC_LEN_D,a3)
+.OKT_no_repeat:
                     ; repeat start address
+                    add.l   d2,d1
                     move.l  d1,(CHAN_SMP_REP_START,a3)
                     move.l  a0,-(a7)
                     lea     (OKT_channels_volumes,pc),a0
@@ -7033,11 +7179,8 @@ OKT_fill_double_channel_data:
                     move.w  d3,(CHAN_NOTE_D,a3)
                     move.w  d3,(CHAN_BASE_NOTE_D,a3)
 .OKT_done_midi_out:
-                    ; !!!!
                     or.b    #VIS_TRIG_VUMETERS,(refresh_visual)
                     bset    d7,(trigger_vumeters_bits)
-                    ; !!!!
-                    ;bsr     trigger_vumeters
 .OKT_no_data:
                     addq.w  #4,a2
                     lea     (CHAN_LEN,a3),a3
@@ -7090,11 +7233,6 @@ OKT_fill_single_channel_data:
                     lsl.w   #5,d0
                     lea     (OKT_samples),a1
                     add.w   d0,a1
-                    ; sample mode
-                    ; not in 8 mode
-                    ; only in 4 and b modes
-                    ;tst.w   (SMP_TYPE,a1)
-                    ;beq     .OKT_empty
                     ; sample assigned to corresponding MIDI channel
                     move.b  (1,a2),d0
                     ; note
@@ -7126,10 +7264,6 @@ OKT_fill_single_channel_data:
                     add.w   d0,d0
                     lea     (OKT_samples),a1
                     add.w   d0,a1
-                    ; sample mode
-                    ; not in 8 mode
-                    ;tst.w   (SMP_TYPE,a1)
-                    ;beq     .OKT_no_data
                     ; length
                     move.l  (SMP_LEN,a1),d1
                     lsr.l   #1,d1
@@ -7157,11 +7291,8 @@ OKT_fill_single_channel_data:
                     move.b  (SMP_VOL+1,a1),(a0,d0.w)
                     move.l  (a7)+,a0
 .OKT_done_midi_out:
-                    ; !!!!
                     or.b    #VIS_TRIG_VUMETERS,(refresh_visual)
                     bset    d7,(trigger_vumeters_bits)
-                    ; !!!!
-                    ;bsr     trigger_vumeters
                     cmpi.b  #MIDI_OUT,(midi_mode)
                     beq     .OKT_no_data
                     moveq   #0,d0
@@ -7178,6 +7309,7 @@ OKT_fill_single_channel_data:
                     move.w  d0,(CHAN_SMP_REP_LEN_S,a3)
                     moveq   #0,d1
                     move.w  (SMP_REP_START,a1),d1
+                    ; length + length before
                     add.w   d1,d0
                     ; length
                     OKT_SET_AUDIO_LEN d0,a4
@@ -7582,14 +7714,7 @@ OKT_set_speed:
                     andi.w  #$1F,d1
                     beq     .OKT_no_change
                     move.w  d1,(OKT_current_speed)
-                    ; !!!!
                     or.b    #VIS_DRAW_SPEED,refresh_visual
-                    ; !!!!
-                    ; update the speed display
-                    ;movem.l d0-d7/a0-a6,-(a7)
-                    ;move.w  d1,d0
-                    ;bsr     draw_current_speed
-                    ;movem.l (a7)+,d0-d7/a0-a6
 .OKT_no_change:
                     rts
 
@@ -8188,7 +8313,6 @@ OKT_create_channel_waveform_data:
                     ; is there a repeat ?
                     tst.l   (CHAN_SMP_REP_LEN_D,a3)
                     beq     .OKT_no_repeat
-.OKT_rearm:
                     ; yes: rearm
                     move.l  (CHAN_SMP_REP_START,a3),(CHAN_SMP_PROC_D,a3)
                     move.l  (CHAN_SMP_REP_LEN_D,a3),d2
@@ -8247,7 +8371,7 @@ OKT_create_channel_waveform_data:
                     move.l  (a4,d3.w),a4
                     jsr     (a4)
                     ; restore the patched code if any
-                    tst.l   OKT_patched_addr
+                    tst.l   (OKT_patched_addr)
                     beq     .OKT_no_patch
                     move.l  (OKT_patched_addr,pc),a4
                     move.w  (OKT_patched_instr,pc),(a4)
@@ -8270,15 +8394,29 @@ OKT_create_channel_waveform_data:
                     move.l  d2,(CHAN_SMP_PROC_LEN_D,a3)
                     ; check if the mix buffer was entirely processed
                     lea     (a1),a4
-                    sub.l   (a7)+,a4
+                    sub.l   (a7),a4
                     cmp.l   #OKT_BUFFERS_LENGTH,a4
                     bge     .OKT_processed
-                    ; restart it to continue the filling
-                    tst.l   (CHAN_SMP_REP_LEN_D,a3)
-                    bne     .OKT_rearm
-                    ; fill the rest of the buffer
+                    ; still some bytes to process in mix buffer
                     move.l  #OKT_BUFFERS_LENGTH,d1
                     sub.l   a4,d1
+                    ; restart it to continue the filling
+                    tst.l   (CHAN_SMP_REP_LEN_D,a3)
+                    beq     .OKT_rearm
+                    ; yes: rearm
+                    cmp.l   d1,d2
+                    blt     .OKT_max_fill
+                    ; buffer to process is smaller than samples left:
+                    ; set the new length to remaining mix buffer to process
+                    move.l  d1,d2
+                    bra     .OKT_sample_end
+.OKT_max_fill:
+                    move.l  (CHAN_SMP_REP_START,a3),(CHAN_SMP_PROC_D,a3)
+                    move.l  (CHAN_SMP_REP_LEN_D,a3),d2
+                    move.l  d2,(CHAN_SMP_PROC_LEN_D,a3)
+                    bra     .OKT_sample_end
+.OKT_rearm:
+                    ; fill the rest of the buffer
                     btst    #0,d1
                     beq     .OKT_odd
                     sf      (a1)+
@@ -8296,6 +8434,7 @@ OKT_create_channel_waveform_data:
                 ENDR
 .OK_clear_buffer:
 .OKT_processed:
+                    addq.l  #4,a7
                     moveq   #0,d0
                     rts
 .OKT_no_mix:
@@ -13362,9 +13501,9 @@ lbC02837A:
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     ; sample mode
-                    ; set in 4 mode
-                    cmpi.w  #1,(SMP_TYPE,a0,d0.w)
-                    seq     (lbB029EE6)
+                    ; set in 8 bit mode
+                    ;cmpi.w  #1,(SMP_TYPE,a0,d0.w)
+                    ;seq     (lbB029EE6)
                     bsr     lbC0284F6
                     cmpi.l  #SCREEN_WIDTH,(lbL01A134)
                     bcs     lbC028460
@@ -13373,7 +13512,7 @@ lbC02837A:
                     divu.w  #(SCREEN_BYTES*8),d1
                     move.w  d1,(lbW029ED2)
                     movem.l d2-d7/a2,-(a7)
-                    move.b  (lbB029EE6,pc),d2
+                    ;move.b  (lbB029EE6,pc),d2
                     move.l  (lbL01A130),a2
                     move.l  (lbL01A134),a3
                     move.w  #SCREEN_WIDTH-1,d3
@@ -13399,11 +13538,11 @@ lbC0283F2:
                     cmp.l   a3,d7
                     bcc     lbC02844A
                     move.b  (a2,d7.l),d1
-                    tst.b   d2
-                    bne     lbC028410
-                    add.b   d0,d0
-                    add.b   d1,d1
-lbC028410:
+;                    tst.b   d2
+;                    bne     lbC028410
+;                    add.b   d0,d0
+;                    add.b   d1,d1
+;lbC028410:
                     eori.b  #$80,d0
                     eori.b  #$80,d1
                     swap    d4
@@ -13431,7 +13570,7 @@ lbC02844A:
                     bra     lbC02895C
 lbC028460:
                     movem.l d2-d4/a2,-(a7)
-                    move.b  (lbB029EE6,pc),d2
+;                    move.b  (lbB029EE6,pc),d2
                     move.l  (lbL01A130),a2
                     move.l  (lbL01A134),d3
                     subq.w  #1,d3
@@ -13449,11 +13588,11 @@ lbC02848E:
                     moveq   #0,d1
                     move.b  (a2)+,d0
                     move.b  (a2),d1
-                    tst.b   d2
-                    bne     lbC02849E
-                    add.b   d0,d0
-                    add.b   d1,d1
-lbC02849E:
+;                    tst.b   d2
+;                    bne     lbC02849E
+;                    add.b   d0,d0
+;                    add.b   d1,d1
+;lbC02849E:
                     eori.b  #$80,d0
                     eori.b  #$80,d1
                     swap    d4
@@ -13953,8 +14092,8 @@ lbC028B5A:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     ; sample mode
-                    tst.w   (SMP_TYPE,a0)
-                    beq     lbC028BBC
+                    ;tst.w   (SMP_TYPE,a0)
+                    ;beq     lbC028BBC
                     tst.w   (SMP_REP_LEN,a0)
                     beq     lbC028BBC
                     moveq   #0,d0
@@ -14075,8 +14214,8 @@ lbC028C8C:
                     add.w   d0,a0
                     ; sample mode
                     ; not in mode 8
-                    tst.w   (SMP_TYPE,a0)
-                    beq     lbC028CFC
+                    ;tst.w   (SMP_TYPE,a0)
+                    ;beq     lbC028CFC
                     move.l  a0,-(a7)
                     moveq   #0,d2
                     move.w  (SMP_REP_START,a0),d2
@@ -14180,18 +14319,18 @@ lbC028E1C:
                     bra     lbC02837A
 lbC028E28:
                     rts
-lbC028E2A:
-                    jsr     (inc_sample_type)
-                    bmi     lbC028E36
-                    bra     lbC02837A
-lbC028E36:
-                    rts
-lbC028E38:
-                    jsr     (dec_sample_type)
-                    bmi     lbC028E44
-                    bra     lbC02837A
-lbC028E44:
-                    rts
+;lbC028E2A:
+;                    jsr     (inc_sample_type)
+;                    bmi     lbC028E36
+;                    bra     lbC02837A
+;lbC028E36:
+;                    rts
+;lbC028E38:
+;                    jsr     (dec_sample_type)
+;                    bmi     lbC028E44
+;                    bra     lbC02837A
+;lbC028E44:
+;                    rts
 lbC028E46:
                     jsr     (lbC021E2A)
                     bra     lbC02837A
@@ -14374,13 +14513,13 @@ lbC029066:
                     jsr     (stop_audio_channels)
                     lea     (lbL01C958),a0
                     move.w  (lbW029F0E),d1
-                    moveq   #-$40,d2
-                    moveq   #$3F,d3
-                    tst.b   (lbB029EE6)
-                    beq     lbC029092
+;                    moveq   #-64,d2
+;                    moveq   #63,d3
+;                    tst.b   (lbB029EE6)
+;                    beq     lbC029092
                     moveq   #-128,d2
                     moveq   #127,d3
-lbC029092:
+;lbC029092:
                     moveq   #100,d4
                     moveq   #0,d7
 lbC029096:
@@ -14557,13 +14696,13 @@ lbC02929C:
                     moveq   #0,d3
                     move.w  d1,d3
                     move.w  #624,d5
-                    moveq   #-$40,d6
-                    moveq   #$3F,d7
-                    tst.b   (lbB029EE6)
-                    beq     lbC0292B4
+;                    moveq   #-64,d6
+;                    moveq   #63,d7
+;                    tst.b   (lbB029EE6)
+;                    beq     lbC0292B4
                     moveq   #-128,d6
                     moveq   #127,d7
-lbC0292B4:
+;lbC0292B4:
                     move.l  a0,-(a7)
                     jsr     (get_current_sample_ptr_address)
                     move.l  (a0),a5
@@ -15397,8 +15536,7 @@ lbC029C50:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     ; sample mode
-                    ; mode 4
-                    move.w  #1,(SMP_TYPE,a0)
+                    move.w  #SMP_TYPE_8_BIT,(SMP_TYPE,a0)
                     move.w  #64,(SMP_VOL,a0)
                     bsr     lbC02896C
                     bsr     lbC028324
@@ -15577,8 +15715,8 @@ lbL029EE0:
                     dc.l    0
 lbW029EE4:
                     dc.w    0
-lbB029EE6:
-                    dc.b    0
+;lbB029EE6:
+;                    dc.b    0
 lbB029EE7:
                     dc.b    0
 lbB029EE8:
@@ -15631,11 +15769,11 @@ OKT_channels_modes:
 default_pattern_length:
                     dc.w    $40
 samples_load_mode:
-                    dc.w    1
+                    dc.w    0
 samples_save_format:
                     dc.w    0
 prefs_palette:
-                    dc.w    $F98,$000,$976,$000,$579,$000
+                    dc.w    $A98,$000,$976,$000,$579,$000
 polyphony:
                     dc.b    0,1,2,3,4,5,6,7
 mouse_repeat_delay:
@@ -15933,9 +16071,10 @@ display_default_pattern_length:
                     jmp     (draw_2_digits_hex_number)
 
 ; ===========================================================================
+                IFD OKT_AUDIO_VAMPIRE
 inc_samples_load_mode:
                     lea     (samples_load_mode,pc),a0
-                    cmpi.w  #2,(a0)
+                    cmpi.w  #1,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     display_samples_load_mode
@@ -15949,16 +16088,19 @@ dec_samples_load_mode:
                     bra     display_samples_load_mode
 .min:
                     rts
+                ENDC
 display_samples_load_mode:
                     lea     (.load_mode_text,pc),a0
-                    move.w  (samples_load_mode,pc),d2
-                    move.b  (a0,d2.w),d2
-                    moveq   #24,d0
+                    move.w  (samples_load_mode,pc),d0
+                    add.w   d0,d0
+                    add.w   d0,d0
+                    add.w   d0,a0
+                    moveq   #22,d0
                     moveq   #15,d1
-                    jmp     (draw_one_char)
+                    jmp     (draw_text)
 .load_mode_text:
-                    dc.b    '84B'
-                    even
+                    dc.b    ' 8B',0
+                    dc.b    '16B',0
 
 ; ===========================================================================
 switch_samples_save_format:
@@ -18216,7 +18358,7 @@ lbC02C2E4:
                     clr.l   (lbB02CA08)
                     clr.l   (lbB02C9CC)
                     sf      (lbB02C470)
-                    move.w  (OKT_SLen),d7
+                    move.w  (number_of_patterns),d7
                     bra     lbC02C418
 lbC02C344:
                     movem.l d4-d7/a2-a5,-(a7)
@@ -19552,7 +19694,11 @@ main_menu_text:
                     dc.b    CMD_TEXT,40,0,'Current Sample:',0
                     dc.b    CMD_TEXT,40,1,'Name: --------------------',0
                     dc.b    CMD_TEXT,40,2,'Len.:         Load  Clear',0
+                IFD OKT_AUDIO_VAMPIRE
                     dc.b    CMD_TEXT,40,6,'Mode:',0
+                ELSE
+                    dc.b    CMD_TEXT,40,6,' ',0
+                ENDC
                     dc.b    CMD_TEXT,54,3,'Save  Clear',0
                     dc.b    CMD_TEXT,54,4,'Edit   All',0
                     dc.b    CMD_TEXT,54,5,'Copy   Mix',0
@@ -19736,15 +19882,15 @@ lbB0177C2:
                     dc.b    40,1,26,1
                     dc.l    inc_sample_number,dec_sample_number
 lbB0177D4:
-                    dc.l    lbB0177E6
+                    dc.l    lbB0177F8
                     dc.w    %1
                     dc.b    40,5,8,1
                     dc.l    inc_sample_volume,dec_sample_volume
-lbB0177E6:
-                    dc.l    lbB0177F8
-                    dc.w    %1
-                    dc.b    40,6,7,1
-                    dc.l    inc_sample_type,dec_sample_type
+;lbB0177E6:
+;                    dc.l    lbB0177F8
+;                    dc.w    %1
+;                    dc.b    40,6,7,1
+;                    dc.l    inc_sample_type,dec_sample_type
 lbB0177F8:
                     dc.l    lbB01780A
                     dc.w    %1
@@ -20275,15 +20421,15 @@ lbW01892C:
                     dc.b    26,1,13,1
                     dc.l    cycle_midi_modes_stop_audio_and_draw,0
 lbW01893E:
-                    dc.l    lbW018950
+                    dc.l    lbW018962
                     dc.w    %1
                     dc.b    40,1,26,1
                     dc.l    lbC028E0E,lbC028E1C
-lbW018950:
-                    dc.l    lbW018962
-                    dc.w    %1000000000001
-                    dc.b    40,6,7,1
-                    dc.l    lbC028E2A,lbC028E38
+;lbW018950:
+;                    dc.l    lbW018962
+;                    dc.w    %1000000000001
+;                    dc.b    40,6,7,1
+;                    dc.l    lbC028E2A,lbC028E38
 lbW018962:
                     dc.l    lbW018974
                     dc.w    %1000000000001
@@ -20558,15 +20704,21 @@ lbW0190B6:
                     dc.b    23,12,2,1
                     dc.l    switch_channel_4_type,0
 lbW0190C8:
+                IFD OKT_AUDIO_VAMPIRE
                     dc.l    lbW0190DA
+                ELSE
+                    dc.l    lbW0190EC
+                ENDC
                     dc.w    %1
                     dc.b    2,13,23,1
                     dc.l    inc_default_pattern_length,dec_default_pattern_length
+                IFD OKT_AUDIO_VAMPIRE
 lbW0190DA:
                     dc.l    lbW0190EC
                     dc.w    %1
                     dc.b    2,15,23,1
                     dc.l    inc_samples_load_mode,dec_samples_load_mode
+                ENDC
 lbW0190EC:
                     dc.l    lbW0190FE
                     dc.w    %1000000000001
@@ -21145,7 +21297,7 @@ song_chunk_header_loaded_data:
                     dcb.b   8,0
 lbW01B730:
                     dc.w    0
-lbL01B732:
+length_of_sample_to_load:
                     dc.l    0
 lbW01B736:
                     dcb.w   41,0
@@ -21181,7 +21333,7 @@ midi_mode:
                     dc.b    0
 lbB01BC6B:
                     dcb.b   3,0
-OKT_SLen:
+number_of_patterns:
                     dc.w    0
 lbL01BC70:
                     dcb.l   64,0

@@ -45,7 +45,7 @@ start:
 
 music:              ;incbin  "../songs/lame d-mo.okta"
                     ;incbin  "future melody.okta"
-                    incbin  "storm angel.okta"
+                    incbin  "f.okta"
                     ;incbin  "../songs/future melody.okta"
                     ;incbin  "OKT.headwar"
 

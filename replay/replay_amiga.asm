@@ -484,7 +484,6 @@ OKT_create_channel_waveform_data:
                     ; is there a repeat ?
                     tst.l   (CHAN_SMP_REP_LEN_D,a3)
                     beq     .OKT_no_repeat
-.OKT_rearm:
                     ; yes: rearm
                     move.l  (CHAN_SMP_REP_START,a3),(CHAN_SMP_PROC_D,a3)
                     move.l  (CHAN_SMP_REP_LEN_D,a3),d2
@@ -543,7 +542,7 @@ OKT_create_channel_waveform_data:
                     move.l  (a4,d3.w),a4
                     jsr     (a4)
                     ; restore the patched code if any
-                    tst.l   OKT_patched_addr
+                    tst.l   (OKT_patched_addr-OKT_vars,a6)
                     beq     .OKT_no_patch
                     move.l  (OKT_patched_addr-OKT_vars,a6),a4
                     move.w  (OKT_patched_instr-OKT_vars,a6),(a4)
@@ -566,15 +565,28 @@ OKT_create_channel_waveform_data:
                     move.l  d2,(CHAN_SMP_PROC_LEN_D,a3)
                     ; check if the mix buffer was entirely processed
                     lea     (a1),a4
-                    sub.l   (a7)+,a4
+                    sub.l   (a7),a4
                     cmp.l   #OKT_BUFFERS_LENGTH,a4
                     bge     .OKT_processed
-                    ; restart it to continue the filling
-                    tst.l   (CHAN_SMP_REP_LEN_D,a3)
-                    bne     .OKT_rearm
-                    ; fill the rest of the buffer
                     move.l  #OKT_BUFFERS_LENGTH,d1
                     sub.l   a4,d1
+                    ; restart it to continue the filling
+                    tst.l   (CHAN_SMP_REP_LEN_D,a3)
+                    beq     .OKT_rearm
+                    ; yes: rearm
+                    cmp.l   d1,d2
+                    blt     .OKT_max_fill
+                    ; buffer to process is smaller than samples left:
+                    ; set the new length to remaining mix buffer to process
+                    move.l  d1,d2
+                    bra     .OKT_sample_end
+.OKT_max_fill:
+                    move.l  (CHAN_SMP_REP_START,a3),(CHAN_SMP_PROC_D,a3)
+                    move.l  (CHAN_SMP_REP_LEN_D,a3),d2
+                    move.l  d2,(CHAN_SMP_PROC_LEN_D,a3)
+                    bra     .OKT_sample_end
+.OKT_rearm:
+                    ; fill the rest of the buffer
                     btst    #0,d1
                     beq     .OKT_odd
                     sf      (a1)+
@@ -592,6 +604,7 @@ OKT_create_channel_waveform_data:
                 ENDR
 .OK_clear_buffer:
 .OKT_processed:
+                    addq.l  #4,a7
                     moveq   #0,d0
                     rts
 .OKT_no_mix:
