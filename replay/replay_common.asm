@@ -460,7 +460,7 @@ OKT_fill_double_channel_data:
                     lsl.w   #3,d0
                     ; starting address
                     move.l  d2,(CHAN_SMP_PROC_D,a3)
-                    lea     (OKT_samples),a1
+                    lea     (OKT_samples-OKT_vars,a6),a1
                     add.w   d0,a1
                     ; starting length
                     move.l  (SMP_LEN,a1),d0
@@ -552,7 +552,7 @@ OKT_fill_single_channel_data:
                     ; start sample address
                     OKT_SET_AUDIO_ADR d2,a4
                 IFD OKT_AUDIO_VAMPIRE
-                    OKT_SET_AUDIO_CTRL #%0,a4
+                    OKT_SET_AUDIO_CTRL SMP_TYPE(a1),a4
                 ENDC
                     ; note index
                     move.w  d3,(CHAN_NOTE_S,a3)
