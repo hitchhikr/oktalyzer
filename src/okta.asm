@@ -1409,9 +1409,9 @@ lbC01EF1E:
                     movem.l (a7)+,d2/a2
                     rts
 lbC01EF5A:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC01EFE4
-                    tst.l   (lbL01A134)
+                    tst.l   (current_sample_size)
                     beq     lbC01EFE4
                     movem.l d2-d4/a2,-(a7)
                     ; channel bit
@@ -1426,8 +1426,8 @@ lbC01EF5A:
                     lea     (lbW02513C),a0
                     add.w   d1,d1
                     move.w  (a0,d1.w),d2
-                    move.l  (lbL01A130),a0
-                    move.l  (lbL01A134),d0
+                    move.l  (current_sample_address_ptr),a0
+                    move.l  (current_sample_size),d0
                     lsr.l   #1,d0
                     ; sample mode
 ;                    tst.w   (SMP_TYPE,a2)
@@ -2892,18 +2892,18 @@ plenty_text:
 ; ===========================================================================
 lbC01FF8C:
                     bsr     stop_audio_channels
-                    move.l  (lbL01A130),d0
+                    move.l  (current_sample_address_ptr),d0
                     beq     .empty
                     move.l  d0,a1
-                    move.l  (lbL01A134),d0
+                    move.l  (current_sample_size),d0
                     EXEC    FreeMem
-                    clr.l   (lbL01A130)
+                    clr.l   (current_sample_address_ptr)
 .empty:
-                    clr.l   (lbL01A134)
+                    clr.l   (current_sample_size)
                     clr.l   (lbL029ECE)
                     rts
 lbC01FFC0:
-                    cmp.l   (lbL01A134),d0
+                    cmp.l   (current_sample_size),d0
                     beq     lbC020018
                     move.l  d0,(lbL01B29A)
                     bsr     lbC01FF8C
@@ -2914,10 +2914,10 @@ lbC01FFC0:
                     blt     error_sample_too_short
                     move.l  #MEMF_CLEAR|MEMF_CHIP,d1
                     EXEC    AllocMem
-                    move.l  d0,(lbL01A130)
+                    move.l  d0,(current_sample_address_ptr)
                     beq     error_no_memory
                     move.l  (lbL01B29A),d0
-                    move.l  d0,(lbL01A134)
+                    move.l  d0,(current_sample_size)
                     move.l  d0,(lbL029ECE)
 lbC020018:
                     moveq   #0,d0
@@ -2934,19 +2934,19 @@ lbC02001C:
                     move.l  d2,d0
                     moveq   #MEMF_CHIP,d1
                     EXEC    AllocMem
-                    move.l  d0,(lbL01A130)
+                    move.l  d0,(current_sample_address_ptr)
                     bne     lbC020050
                     bsr     error_no_memory
                     bra     lbC020074
 lbC020050:
-                    move.l  d2,(lbL01A134)
+                    move.l  d2,(current_sample_size)
                     move.l  d2,(lbL029ECE)
                     move.l  a2,a0
-                    move.l  (lbL01A130),a1
+                    move.l  (current_sample_address_ptr),a1
                     move.l  d2,d0
                     EXEC    CopyMem
 lbC020072:
-                    moveq   #0,d0
+                    moveq   #OK,d0
 lbC020074:
                     movem.l (a7)+,d2/a2
                     rts
@@ -5131,7 +5131,7 @@ lbC02177E:
                     beq     error_what_sample
                     move.l  (a0)+,(lbL01BC64)
                     beq     error_what_sample
-                    move.l  (lbL01A130),d0
+                    move.l  (current_sample_address_ptr),d0
                     beq     error_what_sample
                     lea     (MixWithSample_MSG,pc),a0
                     bsr     lbC024876
@@ -5157,7 +5157,7 @@ lbC02177E:
                     bne     lbC02187E
                     bsr     get_current_sample_ptr_address
                     move.l  (4,a0),d0
-                    cmp.l   (lbL01A134),d0
+                    cmp.l   (current_sample_size),d0
                     blt     lbC02181E
                     bsr     lbC01FFC0
                     bmi     lbC02187E
@@ -5167,8 +5167,8 @@ lbC02181E:
                     move.l  (a0),a0
                     move.l  (lbL01BC60),a1
                     move.l  (lbL01BC64),d1
-                    move.l  (lbL01A130),a2
-                    move.l  (lbL01A134),d2
+                    move.l  (current_sample_address_ptr),a2
+                    move.l  (current_sample_size),d2
 lbC021840:
                     subq.l  #1,d2
                     bmi     lbC021860
@@ -5245,11 +5245,15 @@ lbW02190A:
 SwapWith_MSG:
                     dc.b    'Swap With .....:',0
                     even
-lbC02191E:
-                    lea     (lbC02192A,pc),a0
+
+; ===========================================================================
+load_sample:
+                    lea     (do_load_sample,pc),a0
                     move.l  a0,(current_cmd_ptr)
                     rts
-lbC02192A:
+
+; ===========================================================================
+do_load_sample:
                     lea     (LoadSamples_MSG,pc),a0
                     moveq   #DIR_SAMPLES,d0
                     jsr     (lbC026ACC)
@@ -5313,7 +5317,7 @@ lbC0219E0:
 lbC0219E8:
                     jsr     (lbC026D24)
                     move.w  (lbW0219F6,pc),d0
-                    bra     lbC021E2A
+                    bra     set_current_sample_number
 lbW0219F6:
                     dc.w    0
 lbW0219F8:
@@ -5328,25 +5332,25 @@ lbB021A1E:
                     dc.b    0
                     even
 lbC021A20:
-                    move.l  a0,(lbL021C16)
+                    move.l  a0,(sample_filename_to_load)
                     move.l  a1,(lbL021C1A)
-                    sf      (lbB021C04)
-                    clr.w   (lbW021C0A)
-                    clr.w   (lbW021C0C)
+                    sf      (iff_body_sample_load_flag)
+                    clr.w   (iff_repeat_start)
+                    clr.w   (iff_repeat_length)
                     cmpi.l  #2,d0
                     bge     lbC021A4E
                     bsr     error_sample_too_short
                     bra     lbC021BC2
 lbC021A4E:
-                    move.l  d0,(lbL021C06)
-                    move.l  (lbL021C16,pc),a0
+                    move.l  d0,(iff_sample_size_loaded)
+                    move.l  (sample_filename_to_load,pc),a0
                     jsr     (open_file_for_reading)
                     bmi     lbC021BBA
-                    lea     (lbL021BF0,pc),a0
+                    lea     (iff_chunk_load_data,pc),a0
                     moveq   #12,d0
                     jsr     (read_from_file)
                     bmi     lbC021BBA
-                    lea     (lbL021BF0,pc),a0
+                    lea     (iff_chunk_load_data,pc),a0
                     cmpi.l  #'FORM',(a0)
                     bne     lbC021AE2
                     cmpi.l  #'8SVX',(8,a0)
@@ -5354,27 +5358,29 @@ lbC021A4E:
                     lea     (VHDR_MSG,pc),a0
                     bsr     read_chunks_content_from_struct
                     bmi     lbC021BA6
-                    lea     (lbL021BF0,pc),a0
+                    lea     (iff_chunk_load_data,pc),a0
+                    ; octave
                     cmpi.b  #1,(14,a0)
                     bne     lbC021BAE
+                    ; compression
                     tst.b   (15,a0)
                     bne     lbC021BAE
                     move.l  (a0)+,d0
                     lsr.l   #1,d0
-                    move.w  d0,(lbW021C0A)
+                    move.w  d0,(iff_repeat_start)
                     move.l  (a0)+,d0
                     lsr.l   #1,d0
-                    move.w  d0,(lbW021C0C)
-                    bne     lbC021AC8
-                    clr.w   (lbW021C0A)
-lbC021AC8:
+                    move.w  d0,(iff_repeat_length)
+                    bne     .not_bogus
+                    clr.w   (iff_repeat_start)
+.not_bogus:
                     move.l  #'BODY',d0
                     bsr     lbC021C1E
                     bmi     lbC021BA6
-                    move.l  d0,(lbL021C06)
-                    st      (lbB021C04)
+                    move.l  d0,(iff_sample_size_loaded)
+                    st      (iff_body_sample_load_flag)
 lbC021AE2:
-                    move.l  (lbL021C06,pc),d0
+                    move.l  (iff_sample_size_loaded,pc),d0
                     cmpi.l  #131070,d0
                     bls     lbC021AF8
                     bsr     error_sample_clipped
@@ -5385,62 +5391,69 @@ lbC021AF8:
                     bsr     error_sample_too_short
                     bra     lbC021BA6
 lbC021B08:
-                    lea     (OKT_samples),a0
-                    move.w  (current_sample,pc),d2
-                    lsl.w   #5,d2
-                    ; load with default sample mode
-                IFD OKT_AUDIO_VAMPIRE
-                    move.w  (samples_load_mode),(SMP_TYPE,a0,d2.w)
-                ELSE
-                    move.w  #SMP_TYPE_8_BIT,(SMP_TYPE,a0,d2.w)
-                ENDC
+;                    lea     (OKT_samples),a0
+;                    move.w  (current_sample,pc),d2
+;                    lsl.w   #5,d2
+;                    ; load with default sample mode
+;                IFD OKT_AUDIO_VAMPIRE
+;                    move.w  (samples_load_mode),(SMP_TYPE,a0,d2.w)
+;                ELSE
+;                    move.w  #SMP_TYPE_8_BIT,(SMP_TYPE,a0,d2.w)
+;                ENDC
                     bsr     lbC021F9E
                     bmi     lbC021BA6
-                    move.l  d0,(lbL021C0E)
-                    move.l  d1,(lbL021C12)
+                    move.l  d0,(iff_sample_address_to_load_ptr)
+                    move.l  d1,(iff_sample_size_to_load)
                     move.l  (lbL021C1A,pc),a0
                     lea     (OKT_samples),a1
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     add.w   d0,a1
-                    ; copy sample name
+                    ; store sample name
                     moveq   #20-1,d0
-lbC021B44:
+.copy_name:
                     move.b  (a0)+,(a1)+
-                    dbra    d0,lbC021B44
+                    dbra    d0,.copy_name
                     ; SMP_LEN
                     move.l  d1,(a1)+
                     ; SMP_REP_START
-                    move.w  (lbW021C0A,pc),(a1)+
+                    move.w  (iff_repeat_start,pc),(a1)+
                     ; SMP_REP_LEN
-                    move.w  (lbW021C0C,pc),(a1)+
+                    move.w  (iff_repeat_length,pc),(a1)+
                     ; SMP_VOL
                     move.w  #64,(a1)+
                     ; SMP_TYPE
+                    move.b  (iff_body_sample_load_flag,pc),d0
+                    beq     .load_raw_sample
+                    ; 8SVX are always 8 bit
+                    move.w  #SMP_TYPE_8_BIT,(a1)+
+                    move.l  (iff_sample_address_to_load_ptr,pc),a0
+                    move.l  (iff_sample_size_to_load,pc),d0
+                    jsr     (read_from_file)
+                    bmi     lbC021BBA
+                    bra     lbC021B90
+
+; ===========================================================================
+.load_raw_sample:
+                    ; may load 16 bit samples on Vampire
                 IFD OKT_AUDIO_VAMPIRE
                     move.w  (samples_load_mode),(a1)+
                 ELSE
                     move.w  #SMP_TYPE_8_BIT,(a1)+
                 ENDC
-                    move.b  (lbB021C04,pc),d0
-                    beq     lbC021B76
-                    move.l  (lbL021C0E,pc),a0
-                    move.l  (lbL021C12,pc),d0
-                    jsr     (read_from_file)
-                    bmi     lbC021BBA
-                    bra     lbC021B90
-lbC021B76:
                     jsr     (close_file)
-                    move.l  (lbL021C16,pc),a0
-                    move.l  (lbL021C0E,pc),a1
-                    move.l  (lbL021C12,pc),d0
+                    move.l  (sample_filename_to_load,pc),a0
+                    move.l  (iff_sample_address_to_load_ptr,pc),a1
+                    move.l  (iff_sample_size_to_load,pc),d0
                     jsr     (load_file)
                     bmi     lbC021BBA
+
+; ===========================================================================
 lbC021B90:
 ;                    cmpi.w  #1,(samples_load_mode)
 ;                    beq     lbC021BA6
-;                    move.l  (lbL021C0E,pc),a0
-;                    move.l  (lbL021C12,pc),d0
+;                    move.l  (iff_sample_address_to_load_ptr,pc),a0
+;                    move.l  (iff_sample_size_to_load,pc),d0
 ;                    bsr     lbC021F62
 lbC021BA6:
                     bsr     lbC021BCE
@@ -5463,24 +5476,24 @@ lbC021BCE:
                     bra     display_main_menu
 VHDR_MSG:
                     dc.b    'VHDR'
-                    dc.l    20,lbL021BF0,0
+                    dc.l    20,iff_chunk_load_data,0
                     dc.l    0
-lbL021BF0:
-                    dcb.l   5,0
-lbB021C04:
+iff_chunk_load_data:
+                    dcb.b   20,0
+iff_body_sample_load_flag:
                     dc.b    0
                     even
-lbL021C06:
+iff_sample_size_loaded:
                     dc.l    0
-lbW021C0A:
+iff_repeat_start:
                     dc.w    0
-lbW021C0C:
+iff_repeat_length:
                     dc.w    0
-lbL021C0E:
+iff_sample_address_to_load_ptr:
                     dc.l    0
-lbL021C12:
+iff_sample_size_to_load:
                     dc.l    0
-lbL021C16:
+sample_filename_to_load:
                     dc.l    0
 lbL021C1A:
                     dc.l    0
@@ -5518,14 +5531,18 @@ lbC021C64:
                     rts
 lbL021C6A:
                     dcb.b   8,0
-lbC021C72:
-                    tst.l   (lbL01A130)
+
+; ===========================================================================
+save_sample:
+                    tst.l   (current_sample_address_ptr)
                     beq     error_what_sample
-                    tst.l   (lbL01A134)
+                    tst.l   (current_sample_size)
                     beq     error_what_sample
-                    move.l  #lbC021C92,(current_cmd_ptr)
+                    move.l  #do_save_sample,(current_cmd_ptr)
                     rts
-lbC021C92:
+
+; ===========================================================================
+do_save_sample:
                     lea     (OKT_samples),a0
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
@@ -5534,9 +5551,9 @@ lbC021C92:
                     lea     (SaveSample_MSG,pc),a0
                     moveq   #DIR_SAMPLES,d0
                     jsr     (display_file_requester)
-                    bmi     lbC021DA2
+                    bmi     .done
                     bsr     overwrite_file_requester
-                    bne     lbC021DA2
+                    bne     .done
 
 ;                    lea     (OKT_samples+SMP_TYPE),a0
 ;                    move.w  (current_sample,pc),d0
@@ -5544,129 +5561,116 @@ lbC021C92:
                     ; sample type
 ;                    cmpi.w  #1,(a0,d0.w)
 ;                    beq     lbC021CDA
-;                    move.l  (lbL01A130),a0
-;                    move.l  (lbL01A134),d0
+;                    move.l  (current_sample_address_ptr),a0
+;                    move.l  (current_sample_size),d0
 ;                    bsr     lbC021F90
 ;lbC021CDA:
                     tst.w   (samples_save_format)
-                    bne     lbC021D88
+                    bne     .save_sample_as_raw
                     lea     (current_file_name),a0
                     jsr     (open_file_for_writing)
-                    bmi     lbC021DB0
-                    move.l  (lbL01A134),d0
+                    bmi     .error
+                    move.l  (current_sample_size),d0
                     moveq   #-2,d1
                     and.l   d1,d0
-                    move.l  d0,(lbL021E1A)
-                    addi.l  #96,d0
-                    move.l  d0,(ascii_MSG60)
+                    move.l  d0,(iff_sample_size)
+                    addi.l  #(eiff_struct-iff_header_struct),d0
+                    move.l  d0,(iff_global_size)
                     lea     (OKT_samples),a0
-                    lea     (ascii_MSG62,pc),a1
+                    lea     (iff_sample_name,pc),a1
                     move.w  (current_sample,pc),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
                     move.l  a0,a2
-                    ; get sample name
+                    ; store sample name
                     moveq   #19-1,d0
-lbC021D26:
+.copy_name:
                     move.b  (a0)+,(a1)+
-                    dbra    d0,lbC021D26
+                    dbra    d0,.copy_name
                     sf      (a1)+
                     moveq   #0,d0
                     move.w  (SMP_REP_START,a2),d0
                     add.l   d0,d0
-                    move.l  d0,(lbL021DCA)
+                    move.l  d0,(iff_oneshot_size)
                     moveq   #0,d1
                     move.w  (SMP_REP_LEN,a2),d1
                     add.l   d1,d1
-                    move.l  d1,(ascii_MSG61)
-                    beq     lbC021D54
+                    move.l  d1,(iff_repeat_size)
+                    beq     .no_repeat
                     add.l   d1,d0
-                    cmp.l   (lbL021E1A,pc),d0
-                    ble     lbC021D64
-lbC021D54:
-                    move.l  (lbL021E1A),(lbL021DCA)
-                    clr.l   (ascii_MSG61)
-lbC021D64:
-                    lea     (FORM_MSG,pc),a0
-                    moveq   #104,d0
+                    cmp.l   (iff_sample_size,pc),d0
+                    ble     .not_bogus
+.no_repeat:
+                    move.l  (iff_sample_size),(iff_oneshot_size)
+                    clr.l   (iff_repeat_size)
+.not_bogus:
+                    lea     (iff_struct,pc),a0
+                    moveq   #(eiff_struct-iff_struct),d0
                     jsr     (write_to_file)
-                    bmi     lbC021DB0
-                    move.l  (lbL01A130),a0
-                    move.l  (lbL021E1A),d0
+                    bmi     .error
+                    move.l  (current_sample_address_ptr),a0
+                    move.l  (iff_sample_size),d0
                     jsr     (write_to_file)
-                    bmi     lbC021DB0
-                    bra     lbC021DA2
-lbC021D88:
+                    bmi     .error
+                    bra     .done
+
+; ===========================================================================
+.save_sample_as_raw:
                     lea     (current_file_name),a0
-                    move.l  (lbL01A130),a1
-                    move.l  (lbL01A134),d0
+                    move.l  (current_sample_address_ptr),a1
+                    move.l  (current_sample_size),d0
                     jsr     (save_file)
-                    bmi     lbC021DB0
-lbC021DA2:
+                    bmi     .error
+.done:
                     jsr     (close_file)
                     bsr     lbC02001C
                     bra     display_main_menu
-lbC021DB0:
+.error:
                     bsr     display_dos_error
-                    bra     lbC021DA2
-FORM_MSG:
+                    bra     .done
+
+; ===========================================================================
+iff_struct:
                     dc.b    'FORM'
-ascii_MSG60:
+iff_global_size:
                     dc.l    0
-                    dc.b    '8SVXVHDR'
+iff_header_struct:
+                    dc.b    '8SVX'
+                    dc.b    'VHDR'
                     dc.l    20
-lbL021DCA:
+                    ; oneShotHiSamples
+iff_oneshot_size:
                     dc.l    0
-ascii_MSG61:
+                    ; repeatHiSamples
+iff_repeat_size:
+                    dc.l    0
+                    ; samplesPerHiCycle
+                    dc.l    32
+                    ; samplesPerSec
+                    dc.w    8363
+                    ; ctOctave
+                    dc.b    1
+                    ; sCompression (none)
                     dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    $20,$20,$AB,1,0,0,1,0,0
+                    ; volume
+                    dc.l    $10000
                     dc.b    'NAME'
                     dc.l    20
-ascii_MSG62:
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
+iff_sample_name:
+                    dcb.b   20,0
                     dc.b    'ANNO'
                     dc.l    20
-                    dc.b    'Oktalyzer',0,0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
-                    dc.b    0
+                    dc.b    'Oktalyzer'
+                    dcb.b   11,0
                     dc.b    'BODY'
-lbL021E1A:
+iff_sample_size:
                     dc.l    0
+eiff_struct:
 SaveSample_MSG:
                     dc.b    'Save Sample',0
-lbC021E2A:
+
+; ===========================================================================
+set_current_sample_number:
                     move.w  d0,(current_sample)
                     bsr     lbC02001C
                     bra     display_main_menu
@@ -5723,9 +5727,9 @@ dec_sample_volume:
 
 ; ===========================================================================
 ;inc_sample_type:
-;                    tst.l   (lbL01A130)
+;                    tst.l   (current_sample_address_ptr)
 ;                    beq     error_what_sample
-;                    tst.l   (lbL01A134)
+;                    tst.l   (current_sample_size)
 ;                    beq     error_what_sample
 ;                    lea     (OKT_samples+SMP_TYPE),a5
 ;                    move.w  (current_sample,pc),d1
@@ -5749,9 +5753,9 @@ dec_sample_volume:
 
 ; ===========================================================================
 ;dec_sample_type:
-;                    tst.l   (lbL01A130)
+;                    tst.l   (current_sample_address_ptr)
 ;                    beq     error_what_sample
-;                    tst.l   (lbL01A134)
+;                    tst.l   (current_sample_size)
 ;                    beq     error_what_sample
 ;                    lea     (OKT_samples+SMP_TYPE),a5
 ;                    move.w  (current_sample,pc),d1
@@ -5777,8 +5781,8 @@ dec_sample_volume:
 ; ===========================================================================
 ;lbC021F46:
 ;                    bsr     stop_audio_channels
-;                    move.l  (lbL01A130),a0
-;                    move.l  (lbL01A134),d0
+;                    move.l  (current_sample_address_ptr),a0
+;                    move.l  (current_sample_size),d0
 ;                    bsr     lbC021F62
 ;                    jsr     (lbC028324)
 ;                    bra     display_main_menu
@@ -5793,8 +5797,8 @@ dec_sample_volume:
 ;                    rts
 ;lbC021F70:
 ;                    bsr     stop_audio_channels
-;                    ;move.l  (lbL01A130),a0
-;                    ;move.l  (lbL01A134),d0
+;                    ;move.l  (current_sample_address_ptr),a0
+;                    ;move.l  (current_sample_size),d0
 ;                    ;bsr     lbC021F90
 ;                    jsr     (lbC028324)
 ;                    bsr     display_main_menu
@@ -7273,9 +7277,9 @@ OKT_fill_single_channel_data:
                     or.w    d5,d4
                     ; start sample address
                     OKT_SET_AUDIO_ADR d2,a4
-                    ; TODO: set 8/16 bit mode
+                    ; 8/16 bit
                 IFD OKT_AUDIO_VAMPIRE
-                    OKT_SET_AUDIO_CTRL #%0,a4
+                    OKT_SET_AUDIO_CTRL SMP_TYPE(a1),a4
                 ENDC
                     ; note index
                     move.w  d3,(CHAN_NOTE_S,a3)
@@ -13482,7 +13486,7 @@ lbC028324:
                     jsr     (lbC021F9E)
                     bmi     lbC02830C
                     move.l  d0,a1
-                    move.l  (lbL01A130),d0
+                    move.l  (current_sample_address_ptr),d0
                     beq     lbC02830C
                     move.l  d0,a0
                     move.l  (lbL029ECE),d0
@@ -13505,16 +13509,16 @@ lbC02837A:
                     ;cmpi.w  #1,(SMP_TYPE,a0,d0.w)
                     ;seq     (lbB029EE6)
                     bsr     lbC0284F6
-                    cmpi.l  #SCREEN_WIDTH,(lbL01A134)
+                    cmpi.l  #SCREEN_WIDTH,(current_sample_size)
                     bcs     lbC028460
-                    move.l  (lbL01A134),d1
+                    move.l  (current_sample_size),d1
                     lsl.l   #8,d1
                     divu.w  #(SCREEN_BYTES*8),d1
                     move.w  d1,(lbW029ED2)
                     movem.l d2-d7/a2,-(a7)
                     ;move.b  (lbB029EE6,pc),d2
-                    move.l  (lbL01A130),a2
-                    move.l  (lbL01A134),a3
+                    move.l  (current_sample_address_ptr),a2
+                    move.l  (current_sample_size),a3
                     move.w  #SCREEN_WIDTH-1,d3
                     jsr     (prepare_line_drawing)
                     moveq   #2,d4
@@ -13571,8 +13575,8 @@ lbC02844A:
 lbC028460:
                     movem.l d2-d4/a2,-(a7)
 ;                    move.b  (lbB029EE6,pc),d2
-                    move.l  (lbL01A130),a2
-                    move.l  (lbL01A134),d3
+                    move.l  (current_sample_address_ptr),a2
+                    move.l  (current_sample_size),d3
                     subq.w  #1,d3
                     bmi     lbC0284DE
                     jsr     (prepare_line_drawing)
@@ -13632,7 +13636,7 @@ lbC028520:
                     move.w  d0,(BLTSIZE,a6)
                     bra     disown_blitter
 lbC02852A:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     lea     (OKT_samples),a0
                     move.w  (current_sample),d0
@@ -13646,7 +13650,7 @@ lbC02852A:
                     jsr     (lbC0264DC)
                     jmp     (display_main_menu)
 lbC02855C:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     tst.l   (lbL029EDC)
                     beq     lbC029E9E
@@ -13662,11 +13666,11 @@ lbC02855C:
                     EXEC    CopyMem
                     bsr     lbC028914
                     jsr     (stop_audio_channels)
-                    move.l  (lbL01A130),(lbL029EDC)
-                    move.l  (lbL01A134),(lbL029EE0)
-                    move.l  (lbL029EEE),(lbL01A130)
+                    move.l  (current_sample_address_ptr),(lbL029EDC)
+                    move.l  (current_sample_size),(lbL029EE0)
+                    move.l  (lbL029EEE),(current_sample_address_ptr)
                     move.l  (lbL029EEA),d0
-                    move.l  d0,(lbL01A134)
+                    move.l  d0,(current_sample_size)
                     move.l  d0,(lbL029ECE)
                     not.b   (lbB028218)
                     bsr     lbC02896C
@@ -13678,7 +13682,7 @@ lbC02860A:
                     move.w  #SCREEN_WIDTH-1,d1
                     bra     lbC028938
 lbC028614:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     clr.w   (lbW029EE4)
                     bsr     lbC02869A
@@ -13687,7 +13691,7 @@ lbC028614:
 lbC02862A:
                     rts
 lbC02862C:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     tst.b   (lbB029EE8)
                     beq     lbC029E9E
@@ -13695,9 +13699,9 @@ lbC02862C:
                     sub.l   d0,d1
                     beq     lbC029E9E
                     jsr     (stop_audio_channels)
-                    move.l  (lbL01A130),a3
+                    move.l  (current_sample_address_ptr),a3
                     movem.l (lbW029ED4),a0/a1
-                    move.l  (lbL01A134),a2
+                    move.l  (current_sample_size),a2
                     adda.l  a3,a0
                     adda.l  a3,a1
                     adda.l  a3,a2
@@ -13707,7 +13711,7 @@ lbC02866E:
                     move.b  (a1)+,(a0)+
                     bra     lbC02866E
 lbC028676:
-                    sub.l   (lbL01A130),a0
+                    sub.l   (current_sample_address_ptr),a0
                     move.l  a0,(lbL029ECE)
                     bsr     lbC02896C
                     bsr     lbC028324
@@ -13716,7 +13720,7 @@ lbC028676:
 lbC028692:
                     move.w  #-1,(lbW029EE4)
 lbC02869A:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     tst.b   (lbB029EE8)
                     beq     lbC029E9E
@@ -13727,7 +13731,7 @@ lbC02869A:
                     bsr     lbC0288CA
                     beq     lbC029EA6
                     move.l  d0,a1
-                    move.l  (lbL01A130),a0
+                    move.l  (current_sample_address_ptr),a0
                     adda.l  (lbW029ED4),a0
                     move.l  d1,d0
                     EXEC    CopyMem
@@ -13738,20 +13742,20 @@ lbC0286F0:
                     moveq   #OK,d0
                     rts
 lbC0286F4:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     tst.l   (lbL029EDC)
                     beq     lbC029E9E
                     tst.w   (lbW0289C0)
                     bmi     lbC029EAE
-                    move.l  (lbL01A134),d0
+                    move.l  (current_sample_size),d0
                     add.l   (lbL029EE0),d0
                     cmpi.l  #131070,d0
                     bgt     lbC029EB6
                     jsr     (stop_audio_channels)
                     jsr     (lbC021F9E)
                     bmi     lbC028324
-                    move.l  (lbL01A130),a0
+                    move.l  (current_sample_address_ptr),a0
                     move.l  d0,a1
                     move.l  (lbW029ED4),d0
                     EXEC    CopyMem
@@ -13760,7 +13764,7 @@ lbC0286F4:
                     move.l  (lbL029EE0),d0
                     EXEC    CopyMem
                     move.l  (a7)+,a0
-                    move.l  (lbL01A134),d0
+                    move.l  (current_sample_size),d0
                     sub.l   (lbW029ED4),d0
                     EXEC    CopyMem
                     jsr     (lbC02001C)
@@ -13769,13 +13773,13 @@ lbC0286F4:
                     bsr     lbC02837A
                     bra     lbC028C3E
 lbC02879C:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     tst.l   (lbL029EDC)
                     beq     lbC029E9E
                     tst.w   (lbW0289C0)
                     bmi     lbC029EAE
-                    move.l  (lbL01A134),d1
+                    move.l  (current_sample_size),d1
                     move.l  d1,d0
                     sub.l   (lbW029ED4),d1
                     cmp.l   (lbL029EE0),d1
@@ -13788,7 +13792,7 @@ lbC0287DC:
                     jsr     (lbC021F9E)
                     bmi     lbC028324
                     jsr     (stop_audio_channels)
-                    move.l  (lbL01A130),a0
+                    move.l  (current_sample_address_ptr),a0
                     move.l  d0,a1
                     move.l  (lbW029ED4),d0
                     EXEC    CopyMem
@@ -13798,7 +13802,7 @@ lbC0287DC:
                     EXEC    CopyMem
                     move.l  (a7)+,a0
                     adda.l  (lbL029EE0),a0
-                    move.l  (lbL01A134),d0
+                    move.l  (current_sample_size),d0
                     sub.l   (lbW029ED4),d0
                     sub.l   (lbL029EE0),d0
                     bmi     lbC028852
@@ -13810,7 +13814,7 @@ lbC028852:
                     bsr     lbC02837A
                     bra     lbC028C3E
 lbC028868:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     tst.b   (lbB029EE8)
                     beq     lbC028884
@@ -13818,7 +13822,7 @@ lbC028868:
                     bra     lbC02888C
 lbC028884:
                     moveq   #0,d0
-                    move.l  (lbL01A134),d1
+                    move.l  (current_sample_size),d1
 lbC02888C:
                     cmp.l   d0,d1
                     beq     lbC029E9E
@@ -13826,7 +13830,7 @@ lbC02888C:
                     move.l  d0,d2
                     add.l   d1,d2
                     lsr.l   #1,d2
-                    move.l  (lbL01A130),a3
+                    move.l  (current_sample_address_ptr),a3
                     lea     (a3,d0.l),a0
                     lea     (a3,d1.l),a1
                     lea     (a3,d2.l),a2
@@ -13919,7 +13923,7 @@ lbW0289C0:
 lbW0289C2:
                     dc.w    -1
 lbC0289C4:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     lea     (OKT_samples),a0
                     move.w  (current_sample),d0
@@ -13932,7 +13936,7 @@ lbC0289C4:
                     clr.l   (SMP_REP_START,a0)
                     bra     lbC028B58
 lbC0289EE:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     lea     (OKT_samples),a0
                     move.w  (current_sample),d0
@@ -13948,7 +13952,7 @@ lbC0289EE:
                     move.w  (SMP_REP_LEN,a0),d1
                     add.l   d1,d1
                     add.l   d0,d1
-                    move.l  (lbL01A130),a0
+                    move.l  (current_sample_address_ptr),a0
                     move.l  d0,d2
 lbC028A2A:
                     addq.l  #2,d0
@@ -13966,7 +13970,7 @@ lbC028A2A:
                     sub.w   d0,(SMP_REP_LEN,a0)
                     bra     lbC028B58
 lbC028A58:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     lea     (OKT_samples),a0
                     move.w  (current_sample),d0
@@ -13982,7 +13986,7 @@ lbC028A58:
                     move.w  (SMP_REP_LEN,a0),d1
                     add.l   d1,d1
                     add.l   d0,d1
-                    move.l  (lbL01A130),a0
+                    move.l  (current_sample_address_ptr),a0
 lbC028A92:
                     subq.l  #2,d1
                     cmp.l   d0,d1
@@ -14203,7 +14207,7 @@ lbC028C8C:
                     moveq   #10,d1
                     moveq   #21,d2
                     jsr     (draw_text_with_blanks)
-                    move.l  (lbL01A134),d2
+                    move.l  (current_sample_size),d2
                     moveq   #38,d0
                     moveq   #10,d1
                     jsr     (draw_6_digits_decimal_number_leading_zeroes)
@@ -14257,10 +14261,10 @@ lbC028D38:
                     move.w  d6,d2
                     mulu.w  (lbW029ED2),d2
                     lsr.l   #8,d2
-                    cmp.l   (lbL01A134),d2
+                    cmp.l   (current_sample_size),d2
                     ble     lbC028D5A
 lbC028D54:
-                    move.l  (lbL01A134),d2
+                    move.l  (current_sample_size),d2
 lbC028D5A:
                     move.l  d2,(lbW029ED4)
                     moveq   #66,d0
@@ -14279,10 +14283,10 @@ lbC028D82:
                     move.w  d7,d2
                     mulu.w  (lbW029ED2),d2
                     lsr.l   #8,d2
-                    cmp.l   (lbL01A134),d2
+                    cmp.l   (current_sample_size),d2
                     ble     lbC028DA8
 lbC028DA2:
-                    move.l  (lbL01A134),d2
+                    move.l  (current_sample_size),d2
 lbC028DA8:
                     move.l  d2,(lbL029ED8)
                     moveq   #73,d0
@@ -14332,12 +14336,12 @@ lbC028E28:
 ;lbC028E44:
 ;                    rts
 lbC028E46:
-                    jsr     (lbC021E2A)
+                    jsr     (set_current_sample_number)
                     bra     lbC02837A
 lbC028E50:
-                    jmp     (lbC02191E)
+                    jmp     (load_sample)
 lbC028E58:
-                    jmp     (lbC021C72)
+                    jmp     (save_sample)
 lbC028E60:
                     jsr     (lbC02189C)
                     bra     lbC02837A
@@ -14360,7 +14364,7 @@ lbC028E96:
                     move.w  (current_sample),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
-                    move.l  (lbL01A134),d2
+                    move.l  (current_sample_size),d2
                     bra     lbC028ECA
 lbC028EB2:
                     movem.l d2,-(a7)
@@ -14407,7 +14411,7 @@ lbC028F0A:
                     movem.l (a7)+,d2
                     rts
 lbC028F10:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     tst.b   (lbB029EE8)
                     beq     lbC028F32
@@ -14508,7 +14512,7 @@ lbC02905E:
                     bsr     lbC029066
                     bra     lbC02837A
 lbC029066:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     jsr     (stop_audio_channels)
                     lea     (lbL01C958),a0
@@ -14541,8 +14545,8 @@ lbC0290AA:
                     jsr     (get_current_sample_ptr_address)
                     move.l  (a0),a1
                     lea     (lbL01C958),a0
-                    move.l  (lbL01A130),a2
-                    move.l  (lbL01A134),d0
+                    move.l  (current_sample_address_ptr),a2
+                    move.l  (current_sample_size),d0
                     moveq   #0,d1
                     tst.b   (lbB029EE8)
                     beq     lbC0290EE
@@ -14560,7 +14564,7 @@ lbC0290EE:
 lbC0290FA:
                     rts
 lbC0290FC:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     tst.b   (lbB029EE8)
                     beq     lbC02911E
@@ -14644,12 +14648,12 @@ lbC029214:
                     bsr     lbC028324
                     bra     lbC029170
 lbC02921E:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     jsr     (stop_audio_channels)
-                    move.l  (lbL01A130),a0
+                    move.l  (current_sample_address_ptr),a0
                     move.l  a0,a4
-                    adda.l  (lbL01A134),a4
+                    adda.l  (current_sample_size),a4
                     lea     (lbL01CA58),a1
                     move.l  a1,a2
                     movem.w (lbB029F1C),d0/d1
@@ -14708,7 +14712,7 @@ lbC02929C:
                     move.l  (a0),a5
                     move.l  (a7)+,a0
                     move.l  a3,a6
-                    sub.l   (lbL01A130),a6
+                    sub.l   (current_sample_address_ptr),a6
                     adda.l  a6,a5
                     move.l  a0,d4
                     sub.l   a3,d4
@@ -14763,7 +14767,7 @@ lbC02932C:
                     moveq   #ERROR,d0
                     rts
 lbC029330:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     tst.b   (lbB029EE8)
                     beq     lbC029366
@@ -14938,7 +14942,7 @@ lbC029564:
                     move.l  a0,a2
                     move.l  a1,a3
                     jsr     (stop_audio_channels)
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC02966E
                     tst.b   (lbB029EE8)
                     beq     lbC029634
@@ -14964,14 +14968,14 @@ lbC029594:
                     bmi     lbC029674
                     jsr     (get_current_sample_ptr_address)
                     move.l  (a0),a0
-                    move.l  (lbL01A130),a1
+                    move.l  (current_sample_address_ptr),a1
                     move.l  (lbL029F14,pc),d0
                     EXEC    CopyMem
                     jsr     (get_current_sample_ptr_address)
                     move.l  (4,a0),d0
                     move.l  (a0),a0
                     adda.l  (lbL029F18,pc),a0
-                    move.l  (lbL01A130),a1
+                    move.l  (current_sample_address_ptr),a1
                     adda.l  (lbL029F14,pc),a1
                     adda.l  d3,a1
                     sub.l   (lbL029F18,pc),d0
@@ -14979,7 +14983,7 @@ lbC029594:
                     jsr     (get_current_sample_ptr_address)
                     move.l  (a0),a0
                     adda.l  (lbL029F14,pc),a0
-                    move.l  (lbL01A130),a1
+                    move.l  (current_sample_address_ptr),a1
                     adda.l  (lbL029F14,pc),a1
                     move.l  (lbL029F18,pc),d0
                     sub.l   (lbL029F14,pc),d0
@@ -14998,7 +15002,7 @@ lbC029634:
                     jsr     (get_current_sample_ptr_address)
                     move.l  (4,a0),d0
                     move.l  (a0),a0
-                    move.l  (lbL01A130),a1
+                    move.l  (current_sample_address_ptr),a1
                     jsr     (a3)
                     bra     lbC029682
 lbC02966E:
@@ -15117,9 +15121,9 @@ lbC029762:
 lbC029780:
                     movem.w d0/d1,(lbB029F1C)
 lbC029788:
-                    cmpi.l  #SCREEN_WIDTH-1,(lbL01A134)
+                    cmpi.l  #SCREEN_WIDTH-1,(current_sample_size)
                     bge     lbC0297A8
-                    move.l  (lbL01A134),d0
+                    move.l  (current_sample_size),d0
                     cmp.w   (lbW029F1E),d0
                     bgt     lbC0297A8
                     move.w  d0,(lbW029F1E)
@@ -15290,7 +15294,7 @@ lbC029966:
                     move.w  d6,d5
                     rts
 lbC02997C:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
                     tst.b   (lbB029EE8)
                     beq     lbC02999E
@@ -15367,10 +15371,10 @@ lbC029A82:
                     bsr     lbC029A88
                     bra     lbC02837A
 lbC029A88:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029E96
-                    move.l  (lbL01A130),a0
-                    move.l  (lbL01A134),d0
+                    move.l  (current_sample_address_ptr),a0
+                    move.l  (current_sample_size),d0
                     tst.b   (lbB029EE8)
                     beq     lbC029AB8
                     adda.l  (lbW029ED4),a0
@@ -15439,7 +15443,7 @@ lbC029B46:
                     jsr     (stop_audio_channels)
                     jmp     (lbC01E0FA)
 lbC029B5A:
-                    tst.l   (lbL01A130)
+                    tst.l   (current_sample_address_ptr)
                     beq     lbC029B72
                     jsr     (ask_are_you_sure_requester)
                     bne     lbC029CAC
@@ -15609,10 +15613,10 @@ lbC029D92:
                     sub.l   a1,d0
                     EXEC    FreeMem
 lbC029DBA:
-                    move.l  (lbL029EF2),(lbL01A130)
+                    move.l  (lbL029EF2),(current_sample_address_ptr)
                     move.l  (lbL029EFA),d0
                     sub.l   (lbL029EF2),d0
-                    move.l  d0,(lbL01A134)
+                    move.l  d0,(current_sample_size)
                     move.l  d0,(lbL029ECE)
                     moveq   #0,d0
                     rts
@@ -19895,12 +19899,12 @@ lbB0177F8:
                     dc.l    lbB01780A
                     dc.w    %1
                     dc.b    54,2,4,1
-                    dc.l    lbC02191E,0
+                    dc.l    load_sample,0
 lbB01780A:
                     dc.l    lbB01781C
                     dc.w    %1
                     dc.b    54,3,4,1
-                    dc.l    lbC021C72,0
+                    dc.l    save_sample,0
 lbB01781C:
                     dc.l    lbB01782E
                     dc.w    %1
@@ -20076,9 +20080,9 @@ lbW017A58:
                     dc.w    2,69
                     dc.l    lbC01E09E
                     dc.w    2,76
-                    dc.l    lbC02191E
+                    dc.l    load_sample
                     dc.w    2,83
-                    dc.l    lbC021C72
+                    dc.l    save_sample
                     dc.w    2,31
                     dc.l    lbC01E03E
                     dc.w    4,15
@@ -20116,9 +20120,9 @@ lbW017AF2:
                     dc.w    4,13
                     dc.l    lbC022170
                     dc.w    6,'0','9',0
-                    dc.l    lbC021E2A
+                    dc.l    set_current_sample_number
                     dc.w    6,'a','z',10
-                    dc.l    lbC021E2A
+                    dc.l    set_current_sample_number
                     dc.w    0
 lbW017B6C:
                     dc.w    4,12
@@ -21228,9 +21232,9 @@ save_stack:
                     dc.l    0
 screen_mem_block:
                     dc.l    0
-lbL01A130:
+current_sample_address_ptr:
                     dc.l    0
-lbL01A134:
+current_sample_size:
                     dc.l    0
 current_viewed_pattern:
                     dc.w    0
