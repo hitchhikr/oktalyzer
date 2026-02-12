@@ -2924,7 +2924,9 @@ lbC01FFC0:
 lbC020018:
                     moveq   #0,d0
                     rts
-lbC02001C:
+
+; ===========================================================================
+renew_current_sample:
                     movem.l d2/a2,-(a7)
                     bsr     free_current_sample
                     bsr     get_current_sample_ptr_address
@@ -4225,13 +4227,13 @@ do_load_song:
                     bsr     read_samples_from_okta_song_file
                     bmi     lbC020EA6
                     jsr     (close_file)
-                    bsr     lbC02001C
+                    bsr     renew_current_sample
                     bra     display_main_menu
 .error:
                     bsr     display_dos_error
 .done:
                     jsr     (close_file)
-                    bra     lbC02001C
+                    bra     renew_current_sample
 lbC020EA2:
                     bsr     display_dos_error
 lbC020EA6:
@@ -4269,7 +4271,7 @@ lbC020EF0:
                     bsr     lbC0210CE
                     bmi     lbC020F18
                     jsr     (close_file)
-                    bsr     lbC02001C
+                    bsr     renew_current_sample
                     bra     display_main_menu
 lbC020F18:
                     jsr     (close_file)
@@ -5238,7 +5240,7 @@ lbC0218F4:
                     move.l  d0,(a2)+
                     move.l  d1,(a4)+
                     dbra    d2,lbC0218F4
-                    bsr     lbC02001C
+                    bsr     renew_current_sample
                     bra     display_main_menu
 lbC021908:
                     rts
@@ -5474,7 +5476,7 @@ lbC021A20:
                     rts
 lbC021BCE:
                     jsr     (close_file)
-                    bsr     lbC02001C
+                    bsr     renew_current_sample
                     bra     display_main_menu
 VHDR_MSG:
                     dc.b    'VHDR'
@@ -5627,7 +5629,7 @@ do_save_sample:
                     bmi     .error
 .done:
                     jsr     (close_file)
-                    bsr     lbC02001C
+                    bsr     renew_current_sample
                     bra     display_main_menu
 .error:
                     bsr     display_dos_error
@@ -5676,7 +5678,7 @@ SaveSample_MSG:
 ; ===========================================================================
 set_current_sample_number:
                     move.w  d0,(current_sample)
-                    bsr     lbC02001C
+                    bsr     renew_current_sample
                     bra     display_main_menu
 
 ; ===========================================================================
@@ -5685,7 +5687,7 @@ inc_sample_number:
                     cmpi.w  #SMPS_NUMBER-1,(a0)
                     beq     error_no_more_samples
                     addq.w  #1,(a0)
-                    bsr     lbC02001C
+                    bsr     renew_current_sample
                     bsr     display_main_menu
                     moveq   #0,d0
                     rts
@@ -5698,7 +5700,7 @@ dec_sample_number:
                     tst.w   (a0)
                     beq     error_no_more_samples
                     subq.w  #1,(a0)
-                    bsr     lbC02001C
+                    bsr     renew_current_sample
                     bsr     display_main_menu
                     moveq   #0,d0
                     rts
@@ -6089,7 +6091,7 @@ lbC0222E4:
 lbC02230C:
                     bsr     lbC01F1D8
 ;lbC022310:
-                    bsr     lbC02001C
+                    bsr     renew_current_sample
                     bra     display_main_menu
 lbW022318:
                     dc.w    EVT_KEY_PRESSED
@@ -13495,7 +13497,7 @@ lbC028324:
                     move.l  d0,a0
                     move.l  (lbL029ECE),d0
                     EXEC    CopyMem
-                    jsr     (lbC02001C)
+                    jsr     (renew_current_sample)
                     moveq   #0,d0
                     rts
 lbC02836A:
@@ -13771,7 +13773,7 @@ lbC0286F4:
                     move.l  (current_sample_size),d0
                     sub.l   (lbW029ED4),d0
                     EXEC    CopyMem
-                    jsr     (lbC02001C)
+                    jsr     (renew_current_sample)
                     bmi     lbC02830C
                     bsr     lbC02896C
                     bsr     lbC02837A
@@ -13812,7 +13814,7 @@ lbC0287DC:
                     bmi     lbC028852
                     EXEC    CopyMem
 lbC028852:
-                    jsr     (lbC02001C)
+                    jsr     (renew_current_sample)
                     bmi     lbC02830C
                     bsr     lbC02896C
                     bsr     lbC02837A
@@ -14443,7 +14445,7 @@ lbW028F60:
                     dc.l    lbC029E1A
                     dc.w    EVT_LIST_END
 lbC028F82:
-                    jsr     (lbC02001C)
+                    jsr     (renew_current_sample)
                     st      (quit_flag)
                     rts
 lbC028F90:
@@ -14642,7 +14644,7 @@ lbW0291F8:
                     dc.l    lbC029202
                     dc.w    0
 lbC029202:
-                    jsr     (lbC02001C)
+                    jsr     (renew_current_sample)
                     bra     lbC029170
 lbC02920C:
                     bsr     lbC02921E
@@ -14846,7 +14848,7 @@ lbW029442:
                     dc.l    lbC02944C
                     dc.w    0
 lbC02944C:
-                    jsr     (lbC02001C)
+                    jsr     (renew_current_sample)
                     st      (quit_flag)
                     rts
 lbC02945A:
@@ -15364,7 +15366,7 @@ lbW029A5E:
                     dc.l    lbC029A68
                     dc.w    0
 lbC029A68:
-                    jsr     (lbC02001C)
+                    jsr     (renew_current_sample)
                     st      (quit_flag)
                     rts
 lbC029A76:
