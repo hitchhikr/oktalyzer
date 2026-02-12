@@ -43,5 +43,6 @@ Done:
   Still, older modules will sound slightly different.
 - Removed the constraints of the sample types.
 - Changed the version number and the bottom picture.
+- Improved the .mod import.
 
 A work in progress...
