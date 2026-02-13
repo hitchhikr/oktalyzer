@@ -1,5 +1,5 @@
 ; ===========================================================================
-; Oktalyzer replay routine common code
+; Oktalyzer v2.0 - Replay routine common code
 ; ===========================================================================
 ; Original code by Armin 'TIP' Sander.
 ; Disassembled and improved by Franck 'hitchhikr' Charlet.

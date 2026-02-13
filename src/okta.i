@@ -1,5 +1,5 @@
 ; ===========================================================================
-; Oktalyzer v1.57
+; Oktalyzer v2.0 - Main program includes
 ; ===========================================================================
 ; Original code by Armin 'TIP' Sander.
 ; Disassembled by Franck 'hitchhikr' Charlet.

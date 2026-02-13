@@ -1,5 +1,5 @@
 ; ===========================================================================
-; Oktalyzer Amiga replay routine
+; Oktalyzer v2.0 - Amiga replay routine
 ; ===========================================================================
 ; Original code by Armin 'TIP' Sander.
 ; Disassembled and improved by Franck 'hitchhikr' Charlet.
@@ -67,7 +67,7 @@ OKT_init_buffers:
                     lea     (OKT_channels_notes_buffers,pc),a0
                     move.l  d0,(a0)
                     move.l  #256*65,d0
-                    btst    #1,(OKT_processor)
+                    btst    #1,(OKT_processor,pc)
                     beq     .OKT_alloc_table_020_l
                     move.l  #256*65*4,d0
 .OKT_alloc_table_020_l:
@@ -79,7 +79,7 @@ OKT_init_buffers:
                     lea     (OKT_volumes_scaling_table_l,pc),a0
                     move.l  d0,(a0)
                     move.l  #256*65,d0
-                    btst    #1,(OKT_processor)
+                    btst    #1,(OKT_processor,pc)
                     beq     .OKT_alloc_table_020_r
                     move.l  #256*65*4,d0
 .OKT_alloc_table_020_r:
@@ -163,7 +163,7 @@ OKT_release_buffers:
                     beq     .OKT_empty_2
                     move.l  d0,a1
                     move.l  #256*65,d0
-                    btst    #1,(OKT_processor)
+                    btst    #1,(OKT_processor,pc)
                     beq     .OKT_free_table_r
                     move.l  #256*65*4,d0
 .OKT_free_table_r:
@@ -173,7 +173,7 @@ OKT_release_buffers:
                     beq     .OKT_empty_3
                     move.l  d0,a1
                     move.l  #256*65,d0
-                    btst    #1,(OKT_processor)
+                    btst    #1,(OKT_processor,pc)
                     beq     .OKT_free_table_l
                     move.l  #256*65*4,d0
 .OKT_free_table_l:

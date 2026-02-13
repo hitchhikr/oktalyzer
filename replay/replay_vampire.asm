@@ -1,5 +1,5 @@
 ; ===========================================================================
-; Oktalyzer Vampire replay routine
+; Oktalyzer v2.0 - Vampire replay routine
 ; ===========================================================================
 ; Original code by Armin 'TIP' Sander.
 ; Disassembled and improved by Franck 'hitchhikr' Charlet.
@@ -109,9 +109,9 @@ OKT_get_vbr:
                     btst    #0,d0
                     beq.b   .OKT_no_processor
                     ; turn vampire extras on
-                    move    sr,d1
-                    or.w    #$800,d1
-                    move    d1,sr
+                    move    sr,d0
+                    or.w    #$800,d0
+                    move    d0,sr
                     move.w  #%10000,$dff1fc
                     dc.w    $4E7A,$0801
                     rte

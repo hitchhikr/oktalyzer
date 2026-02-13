@@ -1,5 +1,5 @@
 ; ===========================================================================
-; Oktalyzer v1.57
+; Oktalyzer v2.0 - Main program
 ; ===========================================================================
 ; Original code by Armin 'TIP' Sander.
 ; Disassembled by Franck 'hitchhikr' Charlet.
@@ -21,6 +21,7 @@
 
 ; ===========================================================================
                     section prog,code
+
 start:
                     sub.l   a5,a5
                     sub.l   a1,a1
@@ -79,8 +80,16 @@ started_from_CLI:
 
 ; ===========================================================================
                     section main,code
+
 main:
                     move.l  a7,(save_stack)
+                    bsr     OKT_get_vbr
+                IFD OKT_AUDIO_VAMPIRE
+                    add.l   #$78,d0
+                ELSE
+                    add.l   #$70,d0
+                ENDC
+                    move.l  d0,(OKT_vbr)
                 IFND OKT_AUDIO_VAMPIRE
                     bsr     OKT_init_buffers
                     beq     .error
@@ -185,7 +194,11 @@ set_aga_context:
 .machine_is_aga:
                     move.w  #$2C,copper_ddfstrt+2
                     move.w  #$B4,copper_ddfstop+2
+                IFD OKT_AUDIO_VAMPIRE
+                    move.w  #%10011,copper_fmode+2
+                ELSE
                     move.w  #%11,copper_fmode+2
+                ENDC
                     rts
 
 ; ===========================================================================
@@ -7919,9 +7932,6 @@ OKT_dmacon:
                 IFND OKT_AUDIO_VAMPIRE
 OKT_init_buffers:
                     movem.l d1-a6,-(a7)
-                    move.l  4.w,a0
-                    move.b  297(a0),d0
-                    move.b  d0,(OKT_processor)
                     move.l  #OKT_CODE_LENGTH,d0
                     moveq   #MEMF_ANY,d1
                     EXEC    AllocMem
@@ -7944,7 +7954,7 @@ OKT_init_buffers:
                     lea     (OKT_channels_notes_buffers,pc),a0
                     move.l  d0,(a0)
                     move.l  #256*65,d0
-                    btst    #1,(OKT_processor)
+                    btst    #1,(OKT_processor,pc)
                     beq     .OKT_alloc_table_020_l
                     move.l  #256*65*4,d0
 .OKT_alloc_table_020_l:
@@ -7955,7 +7965,7 @@ OKT_init_buffers:
                     lea     (OKT_volumes_scaling_table_l,pc),a0
                     move.l  d0,(a0)
                     move.l  #256*65,d0
-                    btst    #1,(OKT_processor)
+                    btst    #1,(OKT_processor,pc)
                     beq     .OKT_alloc_table_020_r
                     move.l  #256*65*4,d0
 .OKT_alloc_table_020_r:
@@ -8035,7 +8045,7 @@ OKT_release_buffers:
                     beq     .OKT_empty_2
                     move.l  d0,a1
                     move.l  #256*65,d0
-                    btst    #1,(OKT_processor)
+                    btst    #1,(OKT_processor,pc)
                     beq     .OKT_free_table_r
                     move.l  #256*65*4,d0
 .OKT_free_table_r:
@@ -8045,7 +8055,7 @@ OKT_release_buffers:
                     beq     .OKT_empty_3
                     move.l  d0,a1
                     move.l  #256*65,d0
-                    btst    #1,(OKT_processor)
+                    btst    #1,(OKT_processor,pc)
                     beq     .OKT_free_table_l
                     move.l  #256*65*4,d0
 .OKT_free_table_l:
@@ -8090,9 +8100,6 @@ OKT_init:
                     move.l  d1,(a0)+
                     move.l  d1,(a0)+
                     dbra    d0,.OKT_clear_mix_buffers
-                    bsr     OKT_get_vbr
-                    add.l   #$70,d0
-                    move.l  d0,(OKT_vbr)
                     lea     (_CUSTOM),a1
                     move.w  #$FF,(ADKCON,a1)
                     move.w  #$7FFF,(INTREQ,a1)
@@ -8158,9 +8165,6 @@ OKT_init:
                     or.w    #$820F,d0
                     move.w  d0,(DMACON,a1)
                 ELSE
-                    bsr     OKT_get_vbr
-                    add.l   #$78,d0
-                    move.l  d0,(OKT_vbr)
                     lea     (_CUSTOM),a1
                     move.w  #$FF,(ADKCON,a1)
                     move.w  #$7FFF,(INTREQ,a1)
@@ -8238,8 +8242,16 @@ OKT_get_vbr:
                     rts
 .OKT_get_it:
                     move.b  297(a6),d0
+                IFND OKT_AUDIO_VAMPIRE
+                    move.b  d0,(OKT_processor)
+                ENDC
                     btst    #0,d0
                     beq.b   .OKT_no_processor
+                IFD OKT_AUDIO_VAMPIRE
+                    move    sr,d0
+                    or.w    #$800,d0
+                    move    d0,sr
+                ENDC
                     dc.w    $4E7A,$0801
                     rte
 .OKT_no_processor:
@@ -19792,6 +19804,85 @@ workbench_name:
 
 ; ===========================================================================
                     section data,data
+
+input_device_int:
+                    dc.l    0
+                    dc.l    0
+                    dc.b    NT_INTERRUPT,127
+                    dc.l    0,0,input_device_handler
+fullscreen_copperlist_ntsc_struct:
+                    dc.l    copperlist
+                    dc.l    -1,main_menu_copper_jump
+                    dc.l    -1,pattern_copper_jump
+                    dc.l    0
+main_copperlist_struct:
+                    dc.l    copperlist
+                    dc.l    main_menu_copper_jump,main_menu_copper_part,main_menu_copper_back_jump
+                    dc.l    pattern_copper_jump,pattern_copper_part,pattern_copper_back_jump
+                    dc.l    0
+our_window_struct:
+                    dc.w    0,0
+                    dc.w    172,26
+                    dc.b    0,1
+                    dc.l    IDCMP_GADGETUP
+                    dc.l    WFLG_NOCAREREFRESH|WFLG_ACTIVATE|WFLG_DEPTHGADGET|WFLG_DRAGBAR 
+                    dc.l    our_gadget_struct
+                    dc.l    0
+                    dc.l    oktalyzer_name
+                    dc.l    0
+                    dc.l    0
+                    dc.w    5,5
+                    dc.w    -1,-1
+                    dc.w    1
+oktalyzer_name:
+                    dc.b    'Oktalyzer',0
+our_gadget_struct:
+                    dc.l    0
+                    dc.w    8,13
+                    dc.w    157,9
+                    dc.w    GFLG_GADGHCOMP
+                    dc.w    GACT_RELVERIFY
+                    dc.w    GTYP_BOOLGADGET
+                    dc.l    our_gadget_border_struct
+                    dc.l    0
+                    dc.l    our_gadget_text_struct
+                    dc.l    0
+                    dc.l    0
+                    dc.W    0
+                    dc.l    0
+our_gadget_border_struct:
+                    dc.w    -1,-1
+                    dc.b    1,0
+                    dc.b    1
+                    dc.b    5
+                    dc.l    our_gadget_border_coords
+                    dc.l    0
+our_gadget_border_coords:
+                    dc.w    0,0
+                    dc.w    158,0
+                    dc.w    158,10
+                    dc.w    0,10
+                    dc.w    0,0
+our_gadget_text_struct:
+                    dc.b    1,0
+                    dc.b    1
+                    dc.b    0
+                    dc.w    11,1
+                    dc.l    topaz_font_struct
+                    dc.l    our_gadget_text
+                    dc.w    0,0
+our_gadget_text:
+                    dc.b    'Restart Oktalyzer',0
+topaz_font_struct:
+                    dc.l    topaz_name
+                    dc.w    8
+                    dc.b    0
+                    dc.b    0
+topaz_name:
+                    dc.b    'topaz.font',0
+                    even
+
+; ===========================================================================
 lbW01737C:
                     dc.w    EVT_MORE_EVENTS
                     dc.l    lbC0208FA
@@ -19851,6 +19942,84 @@ main_menu_text:
                     dc.l    song_metrics_text_ptr
                     dc.b    CMD_TEXT,71,5,'S',0
                     dc.b    CMD_TEXT,71,6,'C',0
+                    dc.b    CMD_END
+patterns_ed_help_text_1:
+                    dc.b    CMD_SET_SUB_SCREEN
+                    dc.b    4
+                    dc.b    CMD_TEXT,0,8,  '- Pattern Editor Help Page 1 --------------------------------------------------',0
+                    dc.b    CMD_TEXT,0,10, '- Block Movement -------- - Block Operations ------ - Pattern Movement --------',0
+                    dc.b    CMD_TEXT,0,12, '___SPACE  Remove Block    ___F3  Copy Block         ___CURSOR Move Cursor',0
+                    dc.b    CMD_TEXT,0,13, 'SH_SPACE  Block Track     ___F4  Replace Block      ___F6-F10 Go to Predefined',0
+                    dc.b    CMD_TEXT,0,14, 'AL_SPACE  Block Pattern   ___F5  Mix Block          ___HELP   Go to PolyPos',0
+                    dc.b    CMD_TEXT,0,15, 'SH_CURSOR Size Block      SH_F3  Cut Block          AL_CURSOR Prv/Nxt/Size Patt',0
+                    dc.b    CMD_TEXT,0,16, 'AM_CURSOR Move Block      SH_F4  Flip Block         CT_CURSLR Go to Track',0
+                    dc.b    CMD_TEXT,0,17, 'SH_B      Block Mode      SH_F5  Delete Sample      BK_0-9    Move to Pattern',0
+                    dc.b    CMD_TEXT,0,18, '                          AL_F5  Delete Sample Inst',0
+                    dc.b    CMD_TEXT,0,19, '- Octave Settings ------- SH_F6  Note Down          - Misc --------------------',0
+                    dc.b    CMD_TEXT,0,20, '                          AL_F6  Note Down Inst',0
+                    dc.b    CMD_TEXT,0,21, '___F1 Set Octave 1+2      SH_F7  Note Up            ___ESC    Play Pattern',0
+                    dc.b    CMD_TEXT,0,22, '___F2 Set Octave 2+3      AL_F7  Note Up Inst       ___`      Play Pattern',0
+                    dc.b    CMD_TEXT,0,23, '                          SH_F8  Octave Down',0
+                    dc.b    CMD_TEXT,0,24, '- Samples --------------- SH_F9  Octave Up          AL+BK_0-9 Set Quant',0
+                    dc.b    CMD_TEXT,0,25, '                          AL_F8  Octave Down Inst   SH_HELP   Here I am!',0
+                    dc.b    CMD_TEXT,0,26, 'SH_L       Load Sample    AL_F9  Octave Up Inst     AL_HELP   Play Help Page',0
+                    dc.b    CMD_TEXT,0,27, 'SH_S       Save Sample    SH_F10 Change Instrument  AM_HELP   Effect Help Page',0
+                    dc.b    CMD_TEXT,0,28, 'SH_E       Edit Sample    AL_F10 Change Effect',0
+                    dc.b    CMD_TEXT,0,29, 'AL_0-9/a-z Set  Sample    AM_F10 Effect Editor',0
+                    dc.b    CMD_TEXT,0,30, 'CT_CURSUD  Add/Sub Sample',0
+                    dc.b    CMD_END
+patterns_ed_help_text_2:
+                    dc.b    CMD_SET_SUB_SCREEN
+                    dc.b    4
+                    dc.b    CMD_TEXT,23,12,'- Pattern Editor Help Page 2 -----',0
+                    dc.b    CMD_TEXT,23,14,'- Edit ---------------------------',0
+                    dc.b    CMD_TEXT,23,16,'___TAB Change Edit Mode',0
+                    dc.b    CMD_TEXT,23,17,'___BS  Delete Note + Up',0
+                    dc.b    CMD_TEXT,23,18,'___RET Insert Note + Down',0
+                    dc.b    CMD_TEXT,23,19,'___DEL Clear  Note + Inst',0
+                    dc.b    CMD_TEXT,23,20,'SH_DEL Insert Note',0
+                    dc.b    CMD_TEXT,23,21,'AL_DEL Clear  Note + Inst + Effect',0
+                    dc.b    CMD_TEXT,23,22,'AM_DEL Clear  Effect',0
+                    dc.b    CMD_TEXT,23,23,'CT_DEL Like ___DEL + QuantPolyMove',0
+                    dc.b    CMD_END
+effects_help_text:
+                    dc.b    CMD_SET_SUB_SCREEN
+                    dc.b    4
+                    dc.b    CMD_TEXT,17,8, '- Effects Help Page --------------------------',0
+                    dc.b    CMD_TEXT,17,10,'1 Portamento Down (Period)',0
+                    dc.b    CMD_TEXT,17,11,'2 Portamento Up   (Period)',0
+                    dc.b    CMD_TEXT,17,13,'A Arpeggio 1      (down, orig,   up)',0
+                    dc.b    CMD_TEXT,17,14,'B Arpeggio 2      (orig,   up, orig, down)',0
+                    dc.b    CMD_TEXT,17,15,'C Arpeggio 3      (  up,   up, orig)',0
+                    dc.b    CMD_TEXT,17,17,'D Slide Down      (Notes)',0
+                    dc.b    CMD_TEXT,17,18,'U Slide Up        (Notes)',0
+                    dc.b    CMD_TEXT,17,20,'L Slide Down Once (Notes)',0
+                    dc.b    CMD_TEXT,17,21,'H Slide Up   Once (Notes)',0
+                    dc.b    CMD_TEXT,17,23,'F Set Filter      <> 00:ON',0
+                    dc.b    CMD_TEXT,17,24,'P Pos Jump        ',0
+                    dc.b    CMD_TEXT,17,25,'S Speed           ',0
+                    dc.b    CMD_TEXT,17,26,'V Volume          <= 40:DIRECT',0
+                    dc.b    CMD_TEXT,38,27,                     '4x:Vol Down      (VO)',0
+                    dc.b    CMD_TEXT,38,28,                     '5x:Vol Up        (VO)',0
+                    dc.b    CMD_TEXT,38,29,                     '6x:Vol Down Once (VO)',0
+                    dc.b    CMD_TEXT,38,30,                     '7x:Vol Up   Once (VO)',0
+                    dc.b    CMD_END
+play_help_text:
+                    dc.b    CMD_SET_SUB_SCREEN
+                    dc.b    4
+                    dc.b    CMD_TEXT,9,10, '- Play Song, Play Pattern Help Page -------------------------',0
+                    dc.b    CMD_TEXT,9,12, '- Misc --------------------------- - Octave Settings --------',0
+                    dc.b    CMD_TEXT,9,14, '___ESC       Stop                  ___F1 Set Octave 1+2',0
+                    dc.b    CMD_TEXT,9,15, '___`         Stop to Act Pos       ___F2 Set Octave 2+3',0
+                    dc.b    CMD_TEXT,9,17, '___TAB       Change Edit Mode      - Track Movement ---------',0
+                    dc.b    CMD_TEXT,9,18, '___CURSOR UD Change Sample',0
+                    dc.b    CMD_TEXT,9,19, '___F3-F10    Change Channel States ___CURSOR LR Change Track',0
+                    dc.b    CMD_TEXT,44,20,'___HELP      Go to PolyPos',0
+                    dc.b    CMD_TEXT,9,21, 'NB_1         Sub Quant',0
+                    dc.b    CMD_TEXT,9,22, 'NB_2         Add Quant',0
+                    dc.b    CMD_TEXT,9,24, 'NB_4         Sub Poly',0
+                    dc.b    CMD_TEXT,9,25, 'NB_5         Add Poly',0
+                    dc.b    CMD_TEXT,9,27, 'NB_7         Change MidiMode',0
                     dc.b    CMD_END
                     even
 wb_cli_text_ptr:
@@ -20293,143 +20462,8 @@ lbW017BCE:
                     dc.w    6,'0','9',0
                     dc.l    set_quantize_amount_from_keyboard
                     dc.w    0
-patterns_ed_help_text_1:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
-                    dc.b    CMD_TEXT,0,8,  '- Pattern Editor Help Page 1 --------------------------------------------------',0
-                    dc.b    CMD_TEXT,0,10, '- Block Movement -------- - Block Operations ------ - Pattern Movement --------',0
-                    dc.b    CMD_TEXT,0,12, '___SPACE  Remove Block    ___F3  Copy Block         ___CURSOR Move Cursor',0
-                    dc.b    CMD_TEXT,0,13, 'SH_SPACE  Block Track     ___F4  Replace Block      ___F6-F10 Go to Predefined',0
-                    dc.b    CMD_TEXT,0,14, 'AL_SPACE  Block Pattern   ___F5  Mix Block          ___HELP   Go to PolyPos',0
-                    dc.b    CMD_TEXT,0,15, 'SH_CURSOR Size Block      SH_F3  Cut Block          AL_CURSOR Prv/Nxt/Size Patt',0
-                    dc.b    CMD_TEXT,0,16, 'AM_CURSOR Move Block      SH_F4  Flip Block         CT_CURSLR Go to Track',0
-                    dc.b    CMD_TEXT,0,17, 'SH_B      Block Mode      SH_F5  Delete Sample      BK_0-9    Move to Pattern',0
-                    dc.b    CMD_TEXT,0,18, '                          AL_F5  Delete Sample Inst',0
-                    dc.b    CMD_TEXT,0,19, '- Octave Settings ------- SH_F6  Note Down          - Misc --------------------',0
-                    dc.b    CMD_TEXT,0,20, '                          AL_F6  Note Down Inst',0
-                    dc.b    CMD_TEXT,0,21, '___F1 Set Octave 1+2      SH_F7  Note Up            ___ESC    Play Pattern',0
-                    dc.b    CMD_TEXT,0,22, '___F2 Set Octave 2+3      AL_F7  Note Up Inst       ___`      Play Pattern',0
-                    dc.b    CMD_TEXT,0,23, '                          SH_F8  Octave Down',0
-                    dc.b    CMD_TEXT,0,24, '- Samples --------------- SH_F9  Octave Up          AL+BK_0-9 Set Quant',0
-                    dc.b    CMD_TEXT,0,25, '                          AL_F8  Octave Down Inst   SH_HELP   Here I am!',0
-                    dc.b    CMD_TEXT,0,26, 'SH_L       Load Sample    AL_F9  Octave Up Inst     AL_HELP   Play Help Page',0
-                    dc.b    CMD_TEXT,0,27, 'SH_S       Save Sample    SH_F10 Change Instrument  AM_HELP   Effect Help Page',0
-                    dc.b    CMD_TEXT,0,28, 'SH_E       Edit Sample    AL_F10 Change Effect',0
-                    dc.b    CMD_TEXT,0,29, 'AL_0-9/a-z Set  Sample    AM_F10 Effect Editor',0
-                    dc.b    CMD_TEXT,0,30, 'CT_CURSUD  Add/Sub Sample',0
-                    dc.b    CMD_END
-patterns_ed_help_text_2:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
-                    dc.b    CMD_TEXT,23,12,'- Pattern Editor Help Page 2 -----',0
-                    dc.b    CMD_TEXT,23,14,'- Edit ---------------------------',0
-                    dc.b    CMD_TEXT,23,16,'___TAB Change Edit Mode',0
-                    dc.b    CMD_TEXT,23,17,'___BS  Delete Note + Up',0
-                    dc.b    CMD_TEXT,23,18,'___RET Insert Note + Down',0
-                    dc.b    CMD_TEXT,23,19,'___DEL Clear  Note + Inst',0
-                    dc.b    CMD_TEXT,23,20,'SH_DEL Insert Note',0
-                    dc.b    CMD_TEXT,23,21,'AL_DEL Clear  Note + Inst + Effect',0
-                    dc.b    CMD_TEXT,23,22,'AM_DEL Clear  Effect',0
-                    dc.b    CMD_TEXT,23,23,'CT_DEL Like ___DEL + QuantPolyMove',0
-                    dc.b    CMD_END
-effects_help_text:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
-                    dc.b    CMD_TEXT,17,8, '- Effects Help Page --------------------------',0
-                    dc.b    CMD_TEXT,17,10,'1 Portamento Down (Period)',0
-                    dc.b    CMD_TEXT,17,11,'2 Portamento Up   (Period)',0
-                    dc.b    CMD_TEXT,17,13,'A Arpeggio 1      (down, orig,   up)',0
-                    dc.b    CMD_TEXT,17,14,'B Arpeggio 2      (orig,   up, orig, down)',0
-                    dc.b    CMD_TEXT,17,15,'C Arpeggio 3      (  up,   up, orig)',0
-                    dc.b    CMD_TEXT,17,17,'D Slide Down      (Notes)',0
-                    dc.b    CMD_TEXT,17,18,'U Slide Up        (Notes)',0
-                    dc.b    CMD_TEXT,17,20,'L Slide Down Once (Notes)',0
-                    dc.b    CMD_TEXT,17,21,'H Slide Up   Once (Notes)',0
-                    dc.b    CMD_TEXT,17,23,'F Set Filter      <> 00:ON',0
-                    dc.b    CMD_TEXT,17,24,'P Pos Jump        ',0
-                    dc.b    CMD_TEXT,17,25,'S Speed           ',0
-                    dc.b    CMD_TEXT,17,26,'V Volume          <= 40:DIRECT',0
-                    dc.b    CMD_TEXT,38,27,                     '4x:Vol Down      (VO)',0
-                    dc.b    CMD_TEXT,38,28,                     '5x:Vol Up        (VO)',0
-                    dc.b    CMD_TEXT,38,29,                     '6x:Vol Down Once (VO)',0
-                    dc.b    CMD_TEXT,38,30,                     '7x:Vol Up   Once (VO)',0
-                    dc.b    CMD_END
-                    even
-input_device_int:
-                    dc.l    0
-                    dc.l    0
-                    dc.b    NT_INTERRUPT,127
-                    dc.l    0,0,input_device_handler
-fullscreen_copperlist_ntsc_struct:
-                    dc.l    copperlist
-                    dc.l    -1,main_menu_copper_jump
-                    dc.l    -1,pattern_copper_jump
-                    dc.l    0
-main_copperlist_struct:
-                    dc.l    copperlist
-                    dc.l    main_menu_copper_jump,main_menu_copper_part,main_menu_copper_back_jump
-                    dc.l    pattern_copper_jump,pattern_copper_part,pattern_copper_back_jump
-                    dc.l    0
-our_window_struct:
-                    dc.w    0,0
-                    dc.w    172,26
-                    dc.b    0,1
-                    dc.l    IDCMP_GADGETUP
-                    dc.l    WFLG_NOCAREREFRESH|WFLG_ACTIVATE|WFLG_DEPTHGADGET|WFLG_DRAGBAR 
-                    dc.l    our_gadget_struct
-                    dc.l    0
-                    dc.l    oktalyzer_name
-                    dc.l    0
-                    dc.l    0
-                    dc.w    5,5
-                    dc.w    -1,-1
-                    dc.w    1
-oktalyzer_name:
-                    dc.b    'Oktalyzer',0
-our_gadget_struct:
-                    dc.l    0
-                    dc.w    8,13
-                    dc.w    157,9
-                    dc.w    GFLG_GADGHCOMP
-                    dc.w    GACT_RELVERIFY
-                    dc.w    GTYP_BOOLGADGET
-                    dc.l    our_gadget_border_struct
-                    dc.l    0
-                    dc.l    our_gadget_text_struct
-                    dc.l    0
-                    dc.l    0
-                    dc.W    0
-                    dc.l    0
-our_gadget_border_struct:
-                    dc.w    -1,-1
-                    dc.b    1,0
-                    dc.b    1
-                    dc.b    5
-                    dc.l    our_gadget_border_coords
-                    dc.l    0
-our_gadget_border_coords:
-                    dc.w    0,0
-                    dc.w    158,0
-                    dc.w    158,10
-                    dc.w    0,10
-                    dc.w    0,0
-our_gadget_text_struct:
-                    dc.b    1,0
-                    dc.b    1
-                    dc.b    0
-                    dc.w    11,1
-                    dc.l    topaz_font_struct
-                    dc.l    our_gadget_text
-                    dc.w    0,0
-our_gadget_text:
-                    dc.b    'Restart Oktalyzer',0
-topaz_font_struct:
-                    dc.l    topaz_name
-                    dc.w    8
-                    dc.b    0
-                    dc.b    0
-topaz_name:
-                    dc.b    'topaz.font',0
+
+; ===========================================================================
 files_sel_text:
                     dc.b    CMD_SET_SUB_SCREEN
                     dc.b    4
@@ -20540,6 +20574,8 @@ lbW01881E:
                     dc.w    2,99
                     dc.l    lbC027532
                     dc.w    0
+
+; ===========================================================================
 sample_ed_text:
                     dc.b    12
                     dc.b    4
@@ -20554,6 +20590,19 @@ sample_ed_text:
                     dc.l    max_lines
                     dc.b    CMD_TEXT,60,0,'Monitor  Rate:',0
                     dc.b    CMD_TEXT,60,1,'Sampler  Chan:',0
+                    dc.b    CMD_END
+                    even
+sample_ed_help_text:
+                    dc.b    CMD_SET_SUB_SCREEN
+                    dc.b    4
+                    dc.b    CMD_TEXT,2,13,'- Sample Editor Help Page --------------------------------------------------',0
+                    dc.b    CMD_TEXT,2,15,'- Samples ------------- - Repeats --------------------- - Misc -------------',0
+                    dc.b    CMD_TEXT,2,17,'SH_L       Load Sample  ___DEL    Clear  Repeats        ___ESC  Exit',0
+                    dc.b    CMD_TEXT,2,18,'SH_S       Save Sample  ___CURSOR Set    Repeats        SH_HELP Huhu!',0
+                    dc.b    CMD_TEXT,2,19,'SH_C       Copy Sample  SH_CURSOR Set    Repeats fast   ___F1   Set Oct. 0+1',0
+                    dc.b    CMD_TEXT,2,20,'SH_X       Swap Samples AL_CURSOR Set    Repeats faster ___F2   Set Oct. 1+2',0
+                    dc.b    CMD_TEXT,2,21,'SH_M       Mix  Samples BK_0      Search 0 Left',0
+                    dc.b    CMD_TEXT,2,22,'AL_0-9/a-z Set  Sample  BK_.      Search 0 Right',0
                     dc.b    CMD_END
                     even
 lbW01892C:
@@ -20759,18 +20808,8 @@ lbW018BC0:
                     dc.w    6,97,122,10
                     dc.l    lbC028E46
                     dc.w    0
-sample_ed_help_text:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
-                    dc.b    CMD_TEXT,2,13,'- Sample Editor Help Page --------------------------------------------------',0
-                    dc.b    CMD_TEXT,2,15,'- Samples ------------- - Repeats --------------------- - Misc -------------',0
-                    dc.b    CMD_TEXT,2,17,'SH_L       Load Sample  ___DEL    Clear  Repeats        ___ESC  Exit',0
-                    dc.b    CMD_TEXT,2,18,'SH_S       Save Sample  ___CURSOR Set    Repeats        SH_HELP Huhu!',0
-                    dc.b    CMD_TEXT,2,19,'SH_C       Copy Sample  SH_CURSOR Set    Repeats fast   ___F1   Set Oct. 0+1',0
-                    dc.b    CMD_TEXT,2,20,'SH_X       Swap Samples AL_CURSOR Set    Repeats faster ___F2   Set Oct. 1+2',0
-                    dc.b    CMD_TEXT,2,21,'SH_M       Mix  Samples BK_0      Search 0 Left',0
-                    dc.b    CMD_TEXT,2,22,'AL_0-9/a-z Set  Sample  BK_.      Search 0 Right',0
-                    dc.b    CMD_END
+
+; ===========================================================================
 prefs_text:
                     dc.b    CMD_SET_SUB_SCREEN
                     dc.b    4
@@ -21167,6 +21206,8 @@ lbW019514:
                     dc.l    save_font
                     dc.w    0
                     dc.w    0
+
+; ===========================================================================
 effects_ed_text:
                     dc.b    CMD_SET_SUB_SCREEN
                     dc.b    4
@@ -21181,6 +21222,43 @@ effects_ed_text:
                     dc.b    5,59,9,20,5
                     dc.b    CMD_TEXT,1,15,'Effect Conversion Filter Term Table',0
                     dc.b    5,1,16,78,14
+                    dc.b    CMD_END
+effects_ed_help_text:
+                    dc.b    CMD_SET_SUB_SCREEN
+                    dc.b    4
+                    dc.b    CMD_TEXT,21,12,'- Effect Editor Help Page ------------',0
+                    dc.b    CMD_TEXT,21,14,'- Menu ----- - Movement --------------',0
+                    dc.b    CMD_TEXT,21,16,'AM_C   Copy  ___CURSOR UD Scroll',0
+                    dc.b    CMD_TEXT,21,17,'AM_X   Cut   SH_CURSOR UD Scroll Page',0
+                    dc.b    CMD_TEXT,21,18,'AM_I   Paste AL_CURSOR UD Sub/Add',0
+                    dc.b    CMD_TEXT,21,19,'AM_L   Load',0
+                    dc.b    CMD_TEXT,21,20,'AM_S   Save  - Help ------------------',0
+                    dc.b    CMD_TEXT,21,21,'AM_D   Do',0
+                    dc.b    CMD_TEXT,21,22,'AM_Q   Exit  SH_HELP Here you are!',0
+                    dc.b    CMD_TEXT,21,23,'___ESC Exit  AL_HELP Compute Help Page',0
+                    dc.b    CMD_END
+compute_help_text:
+                    dc.b    CMD_SET_SUB_SCREEN
+                    dc.b    4
+                    dc.b    CMD_TEXT,8,8, '- Compute Help Page --------------------------------------------',0
+                    dc.b    CMD_TEXT,8,10,'- Operands - Prio -  - Variables ------------  - Signs ---------',0
+                    dc.b    CMD_TEXT,8,12,'<< SHIFT LEFT     5  P  Pattern Number         ~ NOTATION',0
+                    dc.b    CMD_TEXT,8,13,'>> SHIFT RIGHT    5  H  Height of Pattern      - NEGATION',0
+                    dc.b    CMD_TEXT,8,15,'&  AND            4  S  TRUE if SingleTrack    - Value Types ---',0
+                    dc.b    CMD_TEXT,8,16,'|  OR             4  D  TRUE if DoubleTrack',0
+                    dc.b    CMD_TEXT,8,17,'!  OR             4                            0-9 DECIMAL',0
+                    dc.b    CMD_TEXT,8,18,'^  EOR            4  N  Note Number            %   BINARY',0
+                    dc.b    CMD_TEXT,8,19,'                     I  Instrument Number      @   OCTAL',0
+                    dc.b    CMD_TEXT,8,20,'*  MULTIPLICATION 3  V  Effect Value           $   HEXADECIMAL',0
+                    dc.b    CMD_TEXT,8,21,'/  DIVISION       3                            ''   STRING (''''='')',0
+                    dc.b    CMD_TEXT,8,22,'                     X  XPos in Pattern (1..)  "   STRING (""=")',0
+                    dc.b    CMD_TEXT,8,23,'+  ADDITION       2  Y  YPos in Pattern (0..)',0
+                    dc.b    CMD_TEXT,8,24,'-  SUBTRACTION    2',0
+                    dc.b    CMD_TEXT,8,25,'                     T  TRUE',0
+                    dc.b    CMD_TEXT,8,26,'=  EQUAL          1  F  FALSE',0
+                    dc.b    CMD_TEXT,8,27,'>= GREATER EQUAL  1',0
+                    dc.b    CMD_TEXT,8,28,'<= LESS EQUAL     1',0
+                    dc.b    CMD_TEXT,8,29,'<> UNEQUAL        1',0
                     dc.b    CMD_END
                     even
 lbW0195F4:
@@ -21303,60 +21381,8 @@ lbW019760:
                     dc.w    2,113
                     dc.l    lbC02B7DE
                     dc.w    0
-effects_ed_help_text:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
-                    dc.b    CMD_TEXT,21,12,'- Effect Editor Help Page ------------',0
-                    dc.b    CMD_TEXT,21,14,'- Menu ----- - Movement --------------',0
-                    dc.b    CMD_TEXT,21,16,'AM_C   Copy  ___CURSOR UD Scroll',0
-                    dc.b    CMD_TEXT,21,17,'AM_X   Cut   SH_CURSOR UD Scroll Page',0
-                    dc.b    CMD_TEXT,21,18,'AM_I   Paste AL_CURSOR UD Sub/Add',0
-                    dc.b    CMD_TEXT,21,19,'AM_L   Load',0
-                    dc.b    CMD_TEXT,21,20,'AM_S   Save  - Help ------------------',0
-                    dc.b    CMD_TEXT,21,21,'AM_D   Do',0
-                    dc.b    CMD_TEXT,21,22,'AM_Q   Exit  SH_HELP Here you are!',0
-                    dc.b    CMD_TEXT,21,23,'___ESC Exit  AL_HELP Compute Help Page',0
-                    dc.b    CMD_END
-compute_help_text:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
-                    dc.b    CMD_TEXT,8,8, '- Compute Help Page --------------------------------------------',0
-                    dc.b    CMD_TEXT,8,10,'- Operands - Prio -  - Variables ------------  - Signs ---------',0
-                    dc.b    CMD_TEXT,8,12,'<< SHIFT LEFT     5  P  Pattern Number         ~ NOTATION',0
-                    dc.b    CMD_TEXT,8,13,'>> SHIFT RIGHT    5  H  Height of Pattern      - NEGATION',0
-                    dc.b    CMD_TEXT,8,15,'&  AND            4  S  TRUE if SingleTrack    - Value Types ---',0
-                    dc.b    CMD_TEXT,8,16,'|  OR             4  D  TRUE if DoubleTrack',0
-                    dc.b    CMD_TEXT,8,17,'!  OR             4                            0-9 DECIMAL',0
-                    dc.b    CMD_TEXT,8,18,'^  EOR            4  N  Note Number            %   BINARY',0
-                    dc.b    CMD_TEXT,8,19,'                     I  Instrument Number      @   OCTAL',0
-                    dc.b    CMD_TEXT,8,20,'*  MULTIPLICATION 3  V  Effect Value           $   HEXADECIMAL',0
-                    dc.b    CMD_TEXT,8,21,'/  DIVISION       3                            ''   STRING (''''='')',0
-                    dc.b    CMD_TEXT,8,22,'                     X  XPos in Pattern (1..)  "   STRING (""=")',0
-                    dc.b    CMD_TEXT,8,23,'+  ADDITION       2  Y  YPos in Pattern (0..)',0
-                    dc.b    CMD_TEXT,8,24,'-  SUBTRACTION    2',0
-                    dc.b    CMD_TEXT,8,25,'                     T  TRUE',0
-                    dc.b    CMD_TEXT,8,26,'=  EQUAL          1  F  FALSE',0
-                    dc.b    CMD_TEXT,8,27,'>= GREATER EQUAL  1',0
-                    dc.b    CMD_TEXT,8,28,'<= LESS EQUAL     1',0
-                    dc.b    CMD_TEXT,8,29,'<> UNEQUAL        1',0
-                    dc.b    CMD_END
-play_help_text:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
-                    dc.b    CMD_TEXT,9,10, '- Play Song, Play Pattern Help Page -------------------------',0
-                    dc.b    CMD_TEXT,9,12, '- Misc --------------------------- - Octave Settings --------',0
-                    dc.b    CMD_TEXT,9,14, '___ESC       Stop                  ___F1 Set Octave 1+2',0
-                    dc.b    CMD_TEXT,9,15, '___`         Stop to Act Pos       ___F2 Set Octave 2+3',0
-                    dc.b    CMD_TEXT,9,17, '___TAB       Change Edit Mode      - Track Movement ---------',0
-                    dc.b    CMD_TEXT,9,18, '___CURSOR UD Change Sample',0
-                    dc.b    CMD_TEXT,9,19, '___F3-F10    Change Channel States ___CURSOR LR Change Track',0
-                    dc.b    CMD_TEXT,44,20,'___HELP      Go to PolyPos',0
-                    dc.b    CMD_TEXT,9,21, 'NB_1         Sub Quant',0
-                    dc.b    CMD_TEXT,9,22, 'NB_2         Add Quant',0
-                    dc.b    CMD_TEXT,9,24, 'NB_4         Sub Poly',0
-                    dc.b    CMD_TEXT,9,25, 'NB_5         Add Poly',0
-                    dc.b    CMD_TEXT,9,27, 'NB_7         Change MidiMode',0
-                    dc.b    CMD_END
+
+; ===========================================================================
 ; related to the replay
 OKT_pattern_line_buffer:
                     dcb.b   4*8,0
@@ -21533,6 +21559,7 @@ lbL01DA2C:
 
 ; ===========================================================================
                     section chip_data,data_c
+
 copperlist:
 sprites_bps:
                     dc.w    SPR0PTH,0,SPR0PTL,0,SPR1PTH,0,SPR1PTL,0,SPR2PTH,0,SPR2PTL,0,SPR3PTH,0,SPR3PTL,0
@@ -21556,7 +21583,7 @@ pattern_copper_jump:
                     dcb.w   6,0
 ; =====
 copper_start_line:
-                    dc.w    $6407,$FFFE
+                    dc.w    $6409,$FFFE
 main_back_color:
                     dc.w    COLOR00,0
 main_front_color:
@@ -21568,7 +21595,7 @@ main_bplcon0:
 copper_pal_line:
                     dc.w    $FFDF,$FFFE
 copper_credits_line:
-                    dc.w    $2407,$FFFE
+                    dc.w    $2409,$FFFE
 copper_credits_back_color:
                     dc.w    COLOR00,0
 copper_credits_front_color:
@@ -21577,17 +21604,17 @@ credits_bp:
                     dc.w    BPL1PTH,0,BPL1PTL,0
                     dc.w    BPLCON0,$9200
 copper_end_line:
-                    dc.w    $2C07,$FFFE
+                    dc.w    $2C09,$FFFE
                     dc.w    BPLCON0,$200
                     dc.w    $FFFF,$FFFE
                     dc.w    $FFFF,$FFFE
 ; =====
 main_menu_copper_part:
-                    dc.w    $2C07,$FFFE
+                    dc.w    $2C09,$FFFE
 main_menu_bp:
                     dc.w    BPL1PTH,0,BPL1PTL,0
                     dc.w    BPLCON0,$9200
-                    dc.w    $3307,$FFFE
+                    dc.w    $3309,$FFFE
 main_menu_back_color:
                     dc.w    COLOR00,0
 main_menu_front_color:
@@ -21596,7 +21623,7 @@ main_menu_copper_back_jump:
                     dcb.w   6,0
 ; =====
 pattern_copper_part:
-                    dc.w    $4407,$FFFE
+                    dc.w    $4409,$FFFE
 copper_int:
                     dc.w    BPLCON0,$9200
 pattern_copper_back_jump:
@@ -21622,6 +21649,7 @@ bottom_credits_picture:
 
 ; ===========================================================================
                     section chip_blocks,bss_c
+
                     ; (must be aligned for AGA)
                     cnop    0,8
 main_screen:

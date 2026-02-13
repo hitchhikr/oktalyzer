@@ -1,5 +1,5 @@
 ; ===========================================================================
-; Oktalyzer Vampire replay routine test
+; Oktalyzer v2.0 - Vampire replay routine test
 ; ===========================================================================
 ; Original code by Armin 'TIP' Sander.
 ; Disassembled and improved by Franck 'hitchhikr' Charlet.
