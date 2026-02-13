@@ -15510,6 +15510,10 @@ lbC029AE4:
 sample_ed_set_repeat:
                     tst.l   (work_sample_address_ptr)
                     beq     lbC029E96
+                    cmp.l   #-1,(sample_block_start)
+                    beq     lbC029E9E
+                    cmp.l   #-1,(sample_block_end)
+                    beq     lbC029E9E
                     lea     (OKT_samples_infos),a0
                     move.w  (current_sample_index),d0
                     lsl.w   #5,d0
