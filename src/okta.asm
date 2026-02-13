@@ -7522,17 +7522,17 @@ OKT_handle_effects_single_channels:
                     dbra    d7,.OKT_loop
                     rts
 OKT_effects_table_s:
-                    ; 0 1 2
+                    ;  0  1  2
                     dc.w    0,                                      OKT_port_u-OKT_effects_table_s,     OKT_port_d-OKT_effects_table_s
-                    ; 3 4 5
+                    ;  3  4  5
                     dc.w    0,                                      0,                                  0
-                    ; 6 7 8
+                    ;  6  7  8
                     dc.w    0,                                      0,                                  0
-                    ; 9 A B
+                    ;  9  A  B
                     dc.w    0,                                      OKT_arp_s-OKT_effects_table_s,      OKT_arp2_s-OKT_effects_table_s
-                    ; C D E
+                    ;  C  D  E
                     dc.w    OKT_arp3_s-OKT_effects_table_s,         OKT_slide_d_s-OKT_effects_table_s,  0
-                    ; F 10 11
+                    ;  F 10 11
                     dc.w    OKT_filter-OKT_effects_table_s,         0,                                  OKT_slide_u_once_s-OKT_effects_table_s
                     ; 12 13 14
                     dc.w    0,                                      0,                                  0
@@ -8196,22 +8196,22 @@ OKT_stop:
                     move.w  #$6000,(_CUSTOM|INTENA)
                     move.w  #%11111111,(a2)
                     moveq   #0,d0
-                    move.w  d0,($408-$400,a2)
-                    move.w  d0,($418-$400,a2)
-                    move.w  d0,($428-$400,a2)
-                    move.w  d0,($438-$400,a2)
-                    move.w  d0,($448-$400,a2)
-                    move.w  d0,($458-$400,a2)
-                    move.w  d0,($468-$400,a2)
-                    move.w  d0,($478-$400,a2)
+                    move.w  d0,($408-OKT_AUDIO_DMA,a2)
+                    move.w  d0,($418-OKT_AUDIO_DMA,a2)
+                    move.w  d0,($428-OKT_AUDIO_DMA,a2)
+                    move.w  d0,($438-OKT_AUDIO_DMA,a2)
+                    move.w  d0,($448-OKT_AUDIO_DMA,a2)
+                    move.w  d0,($458-OKT_AUDIO_DMA,a2)
+                    move.w  d0,($468-OKT_AUDIO_DMA,a2)
+                    move.w  d0,($478-OKT_AUDIO_DMA,a2)
                 ELSE
                     move.w  #$6780,(_CUSTOM|INTENA)
                     move.w  #%1111,(a2)
                     moveq   #0,d0
-                    move.w  d0,(AUD0VOL-$96,a2)
-                    move.w  d0,(AUD1VOL-$96,a2)
-                    move.w  d0,(AUD2VOL-$96,a2)
-                    move.w  d0,(AUD3VOL-$96,a2)
+                    move.w  d0,(AUD0VOL-OKT_AUDIO_DMA,a2)
+                    move.w  d0,(AUD1VOL-OKT_AUDIO_DMA,a2)
+                    move.w  d0,(AUD2VOL-OKT_AUDIO_DMA,a2)
+                    move.w  d0,(AUD3VOL-OKT_AUDIO_DMA,a2)
                     tst.w   (OKT_audio_int_single_bit)
                     bne     .OKT_no_double_channels
                 ENDC

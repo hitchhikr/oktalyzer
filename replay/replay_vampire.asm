@@ -77,14 +77,14 @@ OKT_stop:
                     move.w  #$4000,($DFF09A)
                     move.w  #%11111111,(a2)
                     moveq   #0,d0
-                    move.w  d0,($408-$400,a2)
-                    move.w  d0,($418-$400,a2)
-                    move.w  d0,($428-$400,a2)
-                    move.w  d0,($438-$400,a2)
-                    move.w  d0,($448-$400,a2)
-                    move.w  d0,($458-$400,a2)
-                    move.w  d0,($468-$400,a2)
-                    move.w  d0,($478-$400,a2)
+                    move.w  d0,($408-OKT_AUDIO_BASE,a2)
+                    move.w  d0,($418-OKT_AUDIO_BASE,a2)
+                    move.w  d0,($428-OKT_AUDIO_BASE,a2)
+                    move.w  d0,($438-OKT_AUDIO_BASE,a2)
+                    move.w  d0,($448-OKT_AUDIO_BASE,a2)
+                    move.w  d0,($458-OKT_AUDIO_BASE,a2)
+                    move.w  d0,($468-OKT_AUDIO_BASE,a2)
+                    move.w  d0,($478-OKT_AUDIO_BASE,a2)
                     lea     $BFD000+CIATBLO,a0
                     lea     (OKT_old_cia_timer-OKT_vars,a6),a1
                     move.b  (a1)+,(a0)
