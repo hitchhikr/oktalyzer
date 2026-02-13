@@ -8,7 +8,6 @@ To do:
 - Fix some random crashes.
 - 16 bit samples support in the Vampire version (keep the sample type word in infos).
 - The possibility to load riff samples (8 bit but also 16 bit for Vampire).
-- Add a way to set the samples repeat start & length from range selected with the mouse.
 - Remove the 15 samples/8 tracks modules loading and check for 1 track to 8 tracks modules signatures (and load them).
 - Decode the rest of the source.
 - Add new pattern effects.
@@ -45,5 +44,6 @@ Done:
 - Changed the version number and the bottom picture.
 - Improved the .mod import.
 - DEL key now works.
+- Samples repeat start & length can be set from range selected with the mouse.
 
 A work in progress...
