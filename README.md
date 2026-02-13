@@ -44,5 +44,6 @@ Done:
 - Removed the constraints of the sample types.
 - Changed the version number and the bottom picture.
 - Improved the .mod import.
+- DEL key now works.
 
 A work in progress...
