@@ -19939,7 +19939,7 @@ lbB017690:
                     dc.l    play_pattern,0
 lbB0176A2:
                     dc.l    lbB0176B4
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    16,3,9,1
                     dc.l    switch_edit_mode,0
 lbB0176B4:
@@ -19959,52 +19959,52 @@ lbB0176D8:
                     dc.l    inc_current_pattern_rows,dec_current_pattern_rows
 lbB0176EA:
                     dc.l    lbB0176FC
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    26,1,13,1
                     dc.l    cycle_midi_modes_stop_audio_and_draw,0
 lbB0176FC:
                     dc.l    lbB01770E
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    26,2,4,1
                     dc.l    lbC01F51C,0
 lbB01770E:
                     dc.l    lbB017720
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    31,2,3,1
                     dc.l    lbC01F532,0
 lbB017720:
                     dc.l    lbB017732
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    35,2,4,1
                     dc.l    switch_copy_blocks_mode,0
 lbB017732:
                     dc.l    lbB017744
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    26,3,6,1
                     dc.l    lbC01F5C8,0
 lbB017744:
                     dc.l    lbB017756
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    33,3,6,1
                     dc.l    lbC01F5D2,0
 lbB017756:
                     dc.l    lbB017768
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    26,4,6,1
                     dc.l    lbC01F790,lbC01F788
 lbB017768:
                     dc.l    lbB01777A
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    33,4,6,1
                     dc.l    lbC01F7BA,lbC01F7B2
 lbB01777A:
                     dc.l    lbB01778C
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    26,5,6,1
                     dc.l    lbC01F7DE,lbC01F7D6
 lbB01778C:
                     dc.l    lbB01779E
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    33,5,6,1
                     dc.l    lbC01F80A,lbC01F802
 lbB01779E:
@@ -20079,57 +20079,57 @@ lbB017888:
                     dc.l    lbC01E096,0
 lbL0178AC:
                     dc.l    lbB0178BE
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    71,5,1,2
                     dc.l    lbC022202,lbC02220C
 lbB0178BE:
                     dc.l    lbB0178D0
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    72,5,1,2
                     dc.l    lbC022220,0
 lbB0178D0:
                     dc.l    lbB0178E2
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    73,5,1,2
                     dc.l    lbC022224,0
 lbB0178E2:
                     dc.l    lbB0178F4
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    74,5,1,2
                     dc.l    lbC022228,0
 lbB0178F4:
                     dc.l    lbB017906
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    75,5,1,2
                     dc.l    lbC02222C,0
 lbB017906:
                     dc.l    lbB017918
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    76,5,1,2
                     dc.l    lbC022230,0
 lbB017918:
                     dc.l    lbB01792A
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    77,5,1,2
                     dc.l    lbC022234,0
 lbB01792A:
                     dc.l    lbB01793C
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    78,5,1,2
                     dc.l    lbC022238,0
 lbB01793C:
                     dc.l    lbB01794E
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    79,5,1,2
                     dc.l    lbC02223C,0
 lbB01794E:
                     dc.l    lbB017960
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    67,1,13,2
                     dc.l    draw_available_memory,0
 lbB017960:
                     dc.l    lbL017972
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    67,3,13,1
                     dc.l    draw_song_metrics,0
 lbL017972:
@@ -20463,47 +20463,47 @@ lbW018718:
                     dc.l    lbC026D32,lbC026D64
 lbW01872A:
                     dc.l    lbW01873C
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    2,10,36,1
                     dc.l    lbC027674,0
 lbW01873C:
                     dc.l    lbW01874E
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    2,11,36,1
                     dc.l    lbC027698,0
 lbW01874E:
                     dc.l    lbW018760
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    2,12,6,1
                     dc.l    lbC026BBC,0
 lbW018760:
                     dc.l    lbW018772
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    9,12,6,1
                     dc.l    lbC026F18,0
 lbW018772:
                     dc.l    lbW018784
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    16,12,6,1
                     dc.l    lbC0276BC,0
 lbW018784:
                     dc.l    lbW018796
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    23,12,6,1
                     dc.l    lbC0276DC,0
 lbW018796:
                     dc.l    lbW0187A8
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    30,12,6,1
                     dc.l    lbC026BAC,0
 lbW0187A8:
                     dc.l    lbW0187BA
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    64,12,7,1
                     dc.l    lbC027CF4,0
 lbW0187BA:
                     dc.l    lbW0187CC
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    72,12,6,1
                     dc.l    lbC027DDA,0
 lbW0187CC:
@@ -20513,17 +20513,17 @@ lbW0187CC:
                     dc.l    inc_trackdisk_unit_number,dec_trackdisk_unit_number
 lbW0187DE:
                     dc.l    lbW0187F0
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    42,11,11,1
                     dc.l    switch_verify_mode,0
 lbW0187F0:
                     dc.l    lbW018802
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    42,12,11,1
                     dc.l    switch_clear_mode,0
 lbW018802:
                     dc.l    0
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    54,10,6,3
                     dc.l    format_disk,0
 lbW018814:
@@ -20558,7 +20558,7 @@ sample_ed_text:
                     even
 lbW01892C:
                     dc.l    lbW01893E
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    26,1,13,1
                     dc.l    cycle_midi_modes_stop_audio_and_draw,0
 lbW01893E:
@@ -20568,117 +20568,117 @@ lbW01893E:
                     dc.l    lbC028E0E,lbC028E1C
 ;lbW018950:
 ;                    dc.l    lbW018962
-;                    dc.w    %1000000000001
+;                    dc.w    %1|MOUSE_CMD_NO_REPEAT
 ;                    dc.b    40,6,7,1
 ;                    dc.l    lbC028E2A,lbC028E38
 lbW018962:
                     dc.l    lbW018974
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    54,2,4,1
                     dc.l    lbC028E50,0
 lbW018974:
                     dc.l    lbW018986
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    54,3,4,1
                     dc.l    lbC028E58,0
 lbW018986:
                     dc.l    lbW018998
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    54,5,4,1
                     dc.l    lbC028E8E,0
 lbW018998:
                     dc.l    lbW0189AA
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    54,6,4,1
                     dc.l    lbC028E60,0
 lbW0189AA:
                     dc.l    lbW0189BC
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    60,2,5,1
                     dc.l    lbC028E6A,0
 lbW0189BC:
                     dc.l    lbW0189CE
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    60,3,5,2
                     dc.l    lbC028E74,0
 lbW0189CE:
                     dc.l    lbW0189E0
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    60,5,5,1
                     dc.l    lbC028E7E,0
 lbW0189E0:
                     dc.l    lbW0189F2
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    60,6,5,1
                     dc.l    lbC028E88,0
 lbW0189F2:
                     dc.l    lbW018A04
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    1,10,34,1
                     dc.l    lbC02852A,0
 lbW018A04:
                     dc.l    lbW018A16
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    1,0,4,1
                     dc.l    lbC0281FE,0
 lbW018A16:
                     dc.l    lbW018A28
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    1,1,4,1
                     dc.l    lbC02855C,0
 lbW018A28:
                     dc.l    lbW018A3A
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    7,0,4,2
                     dc.l    lbC02860A,0
 lbW018A3A:
                     dc.l    lbW018A4C
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    13,0,4,1
                     dc.l    lbC028614,lbC02862C
 lbW018A4C:
                     dc.l    lbW018A5E
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    13,1,4,1
                     dc.l    lbC028692,0
 lbW018A5E:
                     dc.l    lbW018A70
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    19,0,7,1
                     dc.l    lbC0286F4,lbC02879C
 lbW018A70:
                     dc.l    lbW018A82
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    19,1,7,1
                     dc.l    sample_ed_reverse,0
 lbW018A82:
                     dc.l    lbW018A94
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    28,0,6,2
                     dc.l    sample_ed_change_volume_linear,sample_ed_change_volume_curve
 lbW018A94:
                     dc.l    lbW018AA6
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    36,0,6,2
                     dc.l    sample_ed_change_period,0
 lbW018AA6:
                     dc.l    lbL018AB8b
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    44,0,6,2
                     dc.l    sample_ed_delta_filter,0
 lbL018AB8b:
                     dc.l    lbL018AB8
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    52,0,6,2
                     dc.l    sample_ed_set_repeat,0
 lbL018AB8:
                     dc.l    lbL018ACA
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    60,0,7,1
                     dc.l    sample_ed_monitor,0
 lbL018ACA:
                     dc.l    lbL018ADC
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    60,1,7,1
                     dc.l    sample_ed_sampler,0
 lbL018ADC:
@@ -20688,7 +20688,7 @@ lbL018ADC:
                     dc.l    sample_ed_inc_note_rate,sample_ed_dec_note_rate
 lbL018AEE:
                     dc.l    0
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    69,1,9,1
                     dc.l    sample_ed_switch_left_right,0
 lbW018B00:
@@ -20831,22 +20831,22 @@ prefs_help_text:
                     even
 lbW019080:
                     dc.l    lbW019092
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    14,12,2,1
                     dc.l    switch_channel_1_type,0
 lbW019092:
                     dc.l    lbW0190A4
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    17,12,2,1
                     dc.l    switch_channel_2_type,0
 lbW0190A4:
                     dc.l    lbW0190B6
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    20,12,2,1
                     dc.l    switch_channel_3_type,0
 lbW0190B6:
                     dc.l    lbW0190C8
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    23,12,2,1
                     dc.l    switch_channel_4_type,0
 lbW0190C8:
@@ -20867,7 +20867,7 @@ lbW0190DA:
                 ENDC
 lbW0190EC:
                     dc.l    lbW0190FE
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    2,16,23,1
                     dc.l    switch_samples_save_format,0
 lbW0190FE:
@@ -20997,7 +20997,7 @@ lbW0192AE:
                     dc.l    inc_polyphony_value_8,dec_polyphony_value_8
 lbW0192C0:
                     dc.l    lbW0192D2
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    29,22,10,1
                     dc.l    reset_polyphony_values,randomize_polyphony_values
 lbW0192D2:
@@ -21057,37 +21057,37 @@ lbW019386:
                     dc.l    rotate_char_down,rotate_char_up
 lbW019398:
                     dc.l    lbW0193AA
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    53,22,5,1
                     dc.l    outline_char,0
 lbW0193AA:
                     dc.l    lbW0193BC
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    53,23,4,1
                     dc.l    restore_undo_buffer,swap_undo_buffer
 lbW0193BC:
                     dc.l    lbW0193CE
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    53,24,5,1
                     dc.l    restore_copy_buffer,swap_copy_buffer
 lbW0193CE:
                     dc.l    lbW0193E0
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    53,25,3,1
                     dc.l    copy_to_copy_buffer_and_erase_char,erase_char
 lbW0193E0:
                     dc.l    lbW0193F2
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    57,25,4,1
                     dc.l    copy_to_copy_buffer,0
 lbW0193F2:
                     dc.l    lbW019404
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    53,26,8,1
                     dc.l    mirror_char_x,0
 lbW019404:
                     dc.l    lbW019416
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    53,27,8,1
                     dc.l    mirror_char_y,0
 lbW019416:
@@ -21097,37 +21097,37 @@ lbW019416:
                     dc.l    select_current_char,0
 lbW019428:
                     dc.l    lbW01943A
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    1,26,6,3
                     dc.l    load_prefs,0
 lbW01943A:
                     dc.l    lbW01944C
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    7,26,6,3
                     dc.l    save_prefs,0
 lbW01944C:
                     dc.l    lbW01945E
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    13,26,5,3
                     dc.l    use_prefs,0
 lbW01945E:
                     dc.l    lbW019470
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    18,26,5,3
                     dc.l    old_prefs,0
 lbW019470:
                     dc.l    lbW019482
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    23,26,8,3
                     dc.l    cancel_prefs,0
 lbW019482:
                     dc.l    lbW019494
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    34,27,7,1
                     dc.l    switch_st_samples_mode,0
 lbW019494:
                     dc.l    0
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    42,27,7,1
                     dc.l    switch_st_tracks_mode,0
 lbW0194A6:
@@ -21195,37 +21195,37 @@ lbW019606:
                     dc.l    lbC02B7A4,0
 lbW019618:
                     dc.l    lbW01962A
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    13,10,6,3
                     dc.l    lbC02B8FE,0
 lbW01962A:
                     dc.l    lbW01963C
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    19,10,5,3
                     dc.l    lbC02B866,0
 lbW01963C:
                     dc.l    lbW01964E
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    24,10,7,3
                     dc.l    lbC02B9BA,0
 lbW01964E:
                     dc.l    lbW019660
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    31,10,6,3
                     dc.l    lbC02BB16,0
 lbW019660:
                     dc.l    lbW019672
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    37,10,6,3
                     dc.l    lbC02BC20,0
 lbW019672:
                     dc.l    lbW019684
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    43,10,6,3
                     dc.l    lbC02C2E4,0
 lbW019684:
                     dc.l    lbW019696
-                    dc.w    %1000000000001
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    49,10,6,3
                     dc.l    lbC02B7DE,0
 lbW019696:

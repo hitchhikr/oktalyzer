@@ -121,6 +121,8 @@ EVT_KEY_RELEASED    equ     14
 RESP_EVT_ROUT_1     equ     10
 RESP_EVT_ROUT_2     equ     14
 
+MOUSE_CMD_NO_REPEAT equ     %1000000000000
+
 VIS_DRAW_VUMETERS   equ     1<<0
 VIS_DRAW_ROW        equ     1<<1
 VIS_DRAW_POS        equ     1<<2
