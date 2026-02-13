@@ -75,7 +75,7 @@ OKT_init:
                     move.l  (a0)+,(a1)+
                     move.l  #'SAMP',d0
                     bsr     .OKT_search_hunk
-                    lea     (OKT_samples-OKT_vars,a6),a1
+                    lea     (OKT_samples_infos-OKT_vars,a6),a1
                     move.w  #(SMPS_NUMBER*SMP_INFOS_LEN)-1,d0
 .OKT_get_samples_infos:
                     move.b  (a0)+,(a1)+
@@ -106,7 +106,7 @@ OKT_init:
                     addq.w  #1,d7
                     cmp.w   (OKT_patterns_number-OKT_vars,a6),d7
                     bne     .OKT_get_patterns
-                    lea     (OKT_samples+SMP_LEN-OKT_vars,a6),a5
+                    lea     (OKT_samples_infos+SMP_LEN-OKT_vars,a6),a5
                     lea     (OKT_samples_table-OKT_vars,a6),a1
                     moveq   #0,d7
 .OKT_get_samples_ptrs:
@@ -460,7 +460,7 @@ OKT_fill_double_channel_data:
                     lsl.w   #3,d0
                     ; starting address
                     move.l  d2,(CHAN_SMP_PROC_D,a3)
-                    lea     (OKT_samples-OKT_vars,a6),a1
+                    lea     (OKT_samples_infos-OKT_vars,a6),a1
                     add.w   d0,a1
                     ; starting length
                     move.l  (SMP_LEN,a1),d0
@@ -540,7 +540,7 @@ OKT_fill_single_channel_data:
                     move.l  (a0,d0.w),d2
                     beq     .OKT_no_data
                     lsl.w   #3,d0
-                    lea     (OKT_samples-OKT_vars,a6),a1
+                    lea     (OKT_samples_infos-OKT_vars,a6),a1
                     add.w   d0,a1
                     ; length
                     move.l  (SMP_LEN,a1),d1
@@ -1106,7 +1106,7 @@ OKT_song_length:
                     dc.w    0
 OKT_channels_data:
                     ds.b    CHAN_LEN*8
-OKT_samples:
+OKT_samples_infos:
                     ds.b    SMPS_NUMBER*SMP_INFOS_LEN
 OKT_patterns:
                     ds.l    32
