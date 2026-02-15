@@ -62,10 +62,10 @@ start:
                     DOS     CreateProc
                     move.l  (DOSBase),a1
                     EXEC    CloseLibrary
-                    move.l  (workbench_message),d0
+                    move.l  (workbench_message,pc),d0
                     beq     .no_message
                     EXEC    Forbid
-                    move.l  (workbench_message),a1
+                    move.l  (workbench_message,pc),a1
                     EXEC    ReplyMsg
 .no_message:
                     moveq   #0,d0
@@ -4279,6 +4279,7 @@ load_st_mod:
                     ; single channels
                     clr.l   (a0)
                     clr.l   (4,a0)
+                    ; TODO: change this
                     tst.b   (st_load_default_samples_type)
                     beq     lbC020EF0
                     ; double channels
@@ -4309,16 +4310,16 @@ lbC020F2C:
                     lea     (OKT_samples_infos+SMP_INFOS_LEN),a5
                     moveq   #15-1,d7
                     tst.b   (st_load_samples_mode)
-                    beq     lbC020F4A
+                    beq     .loop
                     moveq   #31-1,d7
-lbC020F4A:
+.loop:
                     move.l  a5,a0
                     moveq   #30,d0
                     jsr     (read_from_file)
                     bmi     lbC02102A
                     ; fix length to 64k
                     andi.l  #$FFFF,(20,a5)
-                    beq     lbC020F96
+                    beq     .empty_sample
                     move.l  (20,a5),d0
                     add.l   d0,d0
                     move.l  d0,(20,a5)
@@ -4334,22 +4335,15 @@ lbC020F4A:
                     bhi     lbC021024
                     move.w  d1,(SMP_REP_START,a5)
                     move.w  d0,(SMP_REP_LEN,a5)
-                    ; 4 mode
-;                    moveq   #1,d0
-;                    tst.b   (st_load_default_samples_type)
-;                    beq     lbC020F90
-;                    ; 8 mode
-;                    moveq   #0,d0
-;lbC020F90:
-;                    ; sample mode
+                    ; sample mode
                     move.w  #SMP_TYPE_8_BIT,(SMP_TYPE,a5)
-                    bra     lbC020F9C
-lbC020F96:
+                    bra     .next_sample
+.empty_sample:
                     move.l  a5,a0
                     bsr     lbC021032
-lbC020F9C:
+.next_sample:
                     lea     (SMP_INFOS_LEN,a5),a5
-                    dbra    d7,lbC020F4A
+                    dbra    d7,.loop
                     lea     (OKT_song_length,pc),a5
                     move.l  a5,a0
                     move.l  #130,d0
@@ -4407,7 +4401,7 @@ lbC02102E:
                     moveq   #ERROR,d0
                     rts
 lbC021032:
-                    moveq   #32-1,d0
+                    moveq   #SMP_INFOS_LEN-1,d0
 lbC021034:
                     sf      (a0)+
                     dbra    d0,lbC021034
@@ -15544,6 +15538,27 @@ sample_ed_set_repeat:
                     jmp     sample_ed_draw_sample_infos
 
 ; ===========================================================================
+sample_ed_clear_repeat:
+                    tst.l   (work_sample_address_ptr)
+                    beq     lbC029E96
+                    cmp.l   #-1,(sample_block_start)
+                    beq     lbC029E9E
+                    cmp.l   #-1,(sample_block_end)
+                    beq     lbC029E9E
+                    move.l  #-1,(sample_block_start)
+                    move.l  #-1,(sample_block_end)
+                    lea     (OKT_samples_infos),a0
+                    move.w  (current_sample_index),d0
+                    lsl.w   #5,d0
+                    add.w   d0,a0
+                    ; clear start
+                    clr.w   (SMP_REP_START,a0)
+                    ; clear length
+                    clr.w   (SMP_REP_LEN,a0)
+                    bsr     sample_ed_remove_repeat_bars
+                    jmp     sample_ed_draw_sample_infos
+
+; ===========================================================================
 sample_ed_monitor:
                     jsr     (lbC01E0C2)
                     move.l  a7,(lbL029F00)
@@ -20719,7 +20734,7 @@ lbL018AB8b:
                     dc.l    lbL018AB8
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    52,0,6,2
-                    dc.l    sample_ed_set_repeat,0
+                    dc.l    sample_ed_set_repeat,sample_ed_clear_repeat
 lbL018AB8:
                     dc.l    lbL018ACA
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
