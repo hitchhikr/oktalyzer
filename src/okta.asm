@@ -9376,7 +9376,7 @@ errors_text:
                     dc.b    'CopyBuffer Empty !',0
                     dc.b    '   No Entries !   ',0
                     dc.b    'EF Struct Error !!',0
-                    dc.b    '  Only in PAL !!  ',0
+                    dc.b    '  What Repeat ??  ',0
 dos_errors_text:
                     dc.b    ' No Free Store !! ',0
                     dc.b    'Task Table Full !!',0
@@ -9558,8 +9558,8 @@ error_no_entries:
 error_ef_struct_error:
                     moveq   #ERROR_EF_STRUCT,d0
                     bra     display_error
-error_only_in_pal:
-                    moveq   #ERROR_ONLY_IN_PAL,d0
+error_what_repeat:
+                    moveq   #ERROR_WHAT_REPEAT,d0
                     bra     display_error
 
 ; ===========================================================================
@@ -14021,16 +14021,20 @@ sample_ed_mouse_block_end:
                     dc.w    -1
 
 ; ===========================================================================
-lbC0289C4:
+sample_ed_clear_repeat:
                     tst.l   (work_sample_address_ptr)
                     beq     lbC029E96
                     lea     (OKT_samples_infos),a0
                     move.w  (current_sample_index),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
+                    tst.l   (SMP_REP_START,a0)
+                    beq     lbC029E96b
                     ; SMP_REP_START+SMP_REP_LEN
                     clr.l   (SMP_REP_START,a0)
                     bra     sample_ed_renew_repeat_bars
+
+; ===========================================================================
 lbC0289EE:
                     tst.l   (work_sample_address_ptr)
                     beq     lbC029E96
@@ -15538,27 +15542,6 @@ sample_ed_set_repeat:
                     jmp     sample_ed_draw_sample_infos
 
 ; ===========================================================================
-sample_ed_clear_repeat:
-                    tst.l   (work_sample_address_ptr)
-                    beq     lbC029E96
-                    cmp.l   #-1,(sample_block_start)
-                    beq     lbC029E9E
-                    cmp.l   #-1,(sample_block_end)
-                    beq     lbC029E9E
-                    move.l  #-1,(sample_block_start)
-                    move.l  #-1,(sample_block_end)
-                    lea     (OKT_samples_infos),a0
-                    move.w  (current_sample_index),d0
-                    lsl.w   #5,d0
-                    add.w   d0,a0
-                    ; clear start
-                    clr.w   (SMP_REP_START,a0)
-                    ; clear length
-                    clr.w   (SMP_REP_LEN,a0)
-                    bsr     sample_ed_remove_repeat_bars
-                    jmp     sample_ed_draw_sample_infos
-
-; ===========================================================================
 sample_ed_monitor:
                     jsr     (lbC01E0C2)
                     move.l  a7,(lbL029F00)
@@ -15857,6 +15840,8 @@ lbL029E92:
                     dcb.b   OKT_AUDIO_HW_CHANS,0
 lbC029E96:
                     jmp     (error_what_sample)
+lbC029E96b:
+                    jmp     (error_what_repeat)
 lbC029E9E:
                     jmp     (error_what_block)
 lbC029EA6:
@@ -20769,7 +20754,7 @@ lbW018B22:
                     dc.w    2,5
                     dc.l    lbC0281FE
                     dc.w    2,6
-                    dc.l    lbC0289C4
+                    dc.l    sample_ed_clear_repeat
                     dc.w    4,$F
                     dc.l    lbC028ABC
                     dc.w    4,$E
