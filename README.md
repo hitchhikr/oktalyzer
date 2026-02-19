@@ -6,6 +6,7 @@ of the Amiga Vampire cards and extract an asm replay routine.
 To do:
 
 - Fix some random crashes.
+- Make samples start from 1 instead of 0 and mimic Protracker replay behaviours.
 - 16 bit samples support in the Vampire version (keep the sample type word in infos).
 - The possibility to load riff samples (8 bit but also 16 bit for Vampire).
 - Remove the 15 samples/8 tracks modules loading and check for 1 track to 8 tracks modules signatures (and load them).
