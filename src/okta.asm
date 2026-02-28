@@ -2,7 +2,7 @@
 ; Oktalyzer v2.0 - Main program
 ; ===========================================================================
 ; Original code by Armin 'TIP' Sander.
-; Disassembled by Franck 'hitchhikr' Charlet.
+; Disassembled and improved by Franck 'hitchhikr' Charlet.
 ; ===========================================================================
 
 ; ===========================================================================
@@ -909,9 +909,9 @@ construct_copperlist:
                     move.l  a3,a0
                     move.l  a0,(_CUSTOM|COP1LCH)
                     subq.b  #1,(dma_copper_spinlock)
-                    bgt     lbC01E976
+                    bgt     .spinning
                     move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
-lbC01E976:
+.spinning:
                     EXEC    Enable
                     movem.l (a7)+,a2/a3
                     rts
@@ -3817,7 +3817,7 @@ lbC020A60:
                     beq     lbC020A86
                     move.l  d0,a0
                     move.w  (4,a0),d0
-                    btst    #12,d0
+                    btst    #MOUSE_CMD_NO_REPEAT_BIT,d0
                     bne     lbC020A86
                     btst    #11,d0
                     bne     lbC020A86
@@ -3998,7 +3998,7 @@ draw_box_around_gadget:
                     move.l  a0,d0
                     beq     .no_draw
                     move.w  (4,a0),d0
-                    btst    #13,d0
+                    btst    #MOUSE_CMD_NO_HILITE_BIT,d0
                     bne     .no_draw
                     lea     (main_screen),a2
                     moveq   #0,d3
@@ -10479,23 +10479,23 @@ next_command:
                     beq     cmd_draw_text
                     cmpi.b  #CMD_CLEAR_MAIN_MENU,d0
                     beq     cmd_clear_main_menu
-                    cmpi.b  #4,d0
-                    beq     lbC02606E
-                    cmpi.b  #5,d0
-                    beq     lbC02607E
+                    cmpi.b  #CMD_PREPARE_SUB_SCREEN,d0
+                    beq     cmd_prepare_sub_screen
+                    cmpi.b  #CMD_DRAW_BOX,d0
+                    beq     cmd_draw_box
                     cmpi.b  #CMD_SUB_COMMAND,d0
                     beq     cmd_process_sub_commands_from_pointer
-                    cmpi.b  #7,d0
-                    beq     lbC0260B2
+                    cmpi.b  #CMD_DRAW_BOX_OUTER,d0
+                    beq     cmd_draw_box_outer
                     cmpi.b  #CMD_TEXT_PTR,d0
                     beq     cmd_draw_text_from_pointer
-                    cmpi.b  #9,d0
-                    beq     lbC0260D2
+                    cmpi.b  #CMD_DRAW_FILLED_BOX_FROM_POINTER,d0
+                    beq     cmd_draw_filled_box_from_pointer
                     cmpi.b  #CMD_CLEAR_CHARS,d0
                     beq     cmd_clear_chars
-                    cmpi.b  #CMD_SET_SUB_SCREEN,d0
+                    cmpi.b  #CMD_SET_SUB_COPPERLIST,d0
                     beq     cmd_set_full_screen_copperlist_ntsc
-                    cmpi.b  #CMD_SET_MAIN_SCREEN,d0
+                    cmpi.b  #CMD_SET_MAIN_COPPERLIST,d0
                     beq     cmd_restore_full_screen_copperlist_ntsc
                     cmpi.b  #CMD_MOVE_TO_LINE,d0
                     beq     cmd_move_to_line
@@ -10528,14 +10528,14 @@ cmd_clear_main_menu:
                     bra     next_command
 
 ; ===========================================================================
-lbC02606E:
+cmd_prepare_sub_screen:
                     bsr     clear_1_line_blitter
                     moveq   #0,d0
                     jsr     (set_pattern_bitplane_from_given_pos)
                     bra     next_command
 
 ; ===========================================================================
-lbC02607E:
+cmd_draw_box:
                     bsr     get_xy_from_command
                     add.w   d2,d0
                     add.w   d3,d1
@@ -10544,7 +10544,7 @@ lbC02607E:
                     moveq   #0,d3
                     move.b  (a2)+,d2
                     move.b  (a2)+,d3
-                    bsr     lbC0261EC
+                    bsr     draw_box
                     movem.l (a7)+,d2/d3
                     bra     next_command
 
@@ -10559,7 +10559,7 @@ cmd_process_sub_commands_from_pointer:
                     bra     next_command
 
 ; ===========================================================================
-lbC0260B2:
+cmd_draw_box_outer:
                     bsr     get_xy_from_command
                     add.w   d2,d0
                     add.w   d3,d1
@@ -10568,12 +10568,12 @@ lbC0260B2:
                     moveq   #0,d3
                     move.b  (a2)+,d2
                     move.b  (a2)+,d3
-                    bsr     lbC026250
+                    bsr     draw_box_outer
                     movem.l (a7)+,d2/d3
                     bra     next_command
 
 ; ===========================================================================
-lbC0260D2:
+cmd_draw_filled_box_from_pointer:
                     bsr     fix_address_to_even
                     move.w  (a2)+,d0
                     movem.l d2-d7/a2-a6,-(a7)
@@ -10703,7 +10703,7 @@ invert_chars:
                     rts
 
 ; ===========================================================================
-lbC0261EC:
+draw_box:
                     movem.l d2-d6/a2,-(a7)
                     lea     (main_screen),a2
                     add.w   d0,d2
@@ -10742,7 +10742,7 @@ lbC0261EC:
                     jsr     (lbC020D84)
                     movem.l (a7)+,d2-d6/a2
                     rts
-lbC026250:
+draw_box_outer:
                     movem.l d2-d6/a2,-(a7)
                     lea     (main_screen),a2
                     add.w   d0,d2
@@ -14561,8 +14561,7 @@ lbW028FA0:
                     dc.w    0
                     dc.l    0,0,0
 ascii_MSG15:
-                    dc.b    CMD_MOVE_TO_LINE
-                    dc.b    0
+                    dc.b    CMD_MOVE_TO_LINE,0
                     dc.l    max_lines
                     dc.b    CMD_TEXT,28,0,'    % ',0
                     dc.b    CMD_TEXT,28,1,'Do! Ok',0
@@ -14575,7 +14574,7 @@ lbW028FDC:
                     dc.l    lbC02903A,lbC02904C
 lbW028FEE:
                     dc.l    lbW029000
-                    dc.w    %1000000000001
+                    dc.w    MOUSE_CMD_NO_REPEAT|%1
                     dc.b    28,1,3,1
                     dc.l    lbC02905E,0
 lbW029000:
@@ -14713,8 +14712,7 @@ lbW02917C:
                     dc.W    0
                     dc.l    0,0,0
 ascii_MSG16:
-                    dc.b    CMD_MOVE_TO_LINE
-                    dc.b    0
+                    dc.b    CMD_MOVE_TO_LINE,0
                     dc.l    max_lines
                     dc.b    CMD_TEXT,28,0,'Cancel',0
                     dc.b    CMD_TEXT,28,1,'Do! Ok',0
@@ -14727,7 +14725,7 @@ lbL0291B8:
                     dc.l    lbC029202,0
 lbL0291CA:
                     dc.l    lbW0291DC
-                    dc.w    %1000000000001
+                    dc.w    MOUSE_CMD_NO_REPEAT|%1
                     dc.b    28,1,3,1
                     dc.l    lbC02920C,0
 lbW0291DC:
@@ -14914,8 +14912,7 @@ lbW0293B6:
                     dc.w    0
                     dc.l    0,0,0
 ascii_MSG17:
-                    dc.b    CMD_MOVE_TO_LINE
-                    dc.b    0
+                    dc.b    CMD_MOVE_TO_LINE,0
                     dc.l    max_lines
                     dc.b    CMD_TEXT,38,0,'to',0
                     dc.b    CMD_TEXT,35,1,'Do!   Ok',0
@@ -14933,7 +14930,7 @@ lbL029402:
                     dc.l    lbC0294EA,lbC029502
 lbL029414:
                     dc.l    lbL029426
-                    dc.w    %1000000000001
+                    dc.w    MOUSE_CMD_NO_REPEAT|%1
                     dc.b    34,1,5,1
                     dc.l    lbC029472,0
 lbL029426:
@@ -15441,8 +15438,7 @@ lbW0299E2:
                     dc.w    0
                     dc.l    0,0,0
 ascii_MSG19:
-                    dc.b    CMD_MOVE_TO_LINE
-                    dc.b    0
+                    dc.b    CMD_MOVE_TO_LINE,0
                     dc.l    max_lines
                     dc.b    CMD_TEXT,44,0,'Cancel',0
                     dc.b    CMD_TEXT,44,1,'Do! Ok',0
@@ -15455,7 +15451,7 @@ lbL029A1E:
                     dc.l    lbC029A68,0
 lbL029A30:
                     dc.l    lbL029A42
-                    dc.w    %1000000000001
+                    dc.w    MOUSE_CMD_NO_REPEAT|%1
                     dc.b    44,1,3,1
                     dc.l    lbC029A82,0
 lbL029A42:
@@ -19903,7 +19899,7 @@ main_screen_sequence:
                     dc.w    0
                     dc.l    0,0,0
 ascii_MSG0:
-                    dc.b    CMD_SET_MAIN_SCREEN
+                    dc.b    CMD_SET_MAIN_COPPERLIST
                     dc.b    CMD_END
 main_menu_text:
                     dc.b    CMD_CLEAR_MAIN_MENU
@@ -19944,8 +19940,8 @@ main_menu_text:
                     dc.b    CMD_TEXT,71,6,'C',0
                     dc.b    CMD_END
 patterns_ed_help_text_1:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
+                    dc.b    CMD_SET_SUB_COPPERLIST
+                    dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,0,8,  '- Pattern Editor Help Page 1 --------------------------------------------------',0
                     dc.b    CMD_TEXT,0,10, '- Block Movement -------- - Block Operations ------ - Pattern Movement --------',0
                     dc.b    CMD_TEXT,0,12, '___SPACE  Remove Block    ___F3  Copy Block         ___CURSOR Move Cursor',0
@@ -19969,8 +19965,8 @@ patterns_ed_help_text_1:
                     dc.b    CMD_TEXT,0,30, 'CT_CURSUD  Add/Sub Sample',0
                     dc.b    CMD_END
 patterns_ed_help_text_2:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
+                    dc.b    CMD_SET_SUB_COPPERLIST
+                    dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,23,12,'- Pattern Editor Help Page 2 -----',0
                     dc.b    CMD_TEXT,23,14,'- Edit ---------------------------',0
                     dc.b    CMD_TEXT,23,16,'___TAB Change Edit Mode',0
@@ -19983,8 +19979,8 @@ patterns_ed_help_text_2:
                     dc.b    CMD_TEXT,23,23,'CT_DEL Like ___DEL + QuantPolyMove',0
                     dc.b    CMD_END
 effects_help_text:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
+                    dc.b    CMD_SET_SUB_COPPERLIST
+                    dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,17,8, '- Effects Help Page --------------------------',0
                     dc.b    CMD_TEXT,17,10,'1 Portamento Down (Period)',0
                     dc.b    CMD_TEXT,17,11,'2 Portamento Up   (Period)',0
@@ -20005,8 +20001,8 @@ effects_help_text:
                     dc.b    CMD_TEXT,38,30,                     '7x:Vol Up   Once (VO)',0
                     dc.b    CMD_END
 play_help_text:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
+                    dc.b    CMD_SET_SUB_COPPERLIST
+                    dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,9,10, '- Play Song, Play Pattern Help Page -------------------------',0
                     dc.b    CMD_TEXT,9,12, '- Misc --------------------------- - Octave Settings --------',0
                     dc.b    CMD_TEXT,9,14, '___ESC       Stop                  ___F1 Set Octave 1+2',0
@@ -20303,7 +20299,7 @@ lbB017960:
                     dc.l    draw_song_metrics,0
 lbL017972:
                     dc.l    0
-                    dc.w    %10000000000001
+                    dc.w    MOUSE_CMD_NO_HILITE|%1
                     dc.b    0,7,80,24
                     dc.l    lbC01E9DC,0
 lbW017984:
@@ -20465,34 +20461,34 @@ lbW017BCE:
 
 ; ===========================================================================
 files_sel_text:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
-                    dc.b    5,1,90,38,5
+                    dc.b    CMD_SET_SUB_COPPERLIST
+                    dc.b    CMD_PREPARE_SUB_SCREEN
+                    dc.b    CMD_DRAW_BOX,1,90,38,5
                     dc.b    CMD_TEXT,2,10,'Drawer:',0
                     dc.b    CMD_TEXT,2,11,'File..:',0
                     dc.b    CMD_TEXT,2,12,'  Ok   ReRead Parent Delete Cancel',0
-                    dc.b    5,63,11,16,3
+                    dc.b    CMD_DRAW_BOX,63,11,16,3
                     dc.b    CMD_TEXT,63,10,'OkDir',0
                     dc.b    CMD_TEXT,64,12,'Install Delete',0
-                    dc.b    5,41,9,20,5
+                    dc.b    CMD_DRAW_BOX,41,9,20,5
                     dc.b    CMD_TEXT,41,8, 'Format',0
                     dc.b    CMD_TEXT,42,10,'Drive..:',0
                     dc.b    CMD_TEXT,42,11,'Verify.:      Go',0
                     dc.b    CMD_TEXT,42,12,'Clear..:',0
                     dc.b    CMD_TEXT,1,15, 'Directories',0
-                    dc.b    5,1,16,38,14
+                    dc.b    CMD_DRAW_BOX,1,16,38,14
                     dc.b    CMD_TEXT,41,15,'Files',0
-                    dc.b    5,41,16,38,14
+                    dc.b    CMD_DRAW_BOX,41,16,38,14
                     dc.b    CMD_END
                     even
 lbW018706:
                     dc.l    lbW018718
-                    dc.w    %10100000000001
+                    dc.w    MOUSE_CMD_NO_HILITE|%100000000001
                     dc.b    1,16,38,14
                     dc.l    lbC026D32,lbC026DA6
 lbW018718:
                     dc.l    lbW01872A
-                    dc.w    %10100000000001
+                    dc.w    MOUSE_CMD_NO_HILITE|%100000000001
                     dc.b    41,16,38,14
                     dc.l    lbC026D32,lbC026D64
 lbW01872A:
@@ -20577,12 +20573,12 @@ lbW01881E:
 
 ; ===========================================================================
 sample_ed_text:
-                    dc.b    12
-                    dc.b    4
+                    dc.b    CMD_SET_SUB_COPPERLIST
+                    dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,1,8, 'Sample Editor',0
                     dc.b    CMD_TEXT,1,10,'Sample Name:',0
                     dc.b    CMD_TEXT,38,9,'Length RepStr RepLen  Mode  BStart  BEnd',0
-                    dc.b    9,0,94,13,0
+                    dc.b    CMD_DRAW_FILLED_BOX_FROM_POINTER,0,94,13,0
                     dc.l    max_lines
                     dc.b    CMD_TEXT,1,0,'Exit  Mark  Cut    Paste   Change  Change  Delta   Set',0
                     dc.b    CMD_TEXT,1,1,'Swap  All   Copy  Reverse  Volume  Period  Filter  Repeat',0
@@ -20593,8 +20589,8 @@ sample_ed_text:
                     dc.b    CMD_END
                     even
 sample_ed_help_text:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
+                    dc.b    CMD_SET_SUB_COPPERLIST
+                    dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,2,13,'- Sample Editor Help Page --------------------------------------------------',0
                     dc.b    CMD_TEXT,2,15,'- Samples ------------- - Repeats --------------------- - Misc -------------',0
                     dc.b    CMD_TEXT,2,17,'SH_L       Load Sample  ___DEL    Clear  Repeats        ___ESC  Exit',0
@@ -20811,11 +20807,11 @@ lbW018BC0:
 
 ; ===========================================================================
 prefs_text:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
+                    dc.b    CMD_SET_SUB_COPPERLIST
+                    dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,29,8,'Oktalyzer Preferences',0
                     dc.b    CMD_TEXT,1,10,'Misc',0
-                    dc.b    5,1,11,25,13
+                    dc.b    CMD_DRAW_BOX,1,11,25,13
                     dc.b    CMD_TEXT,2,12,'PattFormat:',0
                     dc.b    CMD_TEXT,2,13,'Default PatternLen:',0
                     dc.b    CMD_TEXT,2,15,'Sample Load Mode..:',0
@@ -20825,7 +20821,7 @@ prefs_text:
                     dc.b    CMD_TEXT,2,21,'Color Set...:',0
                     dc.b    CMD_TEXT,18,22,'RGB RGB',0
                     dc.b    CMD_TEXT,28,10,'Polyphony',0
-                    dc.b    5,28,11,12,13
+                    dc.b    CMD_DRAW_BOX,28,11,12,13
                     dc.b    CMD_TEXT,29,12,'<        >',0
                     dc.b    CMD_TEXT,29,13,'<        >',0
                     dc.b    CMD_TEXT,29,14,'<        >',0
@@ -20837,14 +20833,14 @@ prefs_text:
                     dc.b    CMD_TEXT,30,20, '12345678',0
                     dc.b    CMD_TEXT,29,22,'Left-Right',0
                     dc.b    CMD_TEXT,42,10,'IndexPos',0
-                    dc.b    5,42,11,8,13
+                    dc.b    CMD_DRAW_BOX,42,11,8,13
                     dc.b    CMD_TEXT,43,13,'F6:',0
                     dc.b    CMD_TEXT,43,15,'F7:',0
                     dc.b    CMD_TEXT,43,17,'F8:',0
                     dc.b    CMD_TEXT,43,19,'F9:',0
                     dc.b    CMD_TEXT,43,21,'F0:',0
                     dc.b    CMD_TEXT,52,10,'Charset Editor',0
-                    dc.b    5,52,11,27,18
+                    dc.b    CMD_DRAW_BOX,52,11,27,18
                     dc.b    CMD_TEXT,53,20,'Char:',0
                     dc.b    CMD_TEXT,53,22,'OutL. ',   $80,0
                     dc.b    CMD_TEXT,53,23,'UnDo ',$82,' ',$83,0
@@ -20852,16 +20848,16 @@ prefs_text:
                     dc.b    CMD_TEXT,53,25,'Cut Copy',0
                     dc.b    CMD_TEXT,53,26,'Mirror X',0
                     dc.b    CMD_TEXT,53,27,'Mirror Y',0
-                    dc.b    7,62,12,16,16
-                    dc.B    CMD_TEXT,2,27,'Load  Save  Use  Old  Cancel',0
+                    dc.b    CMD_DRAW_BOX_OUTER,62,12,16,16
+                    dc.b    CMD_TEXT,2,27,'Load  Save  Use  Old  Cancel',0
                     dc.b    CMD_TEXT,33,25,'ST Load Modes',0
-                    dc.b    7,33,26,17,3
+                    dc.b    CMD_DRAW_BOX,33,26,17,3
                     dc.b    CMD_TEXT,34,27,'Smps:   Trks:',0
                     dc.b    CMD_END
                     even
 prefs_help_text:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
+                    dc.b    CMD_SET_SUB_COPPERLIST
+                    dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,17,14,'- Preferences Help Page ---------------------',0
                     dc.b    CMD_TEXT,17,16,'- Chars ------------------ - Misc -----------',0
                     dc.b    CMD_TEXT,17,18,'___CURSOR Move  CharCursor ___ESC  Cancel',0
@@ -21066,7 +21062,7 @@ lbW01931A:
                     dc.l    inc_f10_key_line_jump_value,dec_f10_key_line_jump_value
 lbW01932C:
                     dc.l    lbW01933E
-                    dc.w    %10000000000001
+                    dc.w    MOUSE_CMD_NO_HILITE|%1
                     dc.b    53,12,8,7
                     dc.l    set_char_pixel,clear_char_pixel
 lbW01933E:
@@ -21131,7 +21127,7 @@ lbW019404:
                     dc.l    mirror_char_y,0
 lbW019416:
                     dc.l    lbW019428
-                    dc.w    %10000000000001
+                    dc.w    MOUSE_CMD_NO_HILITE|%1
                     dc.b    62,12,16,16
                     dc.l    select_current_char,0
 lbW019428:
@@ -21209,23 +21205,23 @@ lbW019514:
 
 ; ===========================================================================
 effects_ed_text:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
+                    dc.b    CMD_SET_SUB_COPPERLIST
+                    dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,1,8,'Oktalyzer Effect Editor',0
-                    dc.b    5,1,9,56,5
+                    dc.b    CMD_DRAW_BOX,1,9,56,5
                     dc.b    CMD_TEXT,4,11,'Add  Sub  Copy  Cut  Paste  Load  Save  DO!!  Exit',0
                     dc.b    CMD_TEXT,59,8,'Status',0
                     dc.b    CMD_TEXT,78,8,'_',0
                     dc.b    CMD_TEXT,61,10,'CurrentLine.: __',0
                     dc.b    CMD_TEXT,61,11,'CurrentChan.:  _',0
                     dc.b    CMD_TEXT,61,12,'________________',0
-                    dc.b    5,59,9,20,5
+                    dc.b    CMD_DRAW_BOX,59,9,20,5
                     dc.b    CMD_TEXT,1,15,'Effect Conversion Filter Term Table',0
-                    dc.b    5,1,16,78,14
+                    dc.b    CMD_DRAW_BOX,1,16,78,14
                     dc.b    CMD_END
 effects_ed_help_text:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
+                    dc.b    CMD_SET_SUB_COPPERLIST
+                    dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,21,12,'- Effect Editor Help Page ------------',0
                     dc.b    CMD_TEXT,21,14,'- Menu ----- - Movement --------------',0
                     dc.b    CMD_TEXT,21,16,'AM_C   Copy  ___CURSOR UD Scroll',0
@@ -21238,8 +21234,8 @@ effects_ed_help_text:
                     dc.b    CMD_TEXT,21,23,'___ESC Exit  AL_HELP Compute Help Page',0
                     dc.b    CMD_END
 compute_help_text:
-                    dc.b    CMD_SET_SUB_SCREEN
-                    dc.b    4
+                    dc.b    CMD_SET_SUB_COPPERLIST
+                    dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,8,8, '- Compute Help Page --------------------------------------------',0
                     dc.b    CMD_TEXT,8,10,'- Operands - Prio -  - Variables ------------  - Signs ---------',0
                     dc.b    CMD_TEXT,8,12,'<< SHIFT LEFT     5  P  Pattern Number         ~ NOTATION',0
@@ -21308,27 +21304,27 @@ lbW019684:
                     dc.l    lbC02B7DE,0
 lbW019696:
                     dc.l    lbW0196A8
-                    dc.w    %10000000000001
+                    dc.w    MOUSE_CMD_NO_HILITE|%1
                     dc.b    2,16,4,14
                     dc.l    lbC02B7E6,lbC02B7EA
 lbW0196A8:
                     dc.l    lbW0196BA
-                    dc.w    %10000000000001
+                    dc.w    MOUSE_CMD_NO_HILITE|%1
                     dc.b    9,16,5,14
                     dc.l    lbC02BCE6,0
 lbW0196BA:
                     dc.l    lbW0196CC
-                    dc.w    %10000000000001
+                    dc.w    MOUSE_CMD_NO_HILITE|%1
                     dc.b    14,16,5,14
                     dc.l    lbC02BCFE,0
 lbW0196CC:
                     dc.l    lbW0196DE
-                    dc.w    %10000000000001
+                    dc.w    MOUSE_CMD_NO_HILITE|%1
                     dc.b    20,16,25,14
                     dc.l    lbC02BD16,0
 lbW0196DE:
                     dc.l    0
-                    dc.w    %10000000000001
+                    dc.w    MOUSE_CMD_NO_HILITE|%1
                     dc.b    52,16,25,14
                     dc.l    lbC02BD2E,0
 lbW0196F0:

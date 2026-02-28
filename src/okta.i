@@ -56,11 +56,15 @@ MIDI_OUT            equ     2
 CMD_END             equ     0
 CMD_TEXT            equ     2
 CMD_CLEAR_MAIN_MENU equ     3
+CMD_PREPARE_SUB_SCREEN equ  4
+CMD_DRAW_BOX        equ     5
 CMD_SUB_COMMAND     equ     6
+CMD_DRAW_BOX_OUTER  equ     7
 CMD_TEXT_PTR        equ     8
+CMD_DRAW_FILLED_BOX_FROM_POINTER equ 9
 CMD_CLEAR_CHARS     equ     10
-CMD_SET_SUB_SCREEN  equ     11
-CMD_SET_MAIN_SCREEN equ     12
+CMD_SET_SUB_COPPERLIST equ  11
+CMD_SET_MAIN_COPPERLIST equ 12
 CMD_MOVE_TO_LINE    equ     13
 
 ERROR_NO_MEM        equ     0
@@ -121,13 +125,16 @@ EVT_KEY_RELEASED    equ     14
 RESP_EVT_ROUT_1     equ     10
 RESP_EVT_ROUT_2     equ     14
 
-MOUSE_CMD_NO_REPEAT equ     %1000000000000
+MOUSE_CMD_NO_REPEAT_BIT equ 12
+MOUSE_CMD_NO_HILITE_BIT equ 13
+MOUSE_CMD_NO_REPEAT equ     (1<<MOUSE_CMD_NO_REPEAT_BIT)
+MOUSE_CMD_NO_HILITE equ     (1<<MOUSE_CMD_NO_HILITE_BIT)
 
-VIS_DRAW_VUMETERS   equ     1<<0
-VIS_DRAW_ROW        equ     1<<1
-VIS_DRAW_POS        equ     1<<2
-VIS_TRIG_VUMETERS   equ     1<<3
-VIS_DRAW_SPEED      equ     1<<4
+VIS_DRAW_VUMETERS   equ     (1<<0)
+VIS_DRAW_ROW        equ     (1<<1)
+VIS_DRAW_POS        equ     (1<<2)
+VIS_TRIG_VUMETERS   equ     (1<<3)
+VIS_DRAW_SPEED      equ     (1<<4)
 
 OKT_IN_TRACKER      equ     1
 SMPS_NUMBER         equ     36
