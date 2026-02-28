@@ -1056,7 +1056,7 @@ OKT_panning_table:  dc.w    $af,$50,$50,$af,$af,$50,$50,$af
 OKT_global_volume:
                     dc.w    64
 OKT_old_cia_timer:
-                    dcb.b   2,0
+                    dcb.b   4,0
 OKT_vbr:
                     dc.l    0
 OKT_old_irq:

@@ -4242,6 +4242,16 @@ do_load_song:
                     lea     (SAMP_MSG,pc),a0
                     bsr     read_chunks_content_from_struct
                     bmi     lbC020EA6
+                    
+                    ; fix samples lengths
+                    ; (a bug in original oktalyzer)
+                    lea     (OKT_samples_infos),a0
+                    moveq   #SMPS_NUMBER-1,d7
+.fix_samples_length:
+                    bclr    #0,SMP_LEN+3(a0)
+                    lea     (SMP_INFOS_LEN,a0),a0
+                    dbf     d7,.fix_samples_length
+
                     ; read patterns data
                     bsr     read_patterns_from_okta_song_file
                     bmi     lbC020EA6
@@ -4809,11 +4819,15 @@ patch_older_patterns:
                     ; volume was kept
                     move.b  2(a0),d0
                     bne     .no_kept_volume_l
+                    move.b  (a0),d0
+                    beq     .no_kept_volume_l
                     move.b  #$1f,2(a0)
                     move.b  (a2),3(a0)
 .no_kept_volume_l:
                     move.b  2+4(a0),d1
                     bne     .no_kept_volume_r
+                    move.b  4(a0),d0
+                    beq     .no_kept_volume_r
                     move.b  #$1f,2+4(a0)
                     move.b  1(a2),3+4(a0)
 .no_kept_volume_r:
@@ -6229,13 +6243,13 @@ lbW02263A:
                     dc.w    0
 
 ; ===========================================================================
-replay_int:
-                    movem.l d1-d7/a0-a6,-(a7)
+;replay_int:
+;                    movem.l d1-d7/a0-a6,-(a7)
 ;                    bsr     OKT_Play
-                    move.w  #$f00,$dff180
-                    movem.l (a7)+,d1-d7/a0-a6
-                    moveq   #0,d0
-                    rts
+;                    move.w  #$f00,$dff180
+;                    movem.l (a7)+,d1-d7/a0-a6
+;                    moveq   #0,d0
+;                    rts
 
 ; ===========================================================================
 install_midi_ints:
@@ -8124,24 +8138,25 @@ OKT_init:
                     bne     .OKT_no_double_channels
                     ; $78
                     addq.l  #8,a0
-                    move.l  a0,(OKT_vbr)
                     move.l  (a0),(OKT_old_irq)
                     lea     (OKT_cia_int,pc),a2
                     move.l	a2,(a0)
                     lea     $BFD000+CIATBLO,a3
                     lea     (OKT_old_cia_timer,pc),a2
-                    move.b  #$7F,CIAICR-CIATBLO(a3)
-                    move.b  (a3),(a2)+
+                    move.b  CIAICR-CIATBLO(a3),(a2)+
+                    move.b  CIACRB-CIATBLO(a3),(a2)+
+                    move.b  CIATBLO-CIATBLO(a3),(a2)+
                     move.b  CIATBHI-CIATBLO(a3),(a2)
+                    move.b  #%01111111,CIAICR-CIATBLO(a3)
                     move.l	#1773447,d0
 ; NTSC
 ;                    move.l  #1789773,d0
                     divu    #125,d0
-                    move.b  d0,(a3)
+                    move.b  d0,CIATBLO-CIATBLO(a3)
                     lsr.w   #8,d0
                     move.b  d0,CIATBHI-CIATBLO(a3)
                     move.b  #%10000010,CIAICR-CIATBLO(a3)
-                    move.b  #%10001,CIACRB-CIATBLO(a3)
+                    move.b  #%00010001,CIACRB-CIATBLO(a3)
                     move.w  #$E000,(INTENA,a1)
                     move.w  #$8200,(DMACON,a1)
                     moveq   #1,d0
@@ -8159,6 +8174,7 @@ OKT_init:
                     or.w    #$820F,d0
                     move.w  d0,(DMACON,a1)
                 ELSE
+                    ; Vampire only
                     lea     (_CUSTOM),a1
                     move.w  #$FF,(ADKCON,a1)
                     move.w  #$7FFF,(INTREQ,a1)
@@ -8169,18 +8185,20 @@ OKT_init:
                     move.l	a2,(a0)
                     lea     $BFD000+CIATBLO,a3
                     lea     (OKT_old_cia_timer,pc),a2
-                    move.b  #$7F,CIAICR-CIATBLO(a3)
-                    move.b  (a3),(a2)+
+                    move.b  CIAICR-CIATBLO(a3),(a2)+
+                    move.b  CIACRB-CIATBLO(a3),(a2)+
+                    move.b  CIATBLO-CIATBLO(a3),(a2)+
                     move.b  CIATBHI-CIATBLO(a3),(a2)
+                    move.b  #%01111111,CIAICR-CIATBLO(a3)
                     move.l	#1773447,d0
 ; NTSC
 ;                    move.l  #1789773,d0
                     divu    #125,d0
-                    move.b  d0,(a3)
+                    move.b  d0,CIATBLO-CIATBLO(a3)
                     lsr.w   #8,d0
                     move.b  d0,CIATBHI-CIATBLO(a3)
                     move.b  #%10000010,CIAICR-CIATBLO(a3)
-                    move.b  #%10001,CIACRB-CIATBLO(a3)
+                    move.b  #%00010001,CIACRB-CIATBLO(a3)
                     move.w  #$E000,(INTENA,a1)
                     move.w  #$8200,(DMACON,a1)
                 ENDC
@@ -8188,7 +8206,8 @@ OKT_init:
 
 ; ===========================================================================
 OKT_stop:
-                    movem.l d0/a0/a1/a2/a6,-(a7)
+                    movem.l d0/a0/a1/a2/a3/a6,-(a7)
+                    move.l  (OKT_vbr,pc),a3
                     lea     (_CUSTOM|OKT_AUDIO_DMA),a2
                     move.w  #$7FFF,(_CUSTOM|INTREQ)
                 IFD OKT_AUDIO_VAMPIRE
@@ -8213,17 +8232,19 @@ OKT_stop:
                     move.w  d0,(AUD3VOL-OKT_AUDIO_DMA,a2)
                     tst.w   (OKT_audio_int_single_bit)
                     bne     .OKT_no_double_channels
+                    ; was a CIA interrupt
+                    addq.l  #8,a3
                 ENDC
                     lea     $BFD000+CIATBLO,a0
                     lea     (OKT_old_cia_timer,pc),a1
-                    move.b  (a1)+,(a0)
+                    move.b  (a1)+,CIAICR-CIATBLO(a0)
+                    move.b  (a1)+,CIACRB-CIATBLO(a0)
+                    move.b  (a1)+,CIATBLO-CIATBLO(a0)
                     move.b  (a1),CIATBHI-CIATBLO(a0)
-                    move.b  #%10000,CIACRB-CIATBLO(a0)
 .OKT_no_double_channels:
-                    move.l  (OKT_vbr,pc),a0
-                    move.l  (OKT_old_irq,pc),(a0)
+                    move.l  (OKT_old_irq,pc),(a3)
                     move.w	#$C000,(_CUSTOM|INTENA)
-                    movem.l (a7)+,d0/a0/a1/a2/a6
+                    movem.l (a7)+,d0/a0/a1/a2/a3/a6
                     rts
 
 ; ===========================================================================
@@ -8388,8 +8409,8 @@ OKT_main:
 OKT_no_mix:
                     rts
 OKT_mixing_routines_table:
-                    dc.l    OKT_mix_000_lr,OKT_no_mix,OKT_mix_000_empty
-                    dc.l    OKT_mix_020_lr,OKT_no_mix,OKT_mix_020_empty
+                    dc.l    OKT_mix_000,OKT_no_mix,OKT_mix_000_empty
+                    dc.l    OKT_mix_020,OKT_no_mix,OKT_mix_020_empty
 OKT_mixing_routines_index:
                     dc.w    0
 
@@ -8541,7 +8562,7 @@ OKT_create_channel_waveform_data:
                     rts
 
 ; ===========================================================================
-OKT_mix_000_lr:
+OKT_mix_000:
                     move.l  (OKT_channels_notes_buffers,pc),a1
                     lea     (a5),a4
                     movem.l d7/a2/a5/a6,-(a7)
@@ -8591,7 +8612,7 @@ OKT_mix_000_empty:
                     rts
 
 ; ===========================================================================
-OKT_mix_020_lr:
+OKT_mix_020:
                     move.l  (OKT_channels_notes_buffers,pc),a1
                     lea     (a5),a4
                     movem.l d7/a2/a5/a6,-(a7)
@@ -8872,7 +8893,7 @@ OKT_scaling_freqs_table:
                     dc.l    $1AF68,$1CA95,$1E555,$20365
             ENDC        ;OKT_AUDIO_VAMPIRE
 OKT_old_cia_timer:
-                    dcb.b   2,0
+                    dcb.b   4,0
 OKT_vbr:
                     dc.l    0
 OKT_old_irq:
@@ -21579,7 +21600,7 @@ pattern_copper_jump:
                     dcb.w   6,0
 ; =====
 copper_start_line:
-                    dc.w    $6409,$FFFE
+                    dc.w    $6411,$FFFE
 main_back_color:
                     dc.w    COLOR00,0
 main_front_color:
@@ -21591,7 +21612,7 @@ main_bplcon0:
 copper_pal_line:
                     dc.w    $FFDF,$FFFE
 copper_credits_line:
-                    dc.w    $2409,$FFFE
+                    dc.w    $2411,$FFFE
 copper_credits_back_color:
                     dc.w    COLOR00,0
 copper_credits_front_color:
@@ -21600,17 +21621,17 @@ credits_bp:
                     dc.w    BPL1PTH,0,BPL1PTL,0
                     dc.w    BPLCON0,$9200
 copper_end_line:
-                    dc.w    $2C09,$FFFE
+                    dc.w    $2C11,$FFFE
                     dc.w    BPLCON0,$200
                     dc.w    $FFFF,$FFFE
                     dc.w    $FFFF,$FFFE
 ; =====
 main_menu_copper_part:
-                    dc.w    $2C09,$FFFE
+                    dc.w    $2C11,$FFFE
 main_menu_bp:
                     dc.w    BPL1PTH,0,BPL1PTL,0
                     dc.w    BPLCON0,$9200
-                    dc.w    $3309,$FFFE
+                    dc.w    $3311,$FFFE
 main_menu_back_color:
                     dc.w    COLOR00,0
 main_menu_front_color:
@@ -21619,7 +21640,7 @@ main_menu_copper_back_jump:
                     dcb.w   6,0
 ; =====
 pattern_copper_part:
-                    dc.w    $4409,$FFFE
+                    dc.w    $4411,$FFFE
 copper_int:
                     dc.w    BPLCON0,$9200
 pattern_copper_back_jump:

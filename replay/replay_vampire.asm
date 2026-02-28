@@ -52,18 +52,20 @@ OKT_custom_init:
                     move.l	a2,(a0)
                     lea     $BFD000+CIATBLO,a3
                     lea     (OKT_old_cia_timer-OKT_vars,a6),a2
-                    move.b  #$7F,CIAICR-CIATBLO(a3)
-                    move.b  (a3),(a2)+
+                    move.b  CIAICR-CIATBLO(a3),(a2)+
+                    move.b  CIACRB-CIATBLO(a3),(a2)+
+                    move.b  CIATBLO-CIATBLO(a3),(a2)+
                     move.b  CIATBHI-CIATBLO(a3),(a2)
+                    move.b  #%01111111,CIAICR-CIATBLO(a3)
                     move.l	#1773447,d0
 ; NTSC
 ;                    move.l  #1789773,d0
                     divu    #125,d0
-                    move.b  d0,(a3)
+                    move.b  d0,CIATBLO-CIATBLO(a3)
                     lsr.w   #8,d0
                     move.b  d0,CIATBHI-CIATBLO(a3)
                     move.b  #%10000010,CIAICR-CIATBLO(a3)
-                    move.b  #%10001,CIACRB-CIATBLO(a3)
+                    move.b  #%00010001,CIACRB-CIATBLO(a3)
                     move.w  #$E000,($DFF09A)
                     move.w  #$8200,($DFF096)
                     rts
@@ -87,9 +89,10 @@ OKT_stop:
                     move.w  d0,($478-OKT_AUDIO_BASE,a2)
                     lea     $BFD000+CIATBLO,a0
                     lea     (OKT_old_cia_timer-OKT_vars,a6),a1
-                    move.b  (a1)+,(a0)
+                    move.b  (a1)+,CIAICR-CIATBLO(a0)
+                    move.b  (a1)+,CIACRB-CIATBLO(a0)
+                    move.b  (a1)+,CIATBLO-CIATBLO(a0)
                     move.b  (a1),CIATBHI-CIATBLO(a0)
-                    move.b  #%10000,CIACRB-CIATBLO(a0)
                     move.l  (OKT_vbr-OKT_vars,a6),a0
                     move.l  (OKT_old_irq-OKT_vars,a6),(a0)
                     move.w	#$C000,($DFF09A)

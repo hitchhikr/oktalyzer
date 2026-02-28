@@ -256,18 +256,20 @@ OKT_custom_init:
                     move.l	a2,(a0)
                     lea     $BFD000+CIATBLO,a3
                     lea     (OKT_old_cia_timer-OKT_vars,a6),a2
-                    move.b  #$7F,CIAICR-CIATBLO(a3)
-                    move.b  (a3),(a2)+
+                    move.b  CIAICR-CIATBLO(a3),(a2)+
+                    move.b  CIACRB-CIATBLO(a3),(a2)+
+                    move.b  CIATBLO-CIATBLO(a3),(a2)+
                     move.b  CIATBHI-CIATBLO(a3),(a2)
+                    move.b  #%01111111,CIAICR-CIATBLO(a3)
                     move.l	#1773447,d0
 ; NTSC
 ;                    move.l  #1789773,d0
                     divu    #125,d0
-                    move.b  d0,(a3)
+                    move.b  d0,CIATBLO-CIATBLO(a3)
                     lsr.w   #8,d0
                     move.b  d0,CIATBHI-CIATBLO(a3)
                     move.b  #%10000010,CIAICR-CIATBLO(a3)
-                    move.b  #%10001,CIACRB-CIATBLO(a3)
+                    move.b  #%00010001,CIACRB-CIATBLO(a3)
                     move.w  #$E000,($9A-$A0,a1)
                     move.w  #$8200,($96-$A0,a1)
                     rts
@@ -302,9 +304,10 @@ OKT_stop:
                     bne     .OKT_no_double_channels
                     lea     $BFD000+CIATBLO,a0
                     lea     (OKT_old_cia_timer-OKT_vars,a6),a1
-                    move.b  (a1)+,(a0)
+                    move.b  (a1)+,CIAICR-CIATBLO(a0)
+                    move.b  (a1)+,CIACRB-CIATBLO(a0)
+                    move.b  (a1)+,CIATBLO-CIATBLO(a0)
                     move.b  (a1),CIATBHI-CIATBLO(a0)
-                    move.b  #%10000,CIACRB-CIATBLO(a0)
 .OKT_no_double_channels:
                     move.l  (OKT_vbr-OKT_vars,a6),a0
                     move.l  (OKT_old_irq-OKT_vars,a6),(a0)
@@ -460,8 +463,8 @@ OKT_main:
 OKT_no_mix:
                     rts
 OKT_mixing_routines_table:
-                    dc.l    OKT_mix_000_lr,OKT_no_mix,OKT_mix_000_empty
-                    dc.l    OKT_mix_020_lr,OKT_no_mix,OKT_mix_020_empty
+                    dc.l    OKT_mix_000,OKT_no_mix,OKT_mix_000_empty
+                    dc.l    OKT_mix_020,OKT_no_mix,OKT_mix_020_empty
 OKT_mixing_routines_index:
                     dc.w    0
 
@@ -612,7 +615,7 @@ OKT_create_channel_waveform_data:
                     rts
 
 ; ===========================================================================
-OKT_mix_000_lr:
+OKT_mix_000:
                     move.l  (OKT_channels_notes_buffers,pc),a1
                     lea     (a5),a4
                     movem.l d7/a2/a5/a6,-(a7)
@@ -662,7 +665,7 @@ OKT_mix_000_empty:
                     rts
 
 ; ===========================================================================
-OKT_mix_020_lr:
+OKT_mix_020:
                     move.l  (OKT_channels_notes_buffers,pc),a1
                     lea     (a5),a4
                     movem.l d7/a2/a5/a6,-(a7)

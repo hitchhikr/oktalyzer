@@ -4,6 +4,8 @@
 ; Original code by Armin 'TIP' Sander.
 ; Disassembled and improved by Franck 'hitchhikr' Charlet.
 ; ===========================================================================
+                    opt     o+
+                    opt     all+
 
 ; ===========================================================================
                     section start,code
