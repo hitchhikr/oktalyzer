@@ -6519,7 +6519,9 @@ lbC022A68:
                     rts
 lbL022A76:
                     dcb.l   12,0
-lbC022AA6:
+
+; ===========================================================================
+send_midi_out:
                     tst.b   d2
                     beq     lbC022AEE
                     movem.l d2-d6/a2,-(a7)
@@ -7238,7 +7240,7 @@ OKT_fill_double_channel_data:
 .OKT_max:
                     ; sample length
                     move.l  (SMP_LEN,a1),d3
-                    jsr     (lbC022AA6,pc)
+                    jsr     (send_midi_out,pc)
 .OKT_empty:
                     movem.l (a7)+,d0-d4/a0/a1
                     bra     .OKT_done_midi_out
@@ -7359,7 +7361,7 @@ OKT_fill_single_channel_data:
 .OKT_max:
                     ; length
                     move.l  (SMP_LEN,a1),d3
-                    jsr     (lbC022AA6,pc)
+                    jsr     (send_midi_out,pc)
 .OKT_empty:
                     movem.l (a7)+,d0-d4/a0/a1
                     bra     .OKT_done_midi_out
