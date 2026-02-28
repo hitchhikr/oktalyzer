@@ -9,7 +9,7 @@ To do:
 - Make samples start from 1 instead of 0 (so reduce them to 35) and mimic Protracker replay behaviours.
 - 16 bit samples support in the Vampire version (keep the sample type word in infos).
 - The possibility to load riff samples (8 bit but also 16 bit for Vampire).
-- Remove the 15 samples/8 tracks modules loading and check for 4 tracks to 8 tracks modules signatures<br>
+- Remove the 15 samples/8 tracks modules loading and check for 4 tracks to 8 tracks modules signatures<br>
   (and load them).
 - Decode the rest of the source.
 - Add new pattern effects.
