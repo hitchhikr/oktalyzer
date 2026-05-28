@@ -904,7 +904,7 @@ OKT_opcodes_store_4_bytes_000_e:
                     move.b  d0,(a1)+
 OKT_opcodes_store_4_bytes_000:
                     dc.w    OKT_opcodes_store_4_bytes_000-OKT_opcodes_store_4_bytes_000_e,4
-                IFD __VASM__
+                IFD __VASM
                     mc68020
                 ENDC
 ; ==================
@@ -931,7 +931,7 @@ OKT_opcodes_store_4_bytes_020_e:
                     move.l  (a5,d0.w*4),(a1)+
 OKT_opcodes_store_4_bytes_020:
                     dc.w    OKT_opcodes_store_4_bytes_020-OKT_opcodes_store_4_bytes_020_e,4
-                IFD __VASM__
+                IFD __VASM
                     mc68000
                 ENDC
 

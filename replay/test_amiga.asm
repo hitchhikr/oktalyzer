@@ -4,8 +4,10 @@
 ; Original code by Armin 'TIP' Sander.
 ; Disassembled and improved by Franck 'hitchhikr' Charlet.
 ; ===========================================================================
+                IFD __VASM
                     opt     o+
                     opt     all+
+                ENDC
 
 ; ===========================================================================
                     section start,code
