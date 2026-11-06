@@ -347,6 +347,9 @@ OKT_audio_int:
                     and.w   (OKT_audio_int_single_bit,pc),d0
                     beq     .OKT_no_int
                     move.w	d0,$9C-$1E(a1)
+                IFD SHOW_RASTERS
+                    move.w  #$77,$dff180
+                ENDC
                     bsr     OKT_main
                     lea     (_CUSTOM|OKT_AUDIO_BASE),a1
                     move.l  (OKT_final_mixing_buffers-OKT_vars,a6),a0
@@ -374,6 +377,9 @@ OKT_audio_int:
                     lea     (512*2,a0),a0
                     move.l  a0,($30,a1)
 .OKT_no_int:
+                IFD SHOW_RASTERS
+                    move.w  #0,$dff180
+                ENDC
                     movem.l	(a7)+,d0-a6
                     rte
 
@@ -384,7 +390,13 @@ OKT_cia_int:
                     lea     $DFF09C,a0
                     move.w  #$2000,(a0)
                     move.w  #$2000,(a0)
+                IFD SHOW_RASTERS
+                    move.w  #$77,$dff180
+                ENDC
                     bsr     OKT_replay_handler
+                IFD SHOW_RASTERS
+                    move.w  #0,$dff180
+                ENDC
                     movem.l (a7)+,d0-a6
                     rte
 

@@ -6929,7 +6929,6 @@ show_pattern_position_bar:
                     eor.b   d0,(-(SCREEN_BYTES*1),a1)
 .last_column:
                     or.b    #(1<<VIS_DRAW_PATT_POS),refresh_visual
-                    ;bsr     set_pattern_bitplane_from_given_pos
 .no_draw:
                     rts
 current_song_position:
@@ -10639,8 +10638,6 @@ cmd_prepare_sub_screen:
                     bsr     clear_1_line_blitter
                     clr.w   refresh_pattern_pos
                     or.b    #(1<<VIS_DRAW_PATT_POS),refresh_visual
-                    ;moveq   #0,d0
-                    ;jsr     (set_pattern_bitplane_from_given_pos)
                     bra     next_command
 
 ; ===========================================================================

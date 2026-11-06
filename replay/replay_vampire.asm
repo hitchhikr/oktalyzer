@@ -4,8 +4,6 @@
 ; Original code by Armin 'TIP' Sander.
 ; Disassembled and improved by Franck 'hitchhikr' Charlet.
 ; ===========================================================================
-; Music on channels 4 to 7
-; ===========================================================================
 
 ; ===========================================================================
                 IFD __VASM
@@ -135,7 +133,13 @@ OKT_cia_int:
                     lea     $DFF09C,a0
                     move.w  #$2000,(a0)
                     move.w  #$2000,(a0)
-;                    bsr     OKT_replay_handler
+                IFD SHOW_RASTERS
+                    move.w  #$77,$dff180
+                ENDC
+                    bsr     OKT_replay_handler
+                IFD SHOW_RASTERS
+                    move.w  #0,$dff180
+                ENDC
                     movem.l (a7)+,d0-a6
                     rte
 
