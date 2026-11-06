@@ -130,11 +130,13 @@ MOUSE_CMD_NO_HILITE_BIT equ 13
 MOUSE_CMD_NO_REPEAT equ     (1<<MOUSE_CMD_NO_REPEAT_BIT)
 MOUSE_CMD_NO_HILITE equ     (1<<MOUSE_CMD_NO_HILITE_BIT)
 
-VIS_DRAW_VUMETERS   equ     (1<<0)
-VIS_DRAW_ROW        equ     (1<<1)
-VIS_DRAW_POS        equ     (1<<2)
-VIS_TRIG_VUMETERS   equ     (1<<3)
-VIS_DRAW_SPEED      equ     (1<<4)
+VIS_DRAW_VUMETERS   equ     0
+VIS_DRAW_ROW        equ     1
+VIS_DRAW_POS        equ     2
+VIS_TRIG_VUMETERS   equ     3
+VIS_DRAW_SPEED      equ     4
+VIS_DRAW_PATT       equ     5
+VIS_DRAW_PATT_POS   equ     6
 
 OKT_IN_TRACKER      equ     1
 SMPS_NUMBER         equ     36
@@ -154,15 +156,15 @@ SMP_INFOS_LEN:      rs.b    0           ; 32
 CHAN_TYPE:          rs.b    1           ; 0
                     rs.b    1           ; 1 (pad)
 CHAN_SMP_REP_START: rs.l    1           ; 2
-CHAN_SMP_REP_LEN_D: rs.b    0           ; 6 (long word)
 CHAN_SMP_REP_LEN_S: rs.w    1           ; 6
 CHAN_NOTE_S:        rs.w    1           ; 8
-CHAN_PERIOD_S:      rs.b    0           ; 10
-CHAN_NOTE_D:        rs.w    1           ; 10
-CHAN_BASE_NOTE_D:   rs.w    1           ; 12
-CHAN_SMP_PROC_D:    rs.l    1           ; 14
-CHAN_SMP_PROC_LEN_D:rs.l    1           ; 18
-CHAN_LEN:           rs.b    0           ; 22
+CHAN_PERIOD_S:      rs.w    1           ; 10
+CHAN_NOTE_D:        rs.w    1           ; 12
+CHAN_BASE_NOTE_D:   rs.w    1           ; 14
+CHAN_SMP_REP_LEN_D: rs.l    1           ; 16
+CHAN_SMP_PROC_D:    rs.l    1           ; 18
+CHAN_SMP_PROC_LEN_D:rs.l    1           ; 20
+CHAN_LEN:           rs.b    0           ; 24
 
 		            rsreset
 OKT_SCALING_CODE:   rs.b    70800

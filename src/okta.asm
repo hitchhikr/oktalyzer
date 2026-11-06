@@ -405,26 +405,16 @@ vbi_int_code:
                     ; events occuring during replay
                     ; that need visual refresh
                     move.b  (refresh_visual,pc),d0
-                    btst    #0,d0
+                    btst    #VIS_DRAW_VUMETERS,d0
                     beq     .draw_vumeters
-                    and.b   #~VIS_DRAW_VUMETERS,refresh_visual
+                    and.b   #~(1<<VIS_DRAW_VUMETERS),refresh_visual
                     move.w  d0,-(a7)
                     bsr     draw_vumeters
                     move.w  (a7)+,d0
 .draw_vumeters:
-                    btst    #1,d0
-                    beq     .draw_row
-                    and.b   #~VIS_DRAW_ROW,refresh_visual
-                    move.w  d0,-(a7)
-                    move.w  (bar_to_draw_pos),d2
-                    bsr     show_pattern_position_bar
-                    move.w  (bar_to_erase_pos,pc),d2
-                    bsr     show_pattern_position_bar
-                    move.w  (a7)+,d0
-.draw_row:
-                    btst    #2,d0
+                    btst    #VIS_DRAW_POS,d0
                     beq     .draw_pos
-                    and.b   #~VIS_DRAW_POS,refresh_visual
+                    and.b   #~(1<<VIS_DRAW_POS),refresh_visual
                     move.w  d0,-(a7)
                     move.w  (OKT_song_pos,pc),d2
                     moveq   #12,d0
@@ -438,21 +428,46 @@ vbi_int_code:
                     jsr     (draw_2_digits_decimal_number_leading_zeroes)
                     move.w  (a7)+,d0
 .draw_pos:
-                    btst    #3,d0
+                    btst    #VIS_TRIG_VUMETERS,d0
                     beq     .trigger_vumeters
-                    and.b   #~VIS_TRIG_VUMETERS,refresh_visual
+                    and.b   #~(1<<VIS_TRIG_VUMETERS),refresh_visual
                     move.w  d0,-(a7)
                     bsr     trigger_vumeters
                     move.w  (a7)+,d0
 .trigger_vumeters:
-                    btst    #3,d0
+                    btst    #VIS_DRAW_SPEED,d0
                     beq     .draw_speed
-                    and.b   #~VIS_DRAW_SPEED,refresh_visual
+                    and.b   #~(1<<VIS_DRAW_SPEED),refresh_visual
                     move.w  d0,-(a7)
                     move.w  (OKT_current_speed,pc),d0
                     bsr     draw_current_speed
                     move.w  (a7)+,d0
 .draw_speed:
+                    btst    #VIS_DRAW_PATT,d0
+                    beq     .draw_patt
+                    move.w  d0,-(a7)
+                    and.b   #~(1<<VIS_DRAW_PATT),refresh_visual
+                    bsr     set_pattern_bitplane
+                    move.w  (a7)+,d0
+.draw_patt:
+                    btst    #VIS_DRAW_PATT_POS,d0
+                    beq     .draw_patt_pos
+                    move.w  d0,-(a7)
+                    and.b   #~(1<<VIS_DRAW_PATT_POS),refresh_visual
+                    move.w  refresh_pattern_pos,d0
+                    bsr     set_pattern_bitplane_from_given_pos
+                    move.w  (a7)+,d0
+.draw_patt_pos:
+                    btst    #VIS_DRAW_ROW,d0
+                    beq     .draw_row
+                    and.b   #~(1<<VIS_DRAW_ROW),refresh_visual
+                    move.w  d0,-(a7)
+                    move.w  (bar_to_erase_pos,pc),d2
+                    bsr     show_pattern_position_bar
+                    move.w  (bar_to_draw_pos,pc),d2
+                    bsr     show_pattern_position_bar
+                    move.w  (a7)+,d0
+.draw_row:
                     ; must be 0 as some flag is tested right after that
                     moveq   #0,d0
                     movem.l (a7)+,d0-a6
@@ -1680,7 +1695,7 @@ set_pattern_row:
                     bra     .bound_max
 .bounded:
                     move.w  d0,(viewed_pattern_row)
-                    bsr     set_pattern_bitplane
+                    or.b    #(1<<VIS_DRAW_PATT),refresh_visual
                     bra     draw_pattern_caret
 
 ; ===========================================================================
@@ -3175,18 +3190,18 @@ dec_song_position:
 ; ===========================================================================
 draw_pattern:
                     move.w  #$201,(main_bplcon0+2)
-                    bsr     set_pattern_bitplane
+                    or.b    #(1<<VIS_DRAW_PATT),refresh_visual
                     bsr     get_current_pattern_address_and_rows
                     move.w  d0,(pattern_rows_to_display)
                     bsr     erase_pattern_caret
                     jsr     (clear_1_line_blitter)
                     moveq   #0,d7
-                    bsr     lbC0202F0
-lbC0202CC:
+                    bsr     get_current_pattern_ascii_number
+.loop:
                     bsr     draw_row_data
                     addq.w  #1,d7
                     cmp.w   (pattern_rows_to_display),d7
-                    bne     lbC0202CC
+                    bne     .loop
                     bsr     set_caret_to_max_row
                     bsr     set_pattern_row
                     bsr     draw_selection_marquee
@@ -3194,7 +3209,7 @@ lbC0202CC:
                     bra     display_main_menu
 
 ; ===========================================================================
-lbC0202F0:
+get_current_pattern_ascii_number:
                     bsr     get_current_pattern_address_and_rows
                     move.l  a0,a4
                     move.w  d7,d0
@@ -3294,7 +3309,7 @@ draw_one_pattern_row:
                     move.w  d0,-(a7)
                     bsr     lbC01F508
                     move.w  (a7)+,d7
-                    bsr     lbC0202F0
+                    bsr     get_current_pattern_ascii_number
                     bsr     draw_row_data
                     bra     draw_selection_marquee
 
@@ -6139,7 +6154,7 @@ lbC0221BA:
 lbC0221CA:
                     bsr     set_caret_to_max_row
                     bsr     set_pattern_row
-                    bsr     set_pattern_bitplane
+                    or.b    #(1<<VIS_DRAW_PATT),refresh_visual
                     bra     display_main_menu
 lbC0221DA:
                     rts
@@ -6205,8 +6220,10 @@ go_play:
                     bsr     stop_audio_channels
                     bsr     clear_vumeters
                     ; remove after stop
-                    move.w  (OKT_last_pattern_row,pc),d2
+                    move.w  (bar_to_draw_pos,pc),d2
                     bsr     show_pattern_position_bar
+                    clr.w   (lbW01B2B6)
+                    move.w  #-1,(OKT_last_pattern_row)
                     move.w  (OKT_current_speed),(OKT_default_speed)
                     tst.b   (pattern_play_flag)
                     beq     lbC0222E4
@@ -6844,11 +6861,10 @@ lbC022DE6:
 ; ===========================================================================
 show_pattern_position_bar:
                     tst.b   (pattern_play_flag)
-                    bne     last_column
+                    bne     .no_draw
                     tst.w   d2
-                    bmi     last_column
-                    move.w  d2,d0
-                    bsr     set_pattern_bitplane_from_given_pos
+                    bmi     .no_draw
+                    move.w  d2,refresh_pattern_pos
                     lea     (main_screen+(56*80)),a0
                     move.w  d2,d0
                     mulu.w  #(SCREEN_BYTES*8),d0
@@ -6858,18 +6874,18 @@ show_pattern_position_bar:
                     lea     ((SCREEN_BYTES*8),a1),a2
                     ; don't draw top bar on first row
                     tst.w   d2
-                    beq     first_row_1
+                    beq     .first_row_1
                     ; top
                 REPT (80/4)
                     not.l   (a1)+
                 ENDR
-first_row_1:
+.first_row_1:
                     ; bottom
                 REPT (80/4)
                     not.l   (a2)+
                 ENDR
                     move.w  (lbW01B2B6),d0
-                    bmi     last_column
+                    bmi     .last_column
                     ; remove the bar on the current caret channel
                     lea     (caret_current_positions),a1
                     mulu.w  #5,d0
@@ -6889,18 +6905,18 @@ first_row_1:
                     eor.b   d0,(-((SCREEN_BYTES*2)+1),a1)
                     eor.b   d0,(-((SCREEN_BYTES*1)+1),a1)
                     tst.w   d2
-                    beq     first_row_2
+                    beq     .first_row_2
                     ; top
                 REPT 8
                     not.b   (a0)+
                 ENDR
-first_row_2:
+.first_row_2:
                     ; bottom
                 REPT 8
                     not.b   (a1)+
                 ENDR
                     cmpi.w  #72,d1
-                    beq     last_column
+                    beq     .last_column
                     ; close the bar vertically on the right
                     ; of the curent channel
                     move.b  #%10000000,d0
@@ -6911,7 +6927,10 @@ first_row_2:
                     eor.b   d0,(-(SCREEN_BYTES*3),a1)
                     eor.b   d0,(-(SCREEN_BYTES*2),a1)
                     eor.b   d0,(-(SCREEN_BYTES*1),a1)
-last_column:
+.last_column:
+                    or.b    #(1<<VIS_DRAW_PATT_POS),refresh_visual
+                    ;bsr     set_pattern_bitplane_from_given_pos
+.no_draw:
                     rts
 current_song_position:
                     dc.w    0
@@ -6937,6 +6956,10 @@ OKT_init_variables:
                     clr.w   (OKT_double_channels)
                 ENDC
 .OKT_get_channels_size:
+                    move.l  #OKT_empty_waveform,(CHAN_SMP_REP_START,a1)
+                    move.l  #OKT_empty_waveform,(CHAN_SMP_REP_START+CHAN_LEN,a1)
+                    move.w  #2/2,(CHAN_SMP_REP_LEN_S,a1)
+                    move.w  #2/2,(CHAN_SMP_REP_LEN_S+CHAN_LEN,a1)
                     tst.w   (a0)
                     sne     (CHAN_TYPE,a1)
                     sne     (CHAN_TYPE+CHAN_LEN,a1)
@@ -6966,8 +6989,8 @@ OKT_init_variables:
                     move.l  d1,(a0)+
                     dbra    d0,.OKT_clear_pattern_line_buffer
                     lea     (OKT_channels_indexes,pc),a0
-                    move.l  #$7060504,(a0)+
-                    move.l  #$3020100,(a0)+
+                    move.l  #$07060504,(a0)+
+                    move.l  #$03020100,(a0)+
                     ; volumes at max
                     move.l  #$40404040,d0
                     move.l  d0,(a0)+
@@ -6992,7 +7015,7 @@ OKT_init_variables:
 
 ; ===========================================================================
 OKT_replay_handler:
-                    or.b    #VIS_DRAW_VUMETERS,refresh_visual
+                    or.b    #(1<<VIS_DRAW_VUMETERS),refresh_visual
                     bsr     OKT_set_hw_regs
                     addq.w  #1,(OKT_action_cycle)
                     move.w  (OKT_current_speed,pc),d0
@@ -7000,6 +7023,15 @@ OKT_replay_handler:
                     bgt     .OKT_no_new_row
                     bsr     OKT_new_row
 .OKT_no_new_row:
+                    move.w  (OKT_last_pattern_row,pc),d0
+                    cmp.w   (OKT_pattern_row,pc),d0
+                    beq     .not_new_bar_yet
+                    move.w  (lbW01B2BA),(lbW01B2B6)
+                    move.w  (OKT_pattern_row,pc),bar_to_draw_pos
+                    move.w  (OKT_last_pattern_row,pc),bar_to_erase_pos
+                    or.b    #(1<<VIS_DRAW_ROW),refresh_visual
+                    move.w  (OKT_pattern_row,pc),(OKT_last_pattern_row)
+.not_new_bar_yet:
                     bsr     lbC022A44
                     bra     lbC022AF0
 
@@ -7009,11 +7041,6 @@ OKT_new_row:
                     move.l  (OKT_current_pattern,pc),a1
                     add.w   (OKT_rows_size,pc),a1
                     move.l  a1,(OKT_current_pattern)
-                    move.w  (lbW01B2BA),(lbW01B2B6)
-                    move.w  (OKT_pattern_row),bar_to_draw_pos
-                    move.w  (OKT_last_pattern_row),bar_to_erase_pos
-                    or.b    #VIS_DRAW_ROW,refresh_visual
-                    move.w  (OKT_pattern_row),(OKT_last_pattern_row)
                     addq.w  #1,(OKT_pattern_row)
                     bsr     OKT_get_current_pattern
                     tst.w   (OKT_next_song_pos)
@@ -7062,7 +7089,7 @@ OKT_get_current_pattern:
 OKT_set_current_pattern:
                     tst.b   (pattern_play_flag)
                     beq     .OKT_play_pattern
-                    or.b    #VIS_DRAW_POS,refresh_visual
+                    or.b    #(1<<VIS_DRAW_POS),refresh_visual
                     lea     (OKT_patterns),a0
                     move.w  (OKT_song_pos,pc),d0
                     move.b  (a0,d0.w),d0
@@ -7250,6 +7277,7 @@ OKT_fill_double_channel_data:
                     btst    d7,d6
                     beq     .OKT_no_data
                     moveq   #0,d3
+                    ; no note
                     move.b  (a2),d3
                     beq     .OKT_no_data
                     subq.w  #1,d3
@@ -7297,16 +7325,16 @@ OKT_fill_double_channel_data:
                     move.l  (SMP_LEN,a1),d0
                      ; that was a bug
                     bclr    #0,d0
+                    ; repeat at start by default
                     move.l  d0,(CHAN_SMP_PROC_LEN_D,a3)
                     moveq   #0,d0
                     moveq   #0,d1
                     move.w  (SMP_REP_LEN,a1),d0
                     add.l   d0,d0
-                    ; repeat length
-                    move.l  d0,(CHAN_SMP_REP_LEN_D,a3)
                     move.w  (SMP_REP_START,a1),d1
                     add.l   d1,d1
-                    tst.l   d0
+                    ; repeat length
+                    move.l  d0,(CHAN_SMP_REP_LEN_D,a3)
                     beq     .OKT_no_repeat
                     add.l   d1,d0
                     move.l  d0,(CHAN_SMP_PROC_LEN_D,a3)
@@ -7325,7 +7353,7 @@ OKT_fill_double_channel_data:
                     move.w  d3,(CHAN_NOTE_D,a3)
                     move.w  d3,(CHAN_BASE_NOTE_D,a3)
 .OKT_done_midi_out:
-                    or.b    #VIS_TRIG_VUMETERS,(refresh_visual)
+                    or.b    #(1<<VIS_TRIG_VUMETERS),(refresh_visual)
                     bset    d7,(trigger_vumeters_bits)
 .OKT_no_data:
                     addq.w  #4,a2
@@ -7437,7 +7465,7 @@ OKT_fill_single_channel_data:
                     move.b  (SMP_VOL+1,a1),(a0,d0.w)
                     move.l  (a7)+,a0
 .OKT_done_midi_out:
-                    or.b    #VIS_TRIG_VUMETERS,(refresh_visual)
+                    or.b    #(1<<VIS_TRIG_VUMETERS),(refresh_visual)
                     bset    d7,(trigger_vumeters_bits)
                     cmpi.b  #MIDI_OUT,(midi_mode)
                     beq     .OKT_no_data
@@ -7530,17 +7558,29 @@ OKT_handle_effects_double_channels:
                     rts
                 IFND OKT_AUDIO_VAMPIRE
 OKT_effects_table_d:
+                    ;  0  1  2
                     dc.w    0,                                      0,                                  0
+                    ;  3  4  5
                     dc.w    0,                                      0,                                  0
+                    ;  6  7  8
                     dc.w    0,                                      0,                                  0
+                    ;  9  A  B
                     dc.w    0,                                      OKT_arp_d-OKT_effects_table_d,      OKT_arp2_d-OKT_effects_table_d
+                    ;  C  D  E
                     dc.w    OKT_arp3_d-OKT_effects_table_d,         OKT_slide_d_d-OKT_effects_table_d,  0
+                    ;  F 10(G) 11(H)
                     dc.w    OKT_filter-OKT_effects_table_d,         0,                                  OKT_slide_u_once_d-OKT_effects_table_d
+                    ; 12(I) 13(J) 14(K)
                     dc.w    0,                                      0,                                  0
+                    ; 15(L) 16(M) 17(N)
                     dc.w    OKT_slide_d_once_d-OKT_effects_table_d, 0,                                  0
+                    ; 18(O) 19(P) 1A(Q)
                     dc.w    0,                                      OKT_pos_jump-OKT_effects_table_d,   0
+                    ; 1B(R) 1C(S) 1D(T)
                     dc.w    0,                                      OKT_set_speed-OKT_effects_table_d,  0
+                    ; 1E(U) 1F(V) 20(W)
                     dc.w    OKT_slide_u_d-OKT_effects_table_d,      OKT_set_volume-OKT_effects_table_d, 0
+                    ; 21(X) 22(Y) 23(Z)
                     dc.W    0,                                      0,                                  0
                 ENDC
 
@@ -7598,19 +7638,19 @@ OKT_effects_table_s:
                     dc.w    0,                                      OKT_arp_s-OKT_effects_table_s,      OKT_arp2_s-OKT_effects_table_s
                     ;  C  D  E
                     dc.w    OKT_arp3_s-OKT_effects_table_s,         OKT_slide_d_s-OKT_effects_table_s,  0
-                    ;  F 10 11
+                    ;  F 10(G) 11(H)
                     dc.w    OKT_filter-OKT_effects_table_s,         0,                                  OKT_slide_u_once_s-OKT_effects_table_s
-                    ; 12 13 14
+                    ; 12(I) 13(J) 14(K)
                     dc.w    0,                                      0,                                  0
-                    ; 15 16 17
+                    ; 15(L) 16(M) 17(N)
                     dc.w    OKT_slide_d_once_s-OKT_effects_table_s, 0,                                  0
-                    ; 18 19 1A
+                    ; 18(O) 19(P) 1A(Q)
                     dc.w    0,                                      OKT_pos_jump-OKT_effects_table_s,   0
-                    ; 1B 1C 1D
+                    ; 1B(R) 1C(S) 1D(T)
                     dc.w    0,                                      OKT_set_speed-OKT_effects_table_s,  0
-                    ; 1E 1F 20
+                    ; 1E(U) 1F(V) 20(W)
                     dc.w    OKT_slide_u_s-OKT_effects_table_s,      OKT_set_volume-OKT_effects_table_s, 0
-                    ; 21 22 23
+                    ; 21(X) 22(Y) 23(Z)
                     dc.w    0,                                      0,                                  0
 
 ; ===========================================================================
@@ -7872,7 +7912,7 @@ OKT_set_speed:
                     andi.w  #$1F,d1
                     beq     .OKT_no_change
                     move.w  d1,(OKT_current_speed)
-                    or.b    #VIS_DRAW_SPEED,refresh_visual
+                    or.b    #(1<<VIS_DRAW_SPEED),refresh_visual
 .OKT_no_change:
                     rts
 
@@ -7966,6 +8006,8 @@ refresh_visual:
 trigger_vumeters_bits:
                     dc.b    0
                     even
+refresh_pattern_pos:
+                    dc.w    0
 bar_to_draw_pos:
                     dc.w    0
 bar_to_erase_pos:
@@ -8470,8 +8512,9 @@ OKT_create_channel_waveform_data:
                     ; is there a repeat ?
                     tst.l   (CHAN_SMP_REP_LEN_D,a3)
                     beq     .OKT_no_repeat
-                    ; yes: rearm
+                    ; yes: set restart
                     move.l  (CHAN_SMP_REP_START,a3),(CHAN_SMP_PROC_D,a3)
+                    ; new length to process
                     move.l  (CHAN_SMP_REP_LEN_D,a3),d2
                     move.l  d2,(CHAN_SMP_PROC_LEN_D,a3)
                     bra     .OKT_sample_end
@@ -8553,27 +8596,38 @@ OKT_create_channel_waveform_data:
                     lea     (a1),a4
                     sub.l   (a7),a4
                     cmp.l   #OKT_BUFFERS_LENGTH,a4
+                    ble     .fuck
+                    move.l  (a7),$70000
+                    move.l  a1,$70004
+                    move.l  a4,$70008
+.fuck:
+                    cmp.l   #OKT_BUFFERS_LENGTH,a4
                     bge     .OKT_processed
-                    ; still some bytes to process in mix buffer
+                    ; still some bytes to process in mixbuffer...
                     move.l  #OKT_BUFFERS_LENGTH,d1
                     sub.l   a4,d1
-                    ; restart it to continue the filling
+                    ; check if there's a loop
                     tst.l   (CHAN_SMP_REP_LEN_D,a3)
-                    beq     .OKT_rearm
-                    ; yes: rearm
+                    beq     .OKT_max_fill
+                    ; mixbuffer isn't full yet...
                     cmp.l   d1,d2
-                    blt     .OKT_max_fill
-                    ; buffer to process is smaller than samples left:
-                    ; set the new length to remaining mix buffer to process
+                    beq     .OKT_processed
+                    bgt     .OKT_rearm
+                    ; mixbuffer to process is smaller than samples left:
+                    ; set the new length to remaining mixbuffer bytes left to process
                     move.l  d1,d2
                     bra     .OKT_sample_end
-.OKT_max_fill:
+.OKT_rearm:
+                    ; mixbuffer to process is bigger than samples left:
+                    ; restart...
+                    ; set to repeat start
                     move.l  (CHAN_SMP_REP_START,a3),(CHAN_SMP_PROC_D,a3)
+                    ; and repeat length to process
                     move.l  (CHAN_SMP_REP_LEN_D,a3),d2
                     move.l  d2,(CHAN_SMP_PROC_LEN_D,a3)
                     bra     .OKT_sample_end
-.OKT_rearm:
-                    ; fill the rest of the buffer
+.OKT_max_fill:
+                    ; fill the rest of the buffer with 0s
                     btst    #0,d1
                     beq     .OKT_odd
                     sf      (a1)+
@@ -8712,6 +8766,7 @@ OKT_mix_020_empty:
 ; generate the scaling frequencies code
 OKT_generate_scaling_code:
                     move.l  (OKT_code_ptr,pc),a2
+                    move.l  a2,$7000c
                     move.l  (OKT_scaling_code_buffer,pc),a0
                     lea     (OKT_scaling_freqs_table,pc),a5
                     move.l  (OKT_lengths_ptr,pc),a3
@@ -8734,8 +8789,8 @@ OKT_generate_scaling_code:
                     ; dest buffer position
                     moveq   #0,d6
 .OKT_loop_freq:
-                    move.w  (a4),d0
-                    lea     (a4,d0.w),a1
+                    move.w  (a4),d5
+                    lea     (a4,d5.w),a1
                     cmp.w   d4,d3
                     beq.w   .OKT_wait_freq_nibble
                     move.w  d3,d0
@@ -8747,7 +8802,7 @@ OKT_generate_scaling_code:
                     move.l  a0,d0
                     sub.l   (-4,a2),d0
                     move.w  d0,(a6)+
-                    move.w  (OKT_opcode_add,pc),(a0)+
+                    move.w  (OKT_opcode_skip,pc),(a0)+
                     move.l  a0,d0
                     sub.l   (-4,a2),d0
                     move.w  d0,(a6)+
@@ -8766,7 +8821,7 @@ OKT_generate_scaling_code:
                     move.l  a0,d0
                     sub.l   (-4,a2),d0
                     move.w  d0,(a6)+
-                    move.w  (OKT_opcode_add,pc),(a0)+
+                    move.w  (OKT_opcode_skip,pc),(a0)+
                     addq.w  #1,d6
                     cmp.w   #OKT_BUFFERS_LENGTH,d6
                     bge     .OKT_done_freq
@@ -8793,13 +8848,12 @@ OKT_generate_scaling_code:
                     move.w  d0,(a6)+
                     ; length to copy
                     move.w  (a1),d0
-                    ; bytes in dest buffer
+                    ; bytes added in dest buffer
                     add.w   (2,a1),d6
                     suba.w  d0,a1
-                    lsr.w   #1,d0
                     subq.w  #1,d0
 .OKT_copy_code:
-                    move.w  (a1)+,(a0)+
+                    move.b  (a1)+,(a0)+
                     dbra    d0,.OKT_copy_code
                     cmp.w   #OKT_BUFFERS_LENGTH,d6
                     bge     .OKT_done_freq
@@ -8826,7 +8880,7 @@ OKT_generate_scaling_code:
                     ; small overrun correction
                     sub.w   #OKT_BUFFERS_LENGTH,d6
                     beq     .OKT_step_back
-                    ; subq.l #1,a0
+                    ; (subq.l #1,a0)
                     move.w  #$5388,(a0)+
 .OKT_step_back:
                     move.w  (OKT_opcode_rts,pc),(a0)+
@@ -8843,13 +8897,13 @@ OKT_generate_scaling_code:
 
 ; ===========================================================================
 OKT_store_bytes_table:
-                    dc.w    OKT_opcodes_store_1_byte_000-OKT_store_bytes_table,OKT_opcodes_store_1_byte_020-OKT_store_bytes_table-2
+                    dc.w    OKT_opcodes_store_1_byte_000-OKT_store_bytes_table, OKT_opcodes_store_1_byte_020-OKT_store_bytes_table-2
                     dc.w    OKT_opcodes_store_2_bytes_000-OKT_store_bytes_table,OKT_opcodes_store_2_bytes_020-OKT_store_bytes_table-2
                     dc.w    OKT_opcodes_store_3_bytes_000-OKT_store_bytes_table,OKT_opcodes_store_3_bytes_020-OKT_store_bytes_table-2
                     dc.w    OKT_opcodes_store_4_bytes_000-OKT_store_bytes_table,OKT_opcodes_store_4_bytes_020-OKT_store_bytes_table-2
 ; ==================
 ; 2 bytes
-OKT_opcode_add:
+OKT_opcode_skip:
                     addq.w  #1,a0
 ; ==================
 ; 2 bytes
@@ -10588,8 +10642,10 @@ cmd_clear_main_menu:
 ; ===========================================================================
 cmd_prepare_sub_screen:
                     bsr     clear_1_line_blitter
-                    moveq   #0,d0
-                    jsr     (set_pattern_bitplane_from_given_pos)
+                    clr.w   refresh_pattern_pos
+                    or.b    #(1<<VIS_DRAW_PATT_POS),refresh_visual
+                    ;moveq   #0,d0
+                    ;jsr     (set_pattern_bitplane_from_given_pos)
                     bra     next_command
 
 ; ===========================================================================
@@ -20042,9 +20098,9 @@ effects_help_text:
                     dc.b    CMD_TEXT,17,8, '- Effects Help Page --------------------------',0
                     dc.b    CMD_TEXT,17,10,'1 Portamento Down (Period)',0
                     dc.b    CMD_TEXT,17,11,'2 Portamento Up   (Period)',0
-                    dc.b    CMD_TEXT,17,13,'A Arpeggio 1      (down, orig,   up)',0
-                    dc.b    CMD_TEXT,17,14,'B Arpeggio 2      (orig,   up, orig, down)',0
-                    dc.b    CMD_TEXT,17,15,'C Arpeggio 3      (  up,   up, orig)',0
+                    dc.b    CMD_TEXT,17,13,'A Arpeggio 1      (Down, Orig,   Up)',0
+                    dc.b    CMD_TEXT,17,14,'B Arpeggio 2      (Orig,   Up, Orig, Down)',0
+                    dc.b    CMD_TEXT,17,15,'C Arpeggio 3      (  Up,   Up, Orig)',0
                     dc.b    CMD_TEXT,17,17,'D Slide Down      (Notes)',0
                     dc.b    CMD_TEXT,17,18,'U Slide Up        (Notes)',0
                     dc.b    CMD_TEXT,17,20,'L Slide Down Once (Notes)',0

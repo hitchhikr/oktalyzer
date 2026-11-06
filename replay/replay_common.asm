@@ -24,15 +24,15 @@ SMP_INFOS_LEN:      rs.b    0           ; 32
 CHAN_TYPE:          rs.b    1           ; 0
                     rs.b    1           ; 1 (pad)
 CHAN_SMP_REP_START: rs.l    1           ; 2
-CHAN_SMP_REP_LEN_D: rs.b    0           ; 6 (long word)
 CHAN_SMP_REP_LEN_S: rs.w    1           ; 6
 CHAN_NOTE_S:        rs.w    1           ; 8
-CHAN_PERIOD_S:      rs.b    0           ; 10
-CHAN_NOTE_D:        rs.w    1           ; 10
-CHAN_BASE_NOTE_D:   rs.w    1           ; 12
-CHAN_SMP_PROC_D:    rs.l    1           ; 14
-CHAN_SMP_PROC_LEN_D:rs.l    1           ; 18
-CHAN_LEN:           rs.b    0           ; 22
+CHAN_PERIOD_S:      rs.w    1           ; 10
+CHAN_NOTE_D:        rs.w    1           ; 12
+CHAN_BASE_NOTE_D:   rs.w    1           ; 14
+CHAN_SMP_REP_LEN_D: rs.l    1           ; 16
+CHAN_SMP_PROC_D:    rs.l    1           ; 18
+CHAN_SMP_PROC_LEN_D:rs.l    1           ; 20
+CHAN_LEN:           rs.b    0           ; 24
 
 ; ===========================================================================
 OKT_SET_AUDIO_ADR   MACRO
@@ -469,11 +469,10 @@ OKT_fill_double_channel_data:
                     moveq   #0,d1
                     move.w  (SMP_REP_LEN,a1),d0
                     add.l   d0,d0
-                    ; repeat length
-                    move.l  d0,(CHAN_SMP_REP_LEN_D,a3)
                     move.w  (SMP_REP_START,a1),d1
                     add.l   d1,d1
-                    tst.l   d0
+                    ; repeat length
+                    move.l  d0,(CHAN_SMP_REP_LEN_D,a3)
                     beq     .OKT_no_repeat
                     add.l   d1,d0
                     move.l  d0,(CHAN_SMP_PROC_LEN_D,a3)
