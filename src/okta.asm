@@ -3183,7 +3183,7 @@ draw_pattern:
                     moveq   #0,d7
                     bsr     lbC0202F0
 lbC0202CC:
-                    bsr     lbC02031E
+                    bsr     draw_row_data
                     addq.w  #1,d7
                     cmp.w   (pattern_rows_to_display),d7
                     bne     lbC0202CC
@@ -3210,31 +3210,36 @@ lbC0202F0:
                     addi.b  #'0',d0
                     move.b  d0,d4
                     rts
-lbC02031E:
+
+; ===========================================================================
+draw_row_data:
                     lea     (alpha_numeric_table),a2
                     lea     (full_note_table),a3
-                    lea     (lbW01B736),a5
-                    ; row number
+                    lea     (row_data_buffer),a5
+                    ; pattern number
                     move.w  d4,(a5)+
                     lea     (OKT_channels_modes),a0
                     moveq   #2-1,d5
-lbC02033A:
+.draw_channels_groups:
                     move.b  #' ',(a5)+
                     move.w  d7,d0
                     lsr.w   #4,d0
+                    ; row number
                     move.b  (a2,d0.w),(a5)+
                     moveq   #$F,d0
                     and.w   d7,d0
                     move.b  (a2,d0.w),(a5)+
                     moveq   #2-1,d6
-lbC020350:
+.draw_channels:
+                    ; column is doubled or not ?
                     tst.w   (a0)+
-                    beq     lbC02035A
-                    bsr     lbC02038E
-                    bsr     lbC02038E
-                    bra     lbC020370
-lbC02035A:
-                    bsr     lbC02038E
+                    beq     .single_channel
+                    bsr     .draw_pattern_channel
+                    bsr     .draw_pattern_channel
+                    bra     .next_channels
+.single_channel:
+                    bsr     .draw_pattern_channel
+                    ; empty column
                     moveq   #' ',d0
                     move.b  d0,(a5)+
                     move.b  d0,(a5)+
@@ -3245,34 +3250,41 @@ lbC02035A:
                     move.b  d0,(a5)+
                     move.b  d0,(a5)+
                     move.b  d0,(a5)+
-lbC020370:
-                    dbra    d6,lbC020350
-                    dbra    d5,lbC02033A
+.next_channels:
+                    dbra    d6,.draw_channels
+                    dbra    d5,.draw_channels_groups
                     sf      (a5)
-                    lea     (lbW01B736),a0
+                    ; now, draw it
+                    lea     (row_data_buffer),a0
                     moveq   #0,d0
                     move.w  d7,d1
+                    ; min y
                     addq.w  #7,d1
                     jmp     (draw_text)
-lbC02038E:
+.draw_pattern_channel:
                     move.b  #' ',(a5)+
                     moveq   #0,d0
                     move.b  (a4)+,d0
                     add.w   d0,d0
                     add.w   d0,d0
+                    ; notes table
                     lea     (a3,d0.w),a1
+                    ; note
                     move.b  (a1)+,(a5)+
                     move.b  (a1)+,(a5)+
                     move.b  (a1)+,(a5)+
                     move.b  #' ',(a5)+
+                    ; instrument number
                     move.b  (a4)+,d0
                     move.b  (a2,d0.w),(a5)+
+                    ; effect number
                     move.b  (a4)+,d0
                     move.b  (a2,d0.w),(a5)+
                     move.b  (a4)+,d0
                     moveq   #$F,d1
                     and.w   d0,d1
                     lsr.w   #4,d0
+                    ; effect data
                     move.b  (a2,d0.w),(a5)+
                     move.b  (a2,d1.w),(a5)+
                     rts
@@ -3283,7 +3295,7 @@ draw_one_pattern_row:
                     bsr     lbC01F508
                     move.w  (a7)+,d7
                     bsr     lbC0202F0
-                    bsr     lbC02031E
+                    bsr     draw_row_data
                     bra     draw_selection_marquee
 
 ; ===========================================================================
@@ -21513,7 +21525,7 @@ lbW01B730:
                     dc.w    0
 length_of_sample_to_load:
                     dc.l    0
-lbW01B736:
+row_data_buffer:
                     dcb.w   41,0
 pattern_rows_to_display:
                     dc.w    0
