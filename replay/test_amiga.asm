@@ -47,10 +47,6 @@ start:
 ; ===========================================================================
                     section music,data_c
 
-music:              ;incbin  "../songs/lame d-mo.okta"
-                    ;incbin  "future melody.okta"
-                    incbin  "f.okta"
-                    ;incbin  "../songs/future melody.okta"
-                    ;incbin  "OKT.headwar"
-
+music:              incbin  "storm_a.okta"
+                    
                     end

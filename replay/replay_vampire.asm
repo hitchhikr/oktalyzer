@@ -4,6 +4,8 @@
 ; Original code by Armin 'TIP' Sander.
 ; Disassembled and improved by Franck 'hitchhikr' Charlet.
 ; ===========================================================================
+; Music on channels 4 to 7
+; ===========================================================================
 
 ; ===========================================================================
                 IFD __VASM
@@ -27,6 +29,10 @@ OKT_AUDIO_VAMPIRE   equ     1
 OKT_SONG_ID         equ     'SNG3'
 
 ; ===========================================================================
+OKT_SET_AUDIO_LEN   MACRO
+                    move.l  \1,(OKT_AUDIO_LEN,\2)
+                    ENDM
+
 OKT_SET_AUDIO_PAN   MACRO
                     ; set panning
                     move.w  d0,d1
@@ -44,7 +50,8 @@ OKT_custom_init:
                     add.l   #$78,d0
                     move.l  d0,(OKT_vbr-OKT_vars,a6)
                     move.w  #$4000,($DFF09A)
-                    move.w  #%11111111,(_CUSTOM|OKT_AUDIO_DMA)
+                    move.w  #%1111,($DFF096)
+                    move.w  #%111111111111,(_CUSTOM|OKT_AUDIO_DMA)
                     move.w  #$FF,($DFF09E)
                     move.l  (OKT_vbr-OKT_vars,a6),a0
                     move.l  (a0),(OKT_old_irq-OKT_vars,a6)
@@ -72,21 +79,20 @@ OKT_custom_init:
 
 ; ===========================================================================
 OKT_stop:
-                    movem.l d0/a0/a1/a2/a6,-(a7)
+                    movem.l d0/d1/a0/a1/a2/a6,-(a7)
                     lea     (OKT_vars,pc),a6
                     lea     (_CUSTOM|OKT_AUDIO_BASE),a2
                     move.w  #$7FFF,($DFF09C)
+                    move.w  #%111111111111,($DFF29C)
                     move.w  #$4000,($DFF09A)
-                    move.w  #%11111111,(a2)
+                    move.w  #%1111,($DFF096)
+                    move.w  #%111111111111,(_CUSTOM|OKT_AUDIO_DMA)
                     moveq   #0,d0
-                    move.w  d0,($408-OKT_AUDIO_BASE,a2)
-                    move.w  d0,($418-OKT_AUDIO_BASE,a2)
-                    move.w  d0,($428-OKT_AUDIO_BASE,a2)
-                    move.w  d0,($438-OKT_AUDIO_BASE,a2)
-                    move.w  d0,($448-OKT_AUDIO_BASE,a2)
-                    move.w  d0,($458-OKT_AUDIO_BASE,a2)
-                    move.w  d0,($468-OKT_AUDIO_BASE,a2)
-                    move.w  d0,($478-OKT_AUDIO_BASE,a2)
+                    moveq   #16-1,d1
+.OKT_clear_all_vols:
+                    move.w  d0,(8,a2)
+                    lea     (16,a2),a2
+                    dbf     d1,.OKT_clear_all_vols
                     lea     $BFD000+CIATBLO,a0
                     lea     (OKT_old_cia_timer-OKT_vars,a6),a1
                     move.b  (a1)+,CIAICR-CIATBLO(a0)
@@ -96,7 +102,7 @@ OKT_stop:
                     move.l  (OKT_vbr-OKT_vars,a6),a0
                     move.l  (OKT_old_irq-OKT_vars,a6),(a0)
                     move.w	#$C000,($DFF09A)
-                    movem.l (a7)+,d0/a0/a1/a2/a6
+                    movem.l (a7)+,d0/d1/a0/a1/a2/a6
                     rts
 
 ; ===========================================================================
@@ -115,7 +121,7 @@ OKT_get_vbr:
                     move    sr,d0
                     or.w    #$800,d0
                     move    d0,sr
-                    move.w  #%10000,$dff1fc
+                    move.w  #%10000,$DFF1FC
                     dc.w    $4E7A,$0801
                     rte
 .OKT_no_processor:
@@ -129,7 +135,7 @@ OKT_cia_int:
                     lea     $DFF09C,a0
                     move.w  #$2000,(a0)
                     move.w  #$2000,(a0)
-                    bsr     OKT_replay_handler
+;                    bsr     OKT_replay_handler
                     movem.l (a7)+,d0-a6
                     rte
 

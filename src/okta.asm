@@ -225,8 +225,8 @@ main_loop:
                     lea     (main_screen_sequence),a0
                     bsr     process_commands_sequence
                     bsr     display_main_menu
-                    bsr     display_pattern
-                    bsr     display_pattern_caret
+                    bsr     draw_pattern
+                    bsr     draw_pattern_caret
                     lea     (lbW01737C),a0
                     bsr     stop_audio_and_process_event
                     bsr     erase_pattern_caret
@@ -364,7 +364,7 @@ vbi_int_name:
 ;; ===========================================================================
 ;remove_copper_int:
 ;                    EXEC    Disable
-;                    move.l  #(BPLCON0<<16)|$9200,(copper_int)
+;                    move.l  #(BPLCON0<<16)|$9201,(copper_int)
 ;                    lea     (copper_int_struct,pc),a1
 ;                    moveq   #INTB_EXTER,d0
 ;                    tst.b   (used_int_flag)
@@ -951,8 +951,8 @@ lbC01E9DC:
                     add.w   (pattern_bitplane_top_pos),d2
                     move.w  d2,(viewed_pattern_row)
                     move.w  d2,d0
-                    bsr     lbC01F200
-                    bsr     lbC01F1D8
+                    bsr     set_caret_to_max_row
+                    bsr     set_pattern_row
                     lsr.w   #3,d3
                     lea     (caret_current_positions+1),a0
                     moveq   #-1,d0
@@ -967,7 +967,7 @@ lbC01EA0C:
 lbC01EA1E:
                     move.w  (lbW01B294),(caret_pos_x)
 lbC01EA28:
-                    bsr     display_pattern_caret
+                    bsr     draw_pattern_caret
 lbC01EA2C:
                     movem.l (a7)+,d2/d3
                     rts
@@ -1370,8 +1370,8 @@ lbC01EE6E:
                     move.w  d5,d0
                     move.w  d6,d1
                     jsr     (draw_text)
-                    bsr     lbC01F440
-                    bsr     display_pattern_caret
+                    bsr     draw_selection_marquee
+                    bsr     draw_pattern_caret
                     movem.l (a7)+,d2
                     rts
 ascii_MSG5:
@@ -1406,7 +1406,7 @@ lbC01EED2:
                     move.w  (lbW01EC42,pc),d1
                     addq.w  #6,d1
                     jsr     (draw_text)
-                    bsr     lbC01F440
+                    bsr     draw_selection_marquee
                     bsr     previous_pattern_row
 lbC01EF0E:
                     movem.l (a7)+,d2
@@ -1598,89 +1598,105 @@ ABCDEF_MSG:
                     even
 lbC01F10A:
                     subq.w  #1,(caret_pos_x)
-                    bpl     display_pattern_caret
+                    bpl     draw_pattern_caret
                     move.w  (lbW01B294),(caret_pos_x)
-                    bra     display_pattern_caret
+                    bra     draw_pattern_caret
 lbC01F122:
                     subq.w  #5,(caret_pos_x)
-                    bpl     display_pattern_caret
+                    bpl     draw_pattern_caret
                     move.w  (caret_pos_x,pc),d0
                     add.w   (lbW01B294),d0
                     addq.w  #1,d0
                     move.w  d0,(caret_pos_x)
-                    bra     display_pattern_caret
+                    bra     draw_pattern_caret
 lbC01F142:
                     addq.w  #1,(caret_pos_x)
                     move.w  (lbW01B294),d0
                     cmp.w   (caret_pos_x,pc),d0
-                    bge     display_pattern_caret
+                    bge     draw_pattern_caret
                     clr.w   (caret_pos_x)
-                    bra     display_pattern_caret
+                    bra     draw_pattern_caret
 lbC01F160:
                     addq.w  #5,(caret_pos_x)
                     move.w  (lbW01B294),d0
                     cmp.w   (caret_pos_x,pc),d0
-                    bge     display_pattern_caret
+                    bge     draw_pattern_caret
                     move.w  (caret_pos_x,pc),d0
                     sub.w   (lbW01B294),d0
                     subq.w  #1,d0
                     move.w  d0,(caret_pos_x)
-                    bra     display_pattern_caret
+                    bra     draw_pattern_caret
 
 ; ===========================================================================
 previous_pattern_row:
                     subq.w  #1,(viewed_pattern_row)
-                    bra     lbC01F1D8
+                    bra     set_pattern_row
 
 ; ===========================================================================
 next_pattern_row:
                     addq.w  #1,(viewed_pattern_row)
-                    bra     lbC01F1D8
-lbC01F19A:
-                    move.w  (f6_key_line_jump_value),(viewed_pattern_row)
-                    bra     lbC01F1D4
-lbC01F1A6:
-                    move.w  (f7_key_line_jump_value),(viewed_pattern_row)
-                    bra     lbC01F1D4
-lbC01F1B2:
-                    move.w  (f8_key_line_jump_value),(viewed_pattern_row)
-                    bra     lbC01F1D4
-lbC01F1BE:
-                    move.w  (f9_key_line_jump_value),(viewed_pattern_row)
-                    bra     lbC01F1D4
-lbC01F1CA:
-                    move.w  (f10_key_line_jump_value),(viewed_pattern_row)
-lbC01F1D4:
-                    bsr     lbC01F200
-lbC01F1D8:
+                    bra     set_pattern_row
+
+; ===========================================================================
+go_to_f6_row_jump:
+                    move.w  (f6_key_row_jump_value),(viewed_pattern_row)
+                    bra     jump_to_row
+
+; ===========================================================================
+go_to_f7_row_jump:
+                    move.w  (f7_key_row_jump_value),(viewed_pattern_row)
+                    bra     jump_to_row
+
+; ===========================================================================
+go_to_f8_row_jump:
+                    move.w  (f8_key_row_jump_value),(viewed_pattern_row)
+                    bra     jump_to_row
+
+; ===========================================================================
+go_to_f9_row_jump:
+                    move.w  (f9_key_row_jump_value),(viewed_pattern_row)
+                    bra     jump_to_row
+
+; ===========================================================================
+go_to_f10_row_jump:
+                    move.w  (f10_key_row_jump_value),(viewed_pattern_row)
+jump_to_row:
+                    bsr     set_caret_to_max_row
+
+; ===========================================================================
+set_pattern_row:
                     bsr     get_current_pattern_address_and_rows
                     move.w  d0,d1
                     move.w  (viewed_pattern_row,pc),d0
-lbC01F1E2:
+.bound_min:
                     tst.w   d0
-                    bpl     lbC01F1EA
+                    bpl     .bound_max
                     add.w   d1,d0
-                    bra     lbC01F1E2
-lbC01F1EA:
+                    bra     .bound_min
+.bound_max:
                     cmp.w   d1,d0
-                    blt     lbC01F1F2
+                    blt     .bounded
                     sub.w   d1,d0
-                    bra     lbC01F1EA
-lbC01F1F2:
+                    bra     .bound_max
+.bounded:
                     move.w  d0,(viewed_pattern_row)
                     bsr     set_pattern_bitplane
-                    bra     display_pattern_caret
-lbC01F200:
+                    bra     draw_pattern_caret
+
+; ===========================================================================
+set_caret_to_max_row:
                     bsr     get_current_pattern_address_and_rows
                     move.w  d0,d1
                     move.w  (viewed_pattern_row,pc),d0
                     subq.w  #1,d1
                     cmp.w   d1,d0
-                    ble     lbC01F218
+                    ble     .max
                     move.w  d1,d0
                     move.w  d0,(viewed_pattern_row)
-lbC01F218:
+.max:
                     rts
+
+; ===========================================================================
 lbC01F21A:
                     lea     (ascii_MSG6,pc),a1
                     move.b  d0,(a1)
@@ -1695,7 +1711,7 @@ lbC01F23C:
                     cmp.w   (current_viewed_pattern),d0
                     beq     lbC01F24E
                     move.w  d0,(current_viewed_pattern)
-                    bra     display_pattern
+                    bra     draw_pattern
 lbC01F24E:
                     rts
 GotoPattern_MSG:
@@ -1708,7 +1724,7 @@ lbC01F262:
                     tst.w   (current_viewed_pattern)
                     beq     lbC01F274
                     subq.w  #1,(current_viewed_pattern)
-                    bra     display_pattern
+                    bra     draw_pattern
 lbC01F274:
                     rts
 lbC01F276:
@@ -1721,7 +1737,7 @@ lbC01F276:
                     rts
 lbC01F28E:
                     addq.w  #1,(current_viewed_pattern)
-                    bra     display_pattern
+                    bra     draw_pattern
 lbC01F298:
                     bsr     stop_audio_channels
 lbC01F29C:
@@ -1854,7 +1870,7 @@ lbC01F430:
                     move.l  d0,(lbW01F500)
                     move.l  d0,(lbW01F46A)
                     rts
-lbC01F440:
+draw_selection_marquee:
                     moveq   #-1,d0
                     cmp.l   (lbW01F46A,pc),d0
                     beq     lbC01F472
@@ -2077,7 +2093,7 @@ lbC01F674:
                     add.w   (current_channels_size),d5
                     cmp.w   d5,d7
                     bge     lbC01F670
-                    bra     display_pattern
+                    bra     draw_pattern
 lbW01F692:
                     dc.w    0
 lbC01F694:
@@ -2112,7 +2128,7 @@ lbC01F6D6:
                     add.w   (current_channels_size),d5
                     cmp.w   d5,d7
                     bge     lbC01F6C8
-                    bra     display_pattern
+                    bra     draw_pattern
 lbC01F6F2:
                     lea     (lbC01F6FA,pc),a0
                     bra     lbC01F702
@@ -2165,7 +2181,7 @@ lbC01F760:
                     add.w   (current_channels_size),d5
                     cmp.w   d5,d7
                     bge     lbC01F752
-                    bra     display_pattern
+                    bra     draw_pattern
 lbC01F786:
                     rts
 lbC01F788:
@@ -2461,7 +2477,7 @@ lbC01FA6C:
                     subq.w  #4,d0
 lbC01FA8E:
                     move.w  d0,(caret_pos_x)
-                    bra     display_pattern_caret
+                    bra     draw_pattern_caret
 lbC01FA98:
                     move.w  (polyphony_channels_count),d1
                     beq     lbC01FAFC
@@ -2488,7 +2504,7 @@ lbC01FACE:
                     subq.w  #4,d0
 lbC01FAF2:
                     move.w  d0,(caret_pos_x)
-                    bra     display_pattern_caret
+                    bra     draw_pattern_caret
 lbC01FAFC:
                     rts
 lbC01FAFE:
@@ -2575,7 +2591,7 @@ set_quantize_amount_from_keyboard:
 apply_quantize_amount:
                     move.w  (quantize_amount,pc),d0
                     add.w   d0,(viewed_pattern_row)
-                    bra     lbC01F1D8
+                    bra     set_pattern_row
 quantize_amount:
                     dc.w    1
 
@@ -3157,8 +3173,8 @@ dec_song_position:
                     rts
 
 ; ===========================================================================
-display_pattern:
-                    move.w  #$200,(main_bplcon0+2)
+draw_pattern:
+                    move.w  #$201,(main_bplcon0+2)
                     bsr     set_pattern_bitplane
                     bsr     get_current_pattern_address_and_rows
                     move.w  d0,(pattern_rows_to_display)
@@ -3171,11 +3187,13 @@ lbC0202CC:
                     addq.w  #1,d7
                     cmp.w   (pattern_rows_to_display),d7
                     bne     lbC0202CC
-                    bsr     lbC01F200
-                    bsr     lbC01F1D8
-                    bsr     lbC01F440
-                    move.w  #$9200,(main_bplcon0+2)
+                    bsr     set_caret_to_max_row
+                    bsr     set_pattern_row
+                    bsr     draw_selection_marquee
+                    move.w  #$9201,(main_bplcon0+2)
                     bra     display_main_menu
+
+; ===========================================================================
 lbC0202F0:
                     bsr     get_current_pattern_address_and_rows
                     move.l  a0,a4
@@ -3196,6 +3214,7 @@ lbC02031E:
                     lea     (alpha_numeric_table),a2
                     lea     (full_note_table),a3
                     lea     (lbW01B736),a5
+                    ; row number
                     move.w  d4,(a5)+
                     lea     (OKT_channels_modes),a0
                     moveq   #2-1,d5
@@ -3257,13 +3276,17 @@ lbC02038E:
                     move.b  (a2,d0.w),(a5)+
                     move.b  (a2,d1.w),(a5)+
                     rts
-lbC0203C6:
+
+; ===========================================================================
+draw_one_pattern_row:
                     move.w  d0,-(a7)
                     bsr     lbC01F508
                     move.w  (a7)+,d7
                     bsr     lbC0202F0
                     bsr     lbC02031E
-                    bra     lbC01F440
+                    bra     draw_selection_marquee
+
+; ===========================================================================
 lbC0203DC:
                     move.w  d0,-(a7)
                     bsr     erase_pattern_caret
@@ -3279,8 +3302,8 @@ lbC0203DC:
                     move.l  a0,(BLTDPTH,a6)
                     move.w  #(8*64)+(SCREEN_BYTES/2),(BLTSIZE,a6)
                     jsr     (disown_blitter)
-                    bsr     lbC01F440
-                    bra     display_pattern_caret
+                    bsr     draw_selection_marquee
+                    bra     draw_pattern_caret
 
 ; ===========================================================================
 draw_one_char_alpha_numeric:
@@ -3290,7 +3313,7 @@ draw_one_char_alpha_numeric:
                     jmp     (draw_one_char)
 
 ; ===========================================================================
-display_pattern_caret:
+draw_pattern_caret:
                     movem.w (caret_pos_x,pc),d0/d1
                     addq.w  #7,d1
                     lea     (caret_current_positions),a0
@@ -4183,7 +4206,7 @@ lbC020DCE:
                     bsr     free_song
                     bsr     create_new_empty_pattern
                     bmi     exit
-                    bra     display_pattern
+                    bra     draw_pattern
 .cancelled:
                     rts
 
@@ -4636,40 +4659,40 @@ read_patterns_from_okta_song_file:
                     lea     (song_chunk_header_loaded_data),a0
                     moveq   #8,d0
                     jsr     (read_from_file)
-                    bmi     lbC02128E
+                    bmi     .read_error
                     lea     (song_chunk_header_loaded_data),a0
                     cmpi.l  #'PBOD',(a0)
-                    bne     lbC021288
+                    bne     .struct_error
                     lea     (song_chunk_header_loaded_data),a0
                     ; pattern row length
                     moveq   #2,d0
                     jsr     (read_from_file)
-                    bmi     lbC02128E
+                    bmi     .read_error
                     move.w  (song_chunk_header_loaded_data),d0
                     move.w  d0,(default_pattern_length)
                     mulu.w  (current_channels_size),d0
                     move.l  d0,(current_default_patterns_size)
                     bsr     create_new_empty_pattern
-                    bmi     lbC021292
+                    bmi     .memory_error
                     move.w  (number_of_patterns),d0
                     subq.w  #1,d0
                     bsr     get_given_pattern_address_and_rows
                     ; read the data
                     mulu.w  (current_channels_size),d0
                     jsr     (read_from_file)
-                    bmi     lbC02128E
+                    bmi     .read_error
                     bra     .loop
 .done:
                     move.l  (a7)+,(current_default_patterns_size)
                     move.w  (a7)+,(default_pattern_length)
                     moveq   #OK,d0
                     rts
-lbC021288:
+.struct_error:
                     bsr     error_ok_struct_error
-                    bra     lbC021292
-lbC02128E:
+                    bra     .memory_error
+.read_error:
                     bsr     display_dos_error
-lbC021292:
+.memory_error:
                     move.l  (a7)+,(current_default_patterns_size)
                     move.w  (a7)+,(default_pattern_length)
                     moveq   #ERROR,d0
@@ -4679,7 +4702,7 @@ lbC021292:
 read_samples_from_okta_song_file:
                     lea     (OKT_samples_infos),a5
                     moveq   #0,d7
-lbC0212AA:
+.loop:
                     move.w  d7,(current_sample_index)
                     movem.l d7/a5,-(a7)
                     bsr     display_main_menu
@@ -4688,18 +4711,18 @@ lbC0212AA:
                     beq     .no_patch
                     move.l  d0,(length_of_sample_to_load)
                     bsr     create_new_empty_sample
-                    bmi     lbC021334
+                    bmi     .memory_error
                     lea     (song_chunk_header_loaded_data),a0
                     moveq   #8,d0
                     jsr     (read_from_file)
-                    bmi     lbC021330
+                    bmi     .read_error
                     lea     (song_chunk_header_loaded_data),a0
                     cmpi.l  #'SBOD',(a0)+
-                    bne     lbC02132A
+                    bne     .struct_error
                     ; compare chunk length with header length
                     move.l  (length_of_sample_to_load),d0
                     cmp.l   (a0),d0
-                    blt     lbC02132A
+                    blt     .struct_error
                     
                     move.l  (a0),(length_of_sample_to_load)
                     bsr     get_current_sample_ptr_address
@@ -4708,7 +4731,7 @@ lbC0212AA:
                     move.l  a0,(address_of_sample_to_load)
                     move.l  (length_of_sample_to_load),d0
                     jsr     (read_from_file)
-                    bmi     lbC021330
+                    bmi     .read_error
                     tst.b   (pattern_patch_flag)
                     beq     .no_patch
                     ; restore mode 8 samples from 4 to 8 bit
@@ -4729,17 +4752,17 @@ lbC0212AA:
                     lea     (SMP_INFOS_LEN,a5),a5
                     addq.w  #1,d7
                     cmpi.w  #SMPS_NUMBER,d7
-                    bne     lbC0212AA
+                    bne     .loop
                     clr.w   (current_sample_index)
                     bsr     display_main_menu
                     moveq   #OK,d0
                     rts
-lbC02132A:
+.struct_error:
                     bsr     error_ok_struct_error
-                    bra     lbC021334
-lbC021330:
+                    bra     .memory_error
+.read_error:
                     bsr     display_dos_error
-lbC021334:
+.memory_error:
                     clr.w   (current_sample_index)
                     bsr     display_main_menu
                     moveq   #ERROR,d0
@@ -5101,26 +5124,26 @@ get_given_sample_ptr_address:
                     rts
 
 ; ===========================================================================
-lbC02163C:
-                    bsr     lbC021650
-                    beq     lbC02164A
+clear_all_samples:
+                    bsr     .search_samples
+                    beq     .no_samples
                     bsr     ask_are_you_sure_requester
                     beq     do_free_all_samples_and_song
                     rts
-lbC02164A:
+.no_samples:
                     bra     error_what_samples
-lbC021650:
+.search_samples:
                     lea     (OKT_samples_table),a0
                     moveq   #SMPS_NUMBER-1,d0
-lbC021658:
+.loop:
                     tst.l   (a0)+
-                    bne     lbC021668
+                    bne     .found_sample
                     tst.l   (a0)+
-                    bne     lbC021668
-                    dbra    d0,lbC021658
+                    bne     .found_sample
+                    dbra    d0,.loop
                     moveq   #OK,d0
                     rts
-lbC021668:
+.found_sample:
                     moveq   #ERROR,d0
                     rts
 
@@ -5136,7 +5159,7 @@ do_free_all_samples_and_song:
                     bra     display_main_menu
 
 ; ===========================================================================
-lbC02168E:
+clear_sample:
                     bsr     get_current_sample_ptr_address
                     tst.l   (a0)
                     beq     error_what_sample
@@ -6052,7 +6075,7 @@ lbC022144:
                     cmp.w   (current_viewed_pattern),d0
                     bne     lbC022160
                     subq.w  #1,(current_viewed_pattern)
-                    bsr     display_pattern
+                    bsr     draw_pattern
 lbC022160:
                     bsr     dec_song_position
                     bra     display_main_menu
@@ -6091,7 +6114,7 @@ lbC0221A4:
                     beq     lbC0221CA
                     blt     lbC0221BA
                     movem.w d0/d1,-(a7)
-                    bsr     lbC0203C6
+                    bsr     draw_one_pattern_row
                     movem.w (a7)+,d0/d1
                     addq.w  #1,d0
                     bra     lbC0221A4
@@ -6102,8 +6125,8 @@ lbC0221BA:
                     movem.w (a7)+,d0/d1
                     bra     lbC0221A4
 lbC0221CA:
-                    bsr     lbC01F200
-                    bsr     lbC01F1D8
+                    bsr     set_caret_to_max_row
+                    bsr     set_pattern_row
                     bsr     set_pattern_bitplane
                     bra     display_main_menu
 lbC0221DA:
@@ -6188,7 +6211,7 @@ lbC0222E4:
                     bmi     lbC02230C
                     move.w  d0,(viewed_pattern_row)
 lbC02230C:
-                    bsr     lbC01F1D8
+                    bsr     set_pattern_row
 ;lbC022310:
                     bsr     change_work_sample_size
                     bra     display_main_menu
@@ -14469,10 +14492,10 @@ lbC028E60:
                     jsr     (lbC02189C)
                     bra     lbC02837A
 lbC028E6A:
-                    jsr     (lbC02168E)
+                    jsr     (clear_sample)
                     bra     lbC02837A
 lbC028E74:
-                    jsr     (lbC02163C)
+                    jsr     (clear_all_samples)
                     bra     lbC02837A
 lbC028E7E:
                     jsr     (lbC02177E)
@@ -15952,15 +15975,15 @@ mouse_repeat_delay:
                     dc.w    10
 mouse_repeat_speed:
                     dc.w    2
-f6_key_line_jump_value:
+f6_key_row_jump_value:
                     dc.w    0
-f7_key_line_jump_value:
+f7_key_row_jump_value:
                     dc.w    $10
-f8_key_line_jump_value:
+f8_key_row_jump_value:
                     dc.w    $20
-f9_key_line_jump_value:
+f9_key_row_jump_value:
                     dc.w    $30
-f10_key_line_jump_value:
+f10_key_row_jump_value:
                     dc.w    $40
 text_font:
                     incbin  "font_2048x8.lo1"
@@ -16149,7 +16172,7 @@ display_prefs_screen:
                     bsr     display_mouse_repeat_speed
                     bsr     display_current_color_set
                     bsr     display_polyphony
-                    bsr     update_f_keys_line_jump_values
+                    bsr     update_f_keys_row_jump_values
                     bsr     draw_font
                     bsr     draw_selected_char_grid
                     bra     display_st_load_modes
@@ -16599,147 +16622,147 @@ display_polyphony:
                     jmp     (release_after_line_drawing)
 
 ; ===========================================================================
-inc_f6_key_line_jump_value:
-                    lea     (f6_key_line_jump_value,pc),a0
+inc_f6_key_row_jump_value:
+                    lea     (f6_key_row_jump_value,pc),a0
                     cmpi.w  #127,(a0)
                     beq     .max
                     addq.w  #1,(a0)
-                    bra     update_f6_key_line_jump_value
+                    bra     update_f6_key_row_jump_value
 .max:
                     rts
 
 ; ===========================================================================
-dec_f6_key_line_jump_value:
-                    lea     (f6_key_line_jump_value,pc),a0
+dec_f6_key_row_jump_value:
+                    lea     (f6_key_row_jump_value,pc),a0
                     tst.w   (a0)
                     beq     .min
                     subq.w  #1,(a0)
-                    bra     update_f6_key_line_jump_value
+                    bra     update_f6_key_row_jump_value
 .min:
                     rts
 
 ; ===========================================================================
-update_f6_key_line_jump_value:
+update_f6_key_row_jump_value:
                     moveq   #47,d0
                     moveq   #13,d1
-                    move.w  (f6_key_line_jump_value,pc),d2
+                    move.w  (f6_key_row_jump_value,pc),d2
                     jmp     (draw_2_digits_hex_number)
 
 ; ===========================================================================
-inc_f7_key_line_jump_value:
-                    lea     (f7_key_line_jump_value,pc),a0
+inc_f7_key_row_jump_value:
+                    lea     (f7_key_row_jump_value,pc),a0
                     cmpi.w  #127,(a0)
                     beq     .max
                     addq.w  #1,(a0)
-                    bra     update_f7_key_line_jump_value
+                    bra     update_f7_key_row_jump_value
 .max:
                     rts
 
 ; ===========================================================================
-dec_f7_key_line_jump_value:
-                    lea     (f7_key_line_jump_value,pc),a0
+dec_f7_key_row_jump_value:
+                    lea     (f7_key_row_jump_value,pc),a0
                     tst.w   (a0)
                     beq     .min
                     subq.w  #1,(a0)
-                    bra     update_f7_key_line_jump_value
+                    bra     update_f7_key_row_jump_value
 .min:
                     rts
 
 ; ===========================================================================
-update_f7_key_line_jump_value:
+update_f7_key_row_jump_value:
                     moveq   #47,d0
                     moveq   #15,d1
-                    move.w  (f7_key_line_jump_value,pc),d2
+                    move.w  (f7_key_row_jump_value,pc),d2
                     jmp     (draw_2_digits_hex_number)
 
 ; ===========================================================================
-inc_f8_key_line_jump_value:
-                    lea     (f8_key_line_jump_value,pc),a0
+inc_f8_key_row_jump_value:
+                    lea     (f8_key_row_jump_value,pc),a0
                     cmpi.w  #127,(a0)
                     beq     .max
                     addq.w  #1,(a0)
-                    bra     update_f8_key_line_jump_value
+                    bra     update_f8_key_row_jump_value
 .max:
                     rts
 
 ; ===========================================================================
-dec_f8_key_line_jump_value:
-                    lea     (f8_key_line_jump_value,pc),a0
+dec_f8_key_row_jump_value:
+                    lea     (f8_key_row_jump_value,pc),a0
                     tst.w   (a0)
                     beq     .min
                     subq.w  #1,(a0)
-                    bra     update_f8_key_line_jump_value
+                    bra     update_f8_key_row_jump_value
 .min:
                     rts
 
 ; ===========================================================================
-update_f8_key_line_jump_value:
+update_f8_key_row_jump_value:
                     moveq   #47,d0
                     moveq   #17,d1
-                    move.w  (f8_key_line_jump_value,pc),d2
+                    move.w  (f8_key_row_jump_value,pc),d2
                     jmp     (draw_2_digits_hex_number)
 
 ; ===========================================================================
-inc_f9_key_line_jump_value:
-                    lea     (f9_key_line_jump_value,pc),a0
+inc_f9_key_row_jump_value:
+                    lea     (f9_key_row_jump_value,pc),a0
                     cmpi.w  #127,(a0)
                     beq     .max
                     addq.w  #1,(a0)
-                    bra     update_f9_key_line_jump_value
+                    bra     update_f9_key_row_jump_value
 .max:
                     rts
 
 ; ===========================================================================
-dec_f9_key_line_jump_value:
-                    lea     (f9_key_line_jump_value,pc),a0
+dec_f9_key_row_jump_value:
+                    lea     (f9_key_row_jump_value,pc),a0
                     tst.w   (a0)
                     beq     .min
                     subq.w  #1,(a0)
-                    bra     update_f9_key_line_jump_value
+                    bra     update_f9_key_row_jump_value
 .min:
                     rts
 
 ; ===========================================================================
-update_f9_key_line_jump_value:
+update_f9_key_row_jump_value:
                     moveq   #47,d0
                     moveq   #19,d1
-                    move.w  (f9_key_line_jump_value,pc),d2
+                    move.w  (f9_key_row_jump_value,pc),d2
                     jmp     (draw_2_digits_hex_number)
 
 ; ===========================================================================
-inc_f10_key_line_jump_value:
-                    lea     (f10_key_line_jump_value,pc),a0
+inc_f10_key_row_jump_value:
+                    lea     (f10_key_row_jump_value,pc),a0
                     cmpi.w  #127,(a0)
                     beq     .max
                     addq.w  #1,(a0)
-                    bra     update_f10_key_line_jump_value
+                    bra     update_f10_key_row_jump_value
 .max:
                     rts
 
 ; ===========================================================================
-dec_f10_key_line_jump_value:
-                    lea     (f10_key_line_jump_value,pc),a0
+dec_f10_key_row_jump_value:
+                    lea     (f10_key_row_jump_value,pc),a0
                     tst.w   (a0)
                     beq     .min
                     subq.w  #1,(a0)
-                    bra     update_f10_key_line_jump_value
+                    bra     update_f10_key_row_jump_value
 .min:
                     rts
 
 ; ===========================================================================
-update_f10_key_line_jump_value:
+update_f10_key_row_jump_value:
                     moveq   #47,d0
                     moveq   #21,d1
-                    move.w  (f10_key_line_jump_value,pc),d2
+                    move.w  (f10_key_row_jump_value,pc),d2
                     jmp     (draw_2_digits_hex_number)
 
 ; ===========================================================================
-update_f_keys_line_jump_values:
-                    bsr     update_f6_key_line_jump_value
-                    bsr     update_f7_key_line_jump_value
-                    bsr     update_f8_key_line_jump_value
-                    bsr     update_f9_key_line_jump_value
-                    bra     update_f10_key_line_jump_value
+update_f_keys_row_jump_values:
+                    bsr     update_f6_key_row_jump_value
+                    bsr     update_f7_key_row_jump_value
+                    bsr     update_f8_key_row_jump_value
+                    bsr     update_f9_key_row_jump_value
+                    bra     update_f10_key_row_jump_value
 
 ; ===========================================================================
 save_font:
@@ -20249,12 +20272,12 @@ lbB017852:
                     dc.l    lbB017864
                     dc.w    %1
                     dc.b    60,2,5,1
-                    dc.l    lbC02168E,0
+                    dc.l    clear_sample,0
 lbB017864:
                     dc.l    lbB017876
                     dc.w    %1
                     dc.b    60,3,5,2
-                    dc.l    lbC02163C,0
+                    dc.l    clear_all_samples,0
 lbB017876:
                     dc.l    lbB017888
                     dc.w    %1
@@ -20353,15 +20376,15 @@ lbW0179BE:
                     dc.w    2,20
                     dc.l    lbC01F5D2
                     dc.w    2,21
-                    dc.l    lbC01F19A
+                    dc.l    go_to_f6_row_jump
                     dc.w    2,22
-                    dc.l    lbC01F1A6
+                    dc.l    go_to_f7_row_jump
                     dc.w    2,23
-                    dc.l    lbC01F1B2
+                    dc.l    go_to_f8_row_jump
                     dc.w    2,24
-                    dc.l    lbC01F1BE
+                    dc.l    go_to_f9_row_jump
                     dc.w    2,25
-                    dc.l    lbC01F1CA
+                    dc.l    go_to_f10_row_jump
                     dc.w    2,2
                     dc.l    switch_edit_mode
                     dc.w    2,31
@@ -21062,27 +21085,27 @@ lbW0192D2:
                     dc.l    lbW0192E4
                     dc.w    %1
                     dc.b    43,13,6,1
-                    dc.l    inc_f6_key_line_jump_value,dec_f6_key_line_jump_value
+                    dc.l    inc_f6_key_row_jump_value,dec_f6_key_row_jump_value
 lbW0192E4:
                     dc.l    lbW0192F6
                     dc.w    %1
                     dc.b    43,15,6,1
-                    dc.l    inc_f7_key_line_jump_value,dec_f7_key_line_jump_value
+                    dc.l    inc_f7_key_row_jump_value,dec_f7_key_row_jump_value
 lbW0192F6:
                     dc.l    lbW019308
                     dc.w    %1
                     dc.b    43,17,6,1
-                    dc.l    inc_f8_key_line_jump_value,dec_f8_key_line_jump_value
+                    dc.l    inc_f8_key_row_jump_value,dec_f8_key_row_jump_value
 lbW019308:
                     dc.l    lbW01931A
                     dc.w    %1
                     dc.b    43,19,6,1
-                    dc.l    inc_f9_key_line_jump_value,dec_f9_key_line_jump_value
+                    dc.l    inc_f9_key_row_jump_value,dec_f9_key_row_jump_value
 lbW01931A:
                     dc.l    lbW01932C
                     dc.w    %1
                     dc.b    43,21,6,1
-                    dc.l    inc_f10_key_line_jump_value,dec_f10_key_line_jump_value
+                    dc.l    inc_f10_key_row_jump_value,dec_f10_key_row_jump_value
 lbW01932C:
                     dc.l    lbW01933E
                     dc.w    MOUSE_CMD_NO_HILITE|%1
@@ -21610,7 +21633,7 @@ main_front_color:
 main_bp:
                     dc.w    BPL1PTH,0,BPL1PTL,0
 main_bplcon0:
-                    dc.w    BPLCON0,$9200
+                    dc.w    BPLCON0,$9201
 copper_pal_line:
                     dc.w    $FFDF,$FFFE
 copper_credits_line:
@@ -21621,10 +21644,10 @@ copper_credits_front_color:
                     dc.w    COLOR01,0
 credits_bp:
                     dc.w    BPL1PTH,0,BPL1PTL,0
-                    dc.w    BPLCON0,$9200
+                    dc.w    BPLCON0,$9201
 copper_end_line:
                     dc.w    $2C11,$FFFE
-                    dc.w    BPLCON0,$200
+                    dc.w    BPLCON0,$201
                     dc.w    $FFFF,$FFFE
                     dc.w    $FFFF,$FFFE
 ; =====
@@ -21632,7 +21655,7 @@ main_menu_copper_part:
                     dc.w    $2C11,$FFFE
 main_menu_bp:
                     dc.w    BPL1PTH,0,BPL1PTL,0
-                    dc.w    BPLCON0,$9200
+                    dc.w    BPLCON0,$9201
                     dc.w    $3311,$FFFE
 main_menu_back_color:
                     dc.w    COLOR00,0
@@ -21644,7 +21667,7 @@ main_menu_copper_back_jump:
 pattern_copper_part:
                     dc.w    $4411,$FFFE
 copper_int:
-                    dc.w    BPLCON0,$9200
+                    dc.w    BPLCON0,$9201
 pattern_copper_back_jump:
                     dcb.w   6,0
 
@@ -21652,13 +21675,13 @@ pattern_copper_back_jump:
                     cnop    0,8
 mouse_pointer:
                     dc.b    0,0,0,0
-                    dc.w    %1100011110000000,%1111100000000000
-                    dc.w    %1000000100000000,%1001000000000000
-                    dc.w    %0000001000000000,%1010000000000000
-                    dc.w    %0000010000000000,%1100000000000000
-                    dc.w    %0000100000000000,%1000000000000000
-                    dc.w    %1001000000000000,%0000000000000000
-                    dc.w    %1010000000000000,%0000000000000000
+                    dc.w    %1100001110000000,%1111110000000000
+                    dc.w    %1000001100000000,%1001100000000000
+                    dc.w    %0000011000000000,%1011000000000000
+                    dc.w    %0000110000000000,%1110000000000000
+                    dc.w    %0001100000000000,%1100000000000000
+                    dc.w    %0011000000000000,%1000000000000000
+                    dc.w    %1110000000000000,%0000000000000000
                     dc.w    %1100000000000000,%0000000000000000
                     dc.w    %1000000000000000,%0000000000000000
                     dc.w    0,0

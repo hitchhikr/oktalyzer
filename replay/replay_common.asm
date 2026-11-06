@@ -39,10 +39,6 @@ OKT_SET_AUDIO_ADR   MACRO
                     move.l  \1,(OKT_AUDIO_ADR,\2)
                     ENDM
 
-OKT_SET_AUDIO_LEN   MACRO
-                    move.w  \1,(OKT_AUDIO_LEN,\2)
-                    ENDM
-
 OKT_SET_AUDIO_PER   MACRO
                     move.w  \1,(OKT_AUDIO_PER,\2)
                     ENDM
@@ -389,10 +385,12 @@ OKT_turn_dma_on:
                     btst    d1,d0
                     beq     .OKT_set_channel
                     OKT_SET_AUDIO_ADR CHAN_SMP_REP_START-CHAN_SMP_REP_START(a1),a4
-                    OKT_SET_AUDIO_LEN CHAN_SMP_REP_LEN_S-CHAN_SMP_REP_START(a1),a4
+                    moveq   #0,d2
+                    move.w  CHAN_SMP_REP_LEN_S-CHAN_SMP_REP_START(a1),d2
+                    OKT_SET_AUDIO_LEN d2,a4
 .OKT_set_channel:
                 IFND OKT_AUDIO_VAMPIRE
-                    lea     ((CHAN_LEN*2),a1),a1
+                    lea     (CHAN_LEN*2,a1),a1
                 ELSE
                     lea     (CHAN_LEN,a1),a1
                 ENDC
@@ -545,14 +543,15 @@ OKT_fill_single_channel_data:
                     ; length
                     move.l  (SMP_LEN,a1),d1
                     lsr.l   #1,d1
-                    tst.w   d1
                     beq     .OKT_no_data
                     OKT_SET_AUDIO_DMA d5
                     or.w    d5,d4
                     ; start sample address
                     OKT_SET_AUDIO_ADR d2,a4
                 IFD OKT_AUDIO_VAMPIRE
-                    OKT_SET_AUDIO_CTRL SMP_TYPE(a1),a4
+;                    OKT_SET_AUDIO_CTRL SMP_TYPE(a1),a4
+                    ; TODO: temporary
+                    OKT_SET_AUDIO_CTRL #0,a4
                 ENDC
                     ; note index
                     move.w  d3,(CHAN_NOTE_S,a3)
@@ -568,7 +567,6 @@ OKT_fill_single_channel_data:
                     ; default sample volume
                     move.b  (SMP_VOL+1,a1),(a0,d0.w)
                     move.l  (a7)+,a0
-                    moveq   #0,d0
                     ; repeat length
                     move.w  (SMP_REP_LEN,a1),d0
                     bne     .OKT_real_repeat

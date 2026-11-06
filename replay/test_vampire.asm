@@ -41,8 +41,6 @@ start:
 ; ===========================================================================
                     section music,data_c
 
-music:              ;incbin  "../songs/lame d-mo.okta"
-                    incbin  "../songs/storm angel.okta"
-                    ;incbin  "../songs/future melody.okta"
+music:              incbin  "storm_v.okta"
 
                     end

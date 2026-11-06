@@ -37,6 +37,11 @@ _LVOCacheClearE     equ     -642
 CACRF_ClearI        equ     8
 
 ; ===========================================================================
+OKT_SET_AUDIO_LEN   MACRO
+                    move.w  \1,(OKT_AUDIO_LEN,\2)
+                    ENDM
+
+; ===========================================================================
 OKT_init_buffers:
                     movem.l d1-a6,-(a7)
                     move.l  4.w,a0
@@ -292,14 +297,14 @@ OKT_stop:
                     movem.l d0/a0/a1/a2/a6,-(a7)
                     lea     (OKT_vars,pc),a6
                     lea     (_CUSTOM|OKT_AUDIO_DMA),a2
-                    move.w  #$7FFF,($9C-$96,a2)
-                    move.w  #$6780,($9A-$96,a2)
+                    move.w  #$7FFF,($9C-OKT_AUDIO_DMA,a2)
+                    move.w  #$6780,($9A-OKT_AUDIO_DMA,a2)
                     move.w  #%1111,(a2)
                     moveq   #0,d0
-                    move.w  d0,($A8-$96,a2)
-                    move.w  d0,($B8-$96,a2)
-                    move.w  d0,($C8-$96,a2)
-                    move.w  d0,($D8-$96,a2)
+                    move.w  d0,($A8-OKT_AUDIO_DMA,a2)
+                    move.w  d0,($B8-OKT_AUDIO_DMA,a2)
+                    move.w  d0,($C8-OKT_AUDIO_DMA,a2)
+                    move.w  d0,($D8-OKT_AUDIO_DMA,a2)
                     tst.w   (OKT_audio_int_single_bit-OKT_vars,a6)
                     bne     .OKT_no_double_channels
                     lea     $BFD000+CIATBLO,a0
@@ -311,7 +316,7 @@ OKT_stop:
 .OKT_no_double_channels:
                     move.l  (OKT_vbr-OKT_vars,a6),a0
                     move.l  (OKT_old_irq-OKT_vars,a6),(a0)
-                    move.w	#$C000,($9A-$96,a2)
+                    move.w	#$C000,($9A-OKT_AUDIO_DMA,a2)
                     movem.l (a7)+,d0/a0/a1/a2/a6
                     rts
 
