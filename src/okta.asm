@@ -8596,12 +8596,6 @@ OKT_create_channel_waveform_data:
                     lea     (a1),a4
                     sub.l   (a7),a4
                     cmp.l   #OKT_BUFFERS_LENGTH,a4
-                    ble     .fuck
-                    move.l  (a7),$70000
-                    move.l  a1,$70004
-                    move.l  a4,$70008
-.fuck:
-                    cmp.l   #OKT_BUFFERS_LENGTH,a4
                     bge     .OKT_processed
                     ; still some bytes to process in mixbuffer...
                     move.l  #OKT_BUFFERS_LENGTH,d1
@@ -8611,11 +8605,12 @@ OKT_create_channel_waveform_data:
                     beq     .OKT_max_fill
                     ; mixbuffer isn't full yet...
                     cmp.l   d1,d2
-                    beq     .OKT_processed
                     bgt     .OKT_rearm
                     ; mixbuffer to process is smaller than samples left:
                     ; set the new length to remaining mixbuffer bytes left to process
                     move.l  d1,d2
+                    cmp.l   (CHAN_SMP_REP_LEN_D,a3),d2
+                    bge     .OKT_rearm
                     bra     .OKT_sample_end
 .OKT_rearm:
                     ; mixbuffer to process is bigger than samples left:
