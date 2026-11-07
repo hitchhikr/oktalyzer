@@ -14856,20 +14856,9 @@ ascii_MSG15:
                     dc.b    CMD_DONE
                     even
 lbW028FDC:
-                    dc.l    lbW028FEE
-                    dc.w    %1
-                    dc.b    28,0,6,1
-                    dc.l    lbC02903A,lbC02904C
-lbW028FEE:
-                    dc.l    lbW029000
-                    dc.w    MOUSE_CMD_NO_REPEAT|%1
-                    dc.b    28,1,3,1
-                    dc.l    lbC02905E,0
-lbW029000:
-                    dc.l    0
-                    dc.w    %1
-                    dc.b    32,1,2,1
-                    dc.l    lbC028F90,0
+                    GADGET  GAD_NEXT,%1,28,0,6,1,lbC02903A,lbC02904C
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,28,1,3,1,lbC02905E,0
+                    GADGET  GAD_DONE,%1,32,1,2,1,lbC028F90,0
 lbW029012:
                     dc.w    10,0
                     dc.l    lbW02901C
@@ -15007,20 +14996,9 @@ ascii_MSG16:
                     dc.b    CMD_DONE
                     even
 lbL0291B8:
-                    dc.l    lbL0291CA
-                    dc.w    %1
-                    dc.b    28,0,6,1
-                    dc.l    lbC029202,0
-lbL0291CA:
-                    dc.l    lbW0291DC
-                    dc.w    MOUSE_CMD_NO_REPEAT|%1
-                    dc.b    28,1,3,1
-                    dc.l    lbC02920C,0
-lbW0291DC:
-                    dc.l    0
-                    dc.w    %1
-                    dc.b    32,1,2,1
-                    dc.l    lbC029214,0
+                    GADGET  GAD_NEXT,%1,28,0,6,1,lbC029202,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,28,1,3,1,lbC02920C,0
+                    GADGET  GAD_DONE,%1,32,1,2,1,lbC029214,0
 lbW0291EE:
                     dc.w    10,0
                     dc.l    lbW0291F8
@@ -15207,25 +15185,10 @@ ascii_MSG17:
                     dc.b    CMD_DONE
                     even
 lbL0293F0:
-                    dc.l    lbL029402
-                    dc.w    %1
-                    dc.b    34,0,3,1
-                    dc.l    lbC029492,lbC0294AA
-lbL029402:
-                    dc.l    lbL029414
-                    dc.w    %1
-                    dc.b    41,0,3,1
-                    dc.l    lbC0294EA,lbC029502
-lbL029414:
-                    dc.l    lbL029426
-                    dc.w    MOUSE_CMD_NO_REPEAT|%1
-                    dc.b    34,1,5,1
-                    dc.l    lbC029472,0
-lbL029426:
-                    dc.l    0
-                    dc.w    %1
-                    dc.b    40,1,4,1
-                    dc.l    lbC02945A,0
+                    GADGET  GAD_NEXT,%1,34,0,3,1,lbC029492,lbC0294AA
+                    GADGET  GAD_NEXT,%1,41,0,3,1,lbC0294EA,lbC029502
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,34,1,5,1,lbC029472,0
+                    GADGET  GAD_DONE,%1,40,1,4,1,lbC02945A,0
 lbW029438:
                     dc.w    10,0
                     dc.l    lbW029442
@@ -15750,20 +15713,9 @@ ascii_MSG19:
                     dc.b    CMD_DONE
                     even
 lbL029A1E:
-                    dc.l    lbL029A30
-                    dc.w    %1
-                    dc.b    44,0,6,1
-                    dc.l    lbC029A68,0
-lbL029A30:
-                    dc.l    lbL029A42
-                    dc.w    MOUSE_CMD_NO_REPEAT|%1
-                    dc.b    44,1,3,1
-                    dc.l    lbC029A82,0
-lbL029A42:
-                    dc.l    0
-                    dc.w    %1
-                    dc.b    48,1,2,1
-                    dc.l    lbC029A76,0
+                    GADGET  GAD_NEXT,%1,44,0,6,1,lbC029A68,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,44,1,3,1,lbC029A82,0
+                    GADGET  GAD_DONE,%1,48,1,2,1,lbC029A76,0
 lbW029A54:
                     dc.w    10,0
                     dc.l    lbW029A5E
