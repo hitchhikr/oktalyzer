@@ -4,11 +4,13 @@
 ; Original code by Armin 'TIP' Sander.
 ; Disassembled and improved by Franck 'hitchhikr' Charlet.
 ; ===========================================================================
+; TODO:
+; - clear the palette for the subscreens
 
 ; ===========================================================================
             IFD __VASM
                 IFD OKT_AUDIO_VAMPIRE
-                    mc68020
+                    mc68060
                 ELSE
                     mc68000
                 ENDC
@@ -16,6 +18,7 @@
                     opt     a+
             ENDC
 
+;SHOW_RASTERS        equ     1
 ; ===========================================================================
                     include "okta.i"
 
@@ -129,7 +132,7 @@ init_all:
                     move.l  (current_dir_lock),d1
                     DOS     CurrentDir
                     jsr     (close_workbench)
-                    bsr     set_copper_bitplanes
+                    bsr     init_copper_bitplanes
                     bsr     set_pal_ntsc_context
                     bsr     set_aga_context
                     bsr     install_vbi_int
@@ -159,14 +162,29 @@ set_pal_ntsc_context:
                     move.l  (4).w,a0
                     cmpi.b  #60,(VBlankFrequency,a0)
                     bne     .pal_machine
-                    move.b  #$EB,(copper_pal_line)
+                    lea     (copper_extra_lines_1),a0
+                    lea     (ecopper_extra_lines_1),a1
+.clear_extra_lines_1:
+                    move.l  #$1BE0000,(a0)+
+                    cmp.l   a1,a0
+                    bne.b   .clear_extra_lines_1
+                    lea     (copper_extra_lines_2),a2
+                    lea     (ecopper_extra_lines_2),a3
+.clear_extra_lines_2:
+                    move.l  #$1BE0000,(a2)+
+                    cmp.l   a3,a2
+                    bne.b   .clear_extra_lines_2
+                    move.w  #17-1,max_copper_lines
+                    move.l  #$1BE0000,(copper_pal_line)
                     move.b  #$EC,(copper_credits_line)
                     move.b  #$F4,(copper_end_line)
+                    move.b  #$F4,(copper_diwstop+2)
                     move.w  #17,(number_of_rows_on_screen)
                     move.w  #7,(shift_lines_ntsc)
-                    move.w  #392-1,(max_mouse_pointer_y)
+                    move.w  #495-(56*2),(max_mouse_pointer_y)
                     st      (ntsc_flag)
                     move.w  #17,(max_lines)
+                    move.w  #8,(max_copper_bar_line)
 .pal_machine:
                     lea     (gadgets_list_to_fix),a0
                     move.w  (max_lines),d0
@@ -337,59 +355,33 @@ vbi_int_name:
                     dc.b    'Oktalyzer VBI Interrupt',0
 
 ; ===========================================================================
-;install_copper_int:
-;                    EXEC    Disable
-;                    lea     (copper_int_struct,pc),a1
-;                    move.l  a0,(IS_CODE,a1)
-;                    cmpi.b  #MIDI_IN,(midi_mode)
-;                    seq     (used_int_flag)
-;                    beq     .use_copper_int
-;                    moveq   #INTB_EXTER,d0
-;                    EXEC    AddIntServer
-;                    move.l  #(INTREQ<<16)|(INTF_EXTER|INTF_SETCLR),d1
-;                    bra     .use_external_int
-;.use_copper_int:
-;                    moveq   #INTB_COPER,d0
-;                    EXEC    AddIntServer
-;                    move.l  #(INTREQ<<16)|(INTF_SETCLR|INTF_COPER),d1
-;.use_external_int:
-;                    move.l  d1,(copper_int)
-;                    st      (copper_int_installed_flag)
-;                    EXEC    Enable
-;                    rts
-;used_int_flag:
-;                    dc.b    0
-;                    even
-;
-;; ===========================================================================
-;remove_copper_int:
-;                    EXEC    Disable
-;                    move.l  #(BPLCON0<<16)|$9201,(copper_int)
-;                    lea     (copper_int_struct,pc),a1
-;                    moveq   #INTB_EXTER,d0
-;                    tst.b   (used_int_flag)
-;                    beq     .use_external_int
-;                    moveq   #INTB_COPER,d0
-;.use_external_int:
-;                    EXEC    RemIntServer
-;                    sf      (copper_int_installed_flag)
-;                    EXEC    Enable
-;                    rts
-;copper_int_installed_flag:
-;                    dc.b    0
-;                    even
-;copper_int_struct:
-;                    dc.l    0,0
-;                    dc.b    NT_INTERRUPT,127
-;                    dc.l    copper_int_name,0,0
-;copper_int_name:
-;                    dc.b    'Oktalyzer Copper/External Interrupt',0
-
-; ===========================================================================
 vbi_int_code:
-                    tst.w   (main_spinlock)
-                    bne     .spinning
                     movem.l d0-a6,-(a7)
+
+                    addq.w  #1,delay_fade
+                    move.w  (OKT_current_speed,pc),d0
+                    muls.w  #16,d0
+                    divs.w  #$3F,d0
+                    cmp.w   delay_fade,d0
+                    bgt     .wait_fade
+                    clr.w   delay_fade
+                    lea     main_back_palette+2,a0
+                    lea     (main_back_color),a1
+                    moveq   #12,d6
+                    move.w  max_copper_lines,d7
+                    bsr     fade_colors
+.wait_fade:
+                    move.w  (refresh_visual,pc),d0
+                    btst    #VIS_DRAW_PATT_SCROLL,d0
+                    beq     .patt_scroll
+                    move.w  d0,-(a7)
+                    move.w  (bar_to_draw_pos,pc),refresh_pattern_pos
+                    move.w  (refresh_pattern_pos,pc),d0
+                    bsr     set_pattern_bitplane_from_given_pos
+                    bsr     draw_pattern_position_bar
+                    move.w  (a7)+,d0
+                    and.w   #~(1<<VIS_DRAW_PATT_SCROLL),refresh_visual
+.patt_scroll:
                     moveq   #EVT_VBI,d0
                     moveq   #0,d1
                     moveq   #0,d2
@@ -404,17 +396,16 @@ vbi_int_code:
 
                     ; events occuring during replay
                     ; that need visual refresh
-                    move.b  (refresh_visual,pc),d0
+                    move.w  (refresh_visual,pc),d0
                     btst    #VIS_DRAW_VUMETERS,d0
                     beq     .draw_vumeters
-                    and.b   #~(1<<VIS_DRAW_VUMETERS),refresh_visual
                     move.w  d0,-(a7)
                     bsr     draw_vumeters
                     move.w  (a7)+,d0
+                    and.w   #~(1<<VIS_DRAW_VUMETERS),refresh_visual
 .draw_vumeters:
                     btst    #VIS_DRAW_POS,d0
                     beq     .draw_pos
-                    and.b   #~(1<<VIS_DRAW_POS),refresh_visual
                     move.w  d0,-(a7)
                     move.w  (OKT_song_pos,pc),d2
                     moveq   #12,d0
@@ -427,47 +418,38 @@ vbi_int_code:
                     moveq   #2,d1
                     jsr     (draw_2_digits_decimal_number_leading_zeroes)
                     move.w  (a7)+,d0
+                    and.w   #~(1<<VIS_DRAW_POS),refresh_visual
 .draw_pos:
                     btst    #VIS_TRIG_VUMETERS,d0
                     beq     .trigger_vumeters
-                    and.b   #~(1<<VIS_TRIG_VUMETERS),refresh_visual
                     move.w  d0,-(a7)
                     bsr     trigger_vumeters
                     move.w  (a7)+,d0
+                    and.w   #~(1<<VIS_TRIG_VUMETERS),refresh_visual
 .trigger_vumeters:
                     btst    #VIS_DRAW_SPEED,d0
                     beq     .draw_speed
-                    and.b   #~(1<<VIS_DRAW_SPEED),refresh_visual
                     move.w  d0,-(a7)
                     move.w  (OKT_current_speed,pc),d0
                     bsr     draw_current_speed
                     move.w  (a7)+,d0
+                    and.w   #~(1<<VIS_DRAW_SPEED),refresh_visual
 .draw_speed:
                     btst    #VIS_DRAW_PATT,d0
                     beq     .draw_patt
                     move.w  d0,-(a7)
-                    and.b   #~(1<<VIS_DRAW_PATT),refresh_visual
                     bsr     set_pattern_bitplane
                     move.w  (a7)+,d0
+                    and.w   #~(1<<VIS_DRAW_PATT),refresh_visual
 .draw_patt:
                     btst    #VIS_DRAW_PATT_POS,d0
                     beq     .draw_patt_pos
                     move.w  d0,-(a7)
-                    and.b   #~(1<<VIS_DRAW_PATT_POS),refresh_visual
-                    move.w  refresh_pattern_pos,d0
+                    move.w  (refresh_pattern_pos,pc),d0
                     bsr     set_pattern_bitplane_from_given_pos
                     move.w  (a7)+,d0
+                    and.w   #~(1<<VIS_DRAW_PATT_POS),refresh_visual
 .draw_patt_pos:
-                    btst    #VIS_DRAW_ROW,d0
-                    beq     .draw_row
-                    and.b   #~(1<<VIS_DRAW_ROW),refresh_visual
-                    move.w  d0,-(a7)
-                    move.w  (bar_to_erase_pos,pc),d2
-                    bsr     show_pattern_position_bar
-                    move.w  (bar_to_draw_pos,pc),d2
-                    bsr     show_pattern_position_bar
-                    move.w  (a7)+,d0
-.draw_row:
                     ; must be 0 as some flag is tested right after that
                     moveq   #0,d0
                     movem.l (a7)+,d0-a6
@@ -646,8 +628,6 @@ restore_sys_requesters_function:
 old_sys_requesters_function:
                     dc.l    0
 our_sys_requesters_function:
-;                    tst.b   (copper_int_installed_flag)
-;                    bne     .installed
                     tst.b   (workbench_opened_flag)
                     bne     .apply_patch
 .installed:
@@ -780,7 +760,7 @@ DiskBase:
                     dc.l    0
 
 ; ===========================================================================
-set_copper_bitplanes:
+init_copper_bitplanes:
                     move.l  #dummy_sprite,d0
                     lea     (sprites_bps+2),a0
                     moveq   #8-1,d7
@@ -807,7 +787,6 @@ set_copper_bitplanes:
 set_full_screen_copperlist_ntsc:
                     EXEC    Disable
                     move.w  #DMAF_COPPER,(_CUSTOM|DMACON)
-                    addq.b  #1,(dma_copper_spinlock)
                     tst.b   (ntsc_flag)
                     beq     .no_ntsc
                     lea     (full_screen_copperlist_flag,pc),a0
@@ -818,8 +797,6 @@ set_full_screen_copperlist_ntsc:
                     move.w  #11,(shift_lines_ntsc)
                     move.w  #56,(shift_y_mouse_coord_ntsc)
 .no_ntsc:
-                    subq.b  #1,(dma_copper_spinlock)
-                    bgt     .spinning
                     move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
 .spinning:
                     EXEC    Enable
@@ -829,12 +806,9 @@ set_full_screen_copperlist_ntsc:
 construct_full_screen_copperlist_ntsc:
                     EXEC    Disable
                     move.w  #DMAF_COPPER,(_CUSTOM|DMACON)
-                    addq.b  #1,(dma_copper_spinlock)
                     move.b  #$2C,(copper_start_line)
                     lea     (fullscreen_copperlist_ntsc_struct),a0
                     bsr     construct_copperlist
-                    subq.b  #1,(dma_copper_spinlock)
-                    bgt     .spinning
                     move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
 .spinning:
                     EXEC    Enable
@@ -844,7 +818,6 @@ construct_full_screen_copperlist_ntsc:
 restore_full_screen_copperlist_ntsc:
                     EXEC    Disable
                     move.w  #DMAF_COPPER,(_CUSTOM|DMACON)
-                    addq.b  #1,(dma_copper_spinlock)
                     tst.b   (ntsc_flag)
                     beq     .no_ntsc
                     lea     (full_screen_copperlist_flag,pc),a0
@@ -855,8 +828,6 @@ restore_full_screen_copperlist_ntsc:
                     move.w  #7,(shift_lines_ntsc)
                     clr.w   (shift_y_mouse_coord_ntsc)
 .no_ntsc:
-                    subq.b  #1,(dma_copper_spinlock)
-                    bgt     .spinning
                     move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
 .spinning:
                     EXEC    Enable
@@ -866,12 +837,9 @@ restore_full_screen_copperlist_ntsc:
 construct_main_copperlist:
                     EXEC    Disable
                     move.w  #DMAF_COPPER,(_CUSTOM|DMACON)
-                    addq.b  #1,(dma_copper_spinlock)
                     move.b  #$64,(copper_start_line)
                     lea     (main_copperlist_struct),a0
                     bsr     construct_copperlist
-                    subq.b  #1,(dma_copper_spinlock)
-                    bgt     .spinning
                     move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
 .spinning:
                     EXEC    Enable
@@ -888,7 +856,6 @@ construct_copperlist:
                     move.l  a0,a2
                     EXEC    Disable
                     move.w  #DMAF_COPPER,(_CUSTOM|DMACON)
-                    addq.b  #1,(dma_copper_spinlock)
                     ; first copperlist
                     move.l  (a2)+,a3
 .loop:
@@ -923,8 +890,6 @@ construct_copperlist:
 .done:
                     move.l  a3,a0
                     move.l  a0,(_CUSTOM|COP1LCH)
-                    subq.b  #1,(dma_copper_spinlock)
-                    bgt     .spinning
                     move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
 .spinning:
                     EXEC    Enable
@@ -950,9 +915,6 @@ install_our_copperlist:
                     move.l  d0,(screen_mem_block)
                     movem.l (a7)+,d0/d1/a0/a1
                     rts
-dma_copper_spinlock:
-                    dc.b    0
-                    even
 
 ; ===========================================================================
 lbC01E9DC:
@@ -1695,7 +1657,7 @@ set_pattern_row:
                     bra     .bound_max
 .bounded:
                     move.w  d0,(viewed_pattern_row)
-                    or.b    #(1<<VIS_DRAW_PATT),refresh_visual
+                    or.w    #(1<<VIS_DRAW_PATT),refresh_visual
                     bra     draw_pattern_caret
 
 ; ===========================================================================
@@ -2600,9 +2562,13 @@ set_quantize_amount:
 .max:
                     move.w  d1,(quantize_amount)
                     bra     draw_quantize_amount
+
+; ===========================================================================
 set_quantize_amount_from_keyboard:
                     move.w  d0,(quantize_amount)
                     bra     draw_quantize_amount
+
+; ===========================================================================
 apply_quantize_amount:
                     move.w  (quantize_amount,pc),d0
                     add.w   d0,(viewed_pattern_row)
@@ -3189,8 +3155,8 @@ dec_song_position:
 
 ; ===========================================================================
 draw_pattern:
-                    move.w  #$201,(main_bplcon0+2)
-                    or.b    #(1<<VIS_DRAW_PATT),refresh_visual
+                    move.w  #$200,(main_bplcon0+2)
+                    or.w    #(1<<VIS_DRAW_PATT),refresh_visual
                     bsr     get_current_pattern_address_and_rows
                     move.w  d0,(pattern_rows_to_display)
                     bsr     erase_pattern_caret
@@ -3205,7 +3171,7 @@ draw_pattern:
                     bsr     set_caret_to_max_row
                     bsr     set_pattern_row
                     bsr     draw_selection_marquee
-                    move.w  #$9201,(main_bplcon0+2)
+                    move.w  #$9200,(main_bplcon0+2)
                     bra     display_main_menu
 
 ; ===========================================================================
@@ -3318,7 +3284,7 @@ lbC0203DC:
                     move.w  d0,-(a7)
                     bsr     erase_pattern_caret
                     bsr     lbC01F508
-                    jsr     (own_blitter)
+                    bsr     own_blitter
                     ; clear 1 char line
                     move.l  #(BC0F_DEST<<16),(BLTCON0,a6)
                     move.w  #0,(BLTDMOD,a6)
@@ -3328,7 +3294,7 @@ lbC0203DC:
                     adda.l  d0,a0
                     move.l  a0,(BLTDPTH,a6)
                     move.w  #(8*64)+(SCREEN_BYTES/2),(BLTSIZE,a6)
-                    jsr     (disown_blitter)
+                    bsr     disown_blitter
                     bsr     draw_selection_marquee
                     bra     draw_pattern_caret
 
@@ -3616,7 +3582,7 @@ get_mouse_coords:
                     movem.l (a7)+,d2/d3
                     rts
 max_mouse_pointer_y:
-                    dc.w    496-1
+                    dc.w    495
 
 ; ===========================================================================
 install_mouse_pointer:
@@ -4292,16 +4258,28 @@ do_load_song:
                     lea     (SAMP_MSG,pc),a0
                     bsr     read_chunks_content_from_struct
                     bmi     lbC020EA6
-                    
-                    ; fix samples lengths
-                    ; (a bug in original oktalyzer)
+                    ; fix samples lengths and too short repeat lengths
+                    ; (bugs in original oktalyzer)
                     lea     (OKT_samples_infos),a0
                     moveq   #SMPS_NUMBER-1,d7
 .fix_samples_length:
-                    bclr    #0,SMP_LEN+3(a0)
+                    bclr    #0,(SMP_LEN+3,a0)
+                    cmp.w   #1,(SMP_REP_LEN,a0)
+                    beq     .too_short_loop
+                    moveq   #0,d0
+                    moveq   #0,d1
+                    move.l  (SMP_LEN,a0),d1
+                    move.w  (SMP_REP_START,a0),d0
+                    add.l   d0,d0
+                    sub.l   d0,d1
+                    cmp.l   #2,d1
+                    bgt     .short_loop
+.too_short_loop:
+                    clr.w   (SMP_REP_START,a0)
+                    clr.w   (SMP_REP_LEN,a0)
+.short_loop:
                     lea     (SMP_INFOS_LEN,a0),a0
                     dbf     d7,.fix_samples_length
-
                     ; read patterns data
                     bsr     read_patterns_from_okta_song_file
                     bmi     lbC020EA6
@@ -4668,9 +4646,9 @@ lbC0211B0:
                     dc.b    $0,0          ; 7:tremolo
                     dc.b    $0,0          ; 8:unused
                     dc.b    $0,0          ; 9:sample offset
-                    dc.b    $1f,-1        ; A:volume fade
+                    dc.b    $1F,-1        ; A:volume fade
                     dc.b    $19,-3        ; B:pos jump
-                    dc.b    $1f,$40       ; C:volume
+                    dc.b    $1F,$40       ; C:volume
                     dc.b    0,0           ; D:pattern break
                     dc.b    0,0           ; E:extra
                     dc.b    $1C,$1F       ; F:set speed
@@ -4828,7 +4806,7 @@ patch_older_patterns:
                     ; effect number
                     move.b  2(a0),d0
                     move.b  2+4(a0),d1
-                    ; convert o effects
+                    ; convert old effects
                     cmp.b   #$18,d0
                     bne     .no_old_volume
                     move.b  #$1f,2(a0)
@@ -6003,7 +5981,7 @@ create_new_empty_sample:
 
 ; ===========================================================================
 inc_replay_speed:
-                    cmpi.w  #31,(OKT_default_speed)
+                    cmpi.w  #$3F,(OKT_default_speed)
                     beq     .max
                     addq.w  #1,(OKT_default_speed)
 .max:
@@ -6154,7 +6132,7 @@ lbC0221BA:
 lbC0221CA:
                     bsr     set_caret_to_max_row
                     bsr     set_pattern_row
-                    or.b    #(1<<VIS_DRAW_PATT),refresh_visual
+                    or.w    #(1<<VIS_DRAW_PATT),refresh_visual
                     bra     display_main_menu
 lbC0221DA:
                     rts
@@ -6206,8 +6184,6 @@ play_pattern:
                     move.w  (current_viewed_pattern),(OKT_song_pos)
 go_play:
                     bsr     free_work_sample
-;                    lea     (replay_int,pc),a0
-;                    bsr     install_copper_int
                     bsr     clear_vumeters
                     bsr     lbC022A2C
                     bsr     OKT_init
@@ -6216,13 +6192,8 @@ go_play:
                     bsr     process_event
                     bsr     OKT_stop
                     bsr     lbC022A2C
-;                    bsr     remove_copper_int
                     bsr     stop_audio_channels
                     bsr     clear_vumeters
-                    ; remove after stop
-                    move.w  (bar_to_draw_pos,pc),d2
-                    bsr     show_pattern_position_bar
-                    clr.w   (lbW01B2B6)
                     move.w  #-1,(OKT_last_pattern_row)
                     move.w  (OKT_current_speed),(OKT_default_speed)
                     tst.b   (pattern_play_flag)
@@ -6241,7 +6212,6 @@ lbC0222E4:
                     move.w  d0,(viewed_pattern_row)
 lbC02230C:
                     bsr     set_pattern_row
-;lbC022310:
                     bsr     change_work_sample_size
                     bra     display_main_menu
 lbW022318:
@@ -6254,15 +6224,6 @@ lbW022318:
                     dc.w    EVT_RIGHT_PRESSED
                     dc.l    lbC02261E
                     dc.w    EVT_LIST_END
-lbC022398:
-                    move.l  #lbC0223A4,(current_cmd_ptr)
-                    rts
-lbC0223A4:
-                    lea     (play_help_text),a0
-                    moveq   #0,d0
-                    moveq   #0,d1
-                    jsr     (process_commands)
-                    bra     wait_any_key_and_mouse_press
 lbC0225F6:
                     btst    #15,d1
                     bne     lbC022608
@@ -6295,13 +6256,15 @@ lbW02263A:
                     dc.w    0
 
 ; ===========================================================================
-;replay_int:
-;                    movem.l d1-d7/a0-a6,-(a7)
-;                    bsr     OKT_Play
-;                    move.w  #$f00,$dff180
-;                    movem.l (a7)+,d1-d7/a0-a6
-;                    moveq   #0,d0
-;                    rts
+lbC022398:
+                    move.l  #lbC0223A4,(current_cmd_ptr)
+                    rts
+lbC0223A4:
+                    lea     (play_help_text),a0
+                    moveq   #0,d0
+                    moveq   #0,d1
+                    jsr     (process_commands)
+                    bra     wait_any_key_and_mouse_press
 
 ; ===========================================================================
 install_midi_ints:
@@ -6859,76 +6822,93 @@ lbC022DE6:
                     rts
 
 ; ===========================================================================
-show_pattern_position_bar:
+; Fade a palette
+;
+; in:
+;
+; a0: palette to set
+; a1: dest palette
+; d6: step between palette to set entries
+; d7: number of colors - 1
+fade_colors:
+                    move.w  #$f00,d5
+fade_cols_loop:
+                    move.w  (a0),d0
+                    move.w  (a1),d3
+                    move.w  d3,d4
+                    move.w  d0,d1
+                    move.w  d0,d2
+                    and.w   d5,d3
+                    and.w   d5,d0
+                    cmp.w   d3,d0
+                    beq     red_on_m
+                    bge     red_on_b
+                    add.w   #$200,d2
+red_on_b:
+                    sub.w   #$100,d2
+red_on_m:
+                    move.w  d4,d3
+                    move.w  d1,d0
+                    and.w   #$f0,d3
+                    and.w   #$f0,d0
+                    cmp.w   d3,d0
+                    beq     green_on_m
+                    bge     green_on_b
+                    add.w   #$20,d2
+green_on_b:
+                    sub.w   #$10,d2
+green_on_m:
+                    and.w   #$f,d4
+                    and.w   #$f,d1
+                    cmp.w   d4,d1
+                    beq     blue_on_m
+                    bge     blue_on_b
+                    addq.w  #2,d2
+blue_on_b:
+                    subq.w  #1,d2
+blue_on_m:
+                    move.w  d2,(a0)
+                    add.w   d6,a0
+                    dbf     d7,fade_cols_loop
+                    rts
+
+; ===========================================================================
+clear_rows_palette:
+                    lea     main_back_palette+2,a0
+                    moveq   #12,d6
+                    move.w  max_copper_lines,d7
+.clear:
+                    move.w  (main_back_color),(a0)
+                    add.w   d6,a0
+                    dbf     d7,.clear
+                    rts
+
+; ===========================================================================
+draw_pattern_position_bar:
                     tst.b   (pattern_play_flag)
                     bne     .no_draw
-                    tst.w   d2
+                    move.w  (bar_to_draw_pos,pc),d2
                     bmi     .no_draw
-                    move.w  d2,refresh_pattern_pos
-                    lea     (main_screen+(56*80)),a0
-                    move.w  d2,d0
-                    mulu.w  #(SCREEN_BYTES*8),d0
-                    adda.l  d0,a0
-                    lea     (a0),a1
-                    lea     (-SCREEN_BYTES,a1),a1
-                    lea     ((SCREEN_BYTES*8),a1),a2
-                    ; don't draw top bar on first row
-                    tst.w   d2
-                    beq     .first_row_1
-                    ; top
-                REPT (80/4)
-                    not.l   (a1)+
-                ENDR
-.first_row_1:
-                    ; bottom
-                REPT (80/4)
-                    not.l   (a2)+
-                ENDR
-                    move.w  (lbW01B2B6),d0
-                    bmi     .last_column
-                    ; remove the bar on the current caret channel
-                    lea     (caret_current_positions),a1
-                    mulu.w  #5,d0
-                    move.b  (a1,d0.w),d1
-                    ext.w   d1
-                    add.w   d1,a0
-                    lea     (-SCREEN_BYTES,a0),a0
-                    lea     ((SCREEN_BYTES*8),a0),a1
-                    moveq   #%00000001,d0
-                    ; close the bar vertically on the left
-                    ; of the curent channel
-                    eor.b   d0,(-((SCREEN_BYTES*7)+1),a1)
-                    eor.b   d0,(-((SCREEN_BYTES*6)+1),a1)
-                    eor.b   d0,(-((SCREEN_BYTES*5)+1),a1)
-                    eor.b   d0,(-((SCREEN_BYTES*4)+1),a1)
-                    eor.b   d0,(-((SCREEN_BYTES*3)+1),a1)
-                    eor.b   d0,(-((SCREEN_BYTES*2)+1),a1)
-                    eor.b   d0,(-((SCREEN_BYTES*1)+1),a1)
-                    tst.w   d2
-                    beq     .first_row_2
-                    ; top
-                REPT 8
-                    not.b   (a0)+
-                ENDR
-.first_row_2:
-                    ; bottom
-                REPT 8
-                    not.b   (a1)+
-                ENDR
-                    cmpi.w  #72,d1
-                    beq     .last_column
-                    ; close the bar vertically on the right
-                    ; of the curent channel
-                    move.b  #%10000000,d0
-                    eor.b   d0,(-(SCREEN_BYTES*7),a1)
-                    eor.b   d0,(-(SCREEN_BYTES*6),a1)
-                    eor.b   d0,(-(SCREEN_BYTES*5),a1)
-                    eor.b   d0,(-(SCREEN_BYTES*4),a1)
-                    eor.b   d0,(-(SCREEN_BYTES*3),a1)
-                    eor.b   d0,(-(SCREEN_BYTES*2),a1)
-                    eor.b   d0,(-(SCREEN_BYTES*1),a1)
-.last_column:
-                    or.b    #(1<<VIS_DRAW_PATT_POS),refresh_visual
+                    move.w  (max_copper_bar_line),d1
+                    cmp.w   d1,d2
+                    ble     .max
+                    bsr     OKT_get_current_pattern
+                    move.w  d0,d3
+                    ; remaining rows
+                    sub.w   d2,d0
+                    cmp.w   d1,d0
+                    bgt     .no_patt_bottom                    
+                    ; d0 = [x..1]
+                    sub.w   d0,d3
+                    sub.w   (pattern_bitplane_top_pos),d2
+                    bra     .max
+.no_patt_bottom:
+                    move.W  d1,d2
+.max:
+                    lea     main_back_palette+2,a0
+                    move.w  d2,drawn_bar_pos
+                    mulu.w  #12,d2
+                    move.w  #$36b,(a0,d2.w)
 .no_draw:
                     rts
 current_song_position:
@@ -7002,19 +6982,19 @@ OKT_init_variables:
                     move.w  (caret_pos_x),d0
                     divu.w  #5,d0
                     move.w  d0,(lbW01B2BA)
-                    clr.w   (lbW01B2B6)
+                    move.w  (lbW01B2BA),(lbW01B2B6)
                     move.w  #-1,(OKT_next_song_pos)
                     move.w  (OKT_default_speed),(OKT_current_speed)
                     clr.w   (OKT_action_cycle)
                     clr.w   (OKT_filter_status)
                     clr.w   (OKT_dmacon)
-                    sf.b    (refresh_visual)
+                    clr.w   (refresh_visual)
                     sf.b    (trigger_vumeters_bits)
                     rts
 
 ; ===========================================================================
 OKT_replay_handler:
-                    or.b    #(1<<VIS_DRAW_VUMETERS),refresh_visual
+                    or.w    #(1<<VIS_DRAW_VUMETERS),refresh_visual
                     bsr     OKT_set_hw_regs
                     addq.w  #1,(OKT_action_cycle)
                     move.w  (OKT_current_speed,pc),d0
@@ -7022,13 +7002,20 @@ OKT_replay_handler:
                     bgt     .OKT_no_new_row
                     bsr     OKT_new_row
 .OKT_no_new_row:
+                    tst.b   (pattern_play_flag)
+                    bne     .not_new_bar_yet
                     move.w  (OKT_last_pattern_row,pc),d0
                     cmp.w   (OKT_pattern_row,pc),d0
                     beq     .not_new_bar_yet
-                    move.w  (lbW01B2BA),(lbW01B2B6)
+                    ; not sure was this does...
+                    ;move.w  (lbW01B2BA),(lbW01B2B6)
+                    ; still not drawn
+                    move.w  (refresh_visual,pc),d0
+                    and.w   #(1<<VIS_DRAW_PATT_SCROLL),d0
+                    bne     .not_drawn_yet
                     move.w  (OKT_pattern_row,pc),bar_to_draw_pos
-                    move.w  (OKT_last_pattern_row,pc),bar_to_erase_pos
-                    or.b    #(1<<VIS_DRAW_ROW),refresh_visual
+                    or.w    #(1<<VIS_DRAW_PATT_SCROLL),refresh_visual
+.not_drawn_yet:
                     move.w  (OKT_pattern_row,pc),(OKT_last_pattern_row)
 .not_new_bar_yet:
                     bsr     lbC022A44
@@ -7088,7 +7075,7 @@ OKT_get_current_pattern:
 OKT_set_current_pattern:
                     tst.b   (pattern_play_flag)
                     beq     .OKT_play_pattern
-                    or.b    #(1<<VIS_DRAW_POS),refresh_visual
+                    or.w    #(1<<VIS_DRAW_POS),refresh_visual
                     lea     (OKT_patterns),a0
                     move.w  (OKT_song_pos,pc),d0
                     move.b  (a0,d0.w),d0
@@ -7352,7 +7339,7 @@ OKT_fill_double_channel_data:
                     move.w  d3,(CHAN_NOTE_D,a3)
                     move.w  d3,(CHAN_BASE_NOTE_D,a3)
 .OKT_done_midi_out:
-                    or.b    #(1<<VIS_TRIG_VUMETERS),(refresh_visual)
+                    or.w    #(1<<VIS_TRIG_VUMETERS),(refresh_visual)
                     bset    d7,(trigger_vumeters_bits)
 .OKT_no_data:
                     addq.w  #4,a2
@@ -7464,7 +7451,7 @@ OKT_fill_single_channel_data:
                     move.b  (SMP_VOL+1,a1),(a0,d0.w)
                     move.l  (a7)+,a0
 .OKT_done_midi_out:
-                    or.b    #(1<<VIS_TRIG_VUMETERS),(refresh_visual)
+                    or.w    #(1<<VIS_TRIG_VUMETERS),(refresh_visual)
                     bset    d7,(trigger_vumeters_bits)
                     cmpi.b  #MIDI_OUT,(midi_mode)
                     beq     .OKT_no_data
@@ -7908,10 +7895,10 @@ OKT_pos_jump:
 OKT_set_speed:
                     move.w  (OKT_action_cycle,pc),d0
                     bne     .OKT_no_change
-                    andi.w  #$1F,d1
+                    andi.w  #$3F,d1
                     beq     .OKT_no_change
                     move.w  d1,(OKT_current_speed)
-                    or.b    #(1<<VIS_DRAW_SPEED),refresh_visual
+                    or.w    #(1<<VIS_DRAW_SPEED),refresh_visual
 .OKT_no_change:
                     rts
 
@@ -8000,16 +7987,15 @@ OKT_channels_volumes:
 ; ====
 OKT_filter_status:
                     dc.b    0
-refresh_visual:
-                    dc.b    0
 trigger_vumeters_bits:
                     dc.b    0
-                    even
+refresh_visual:
+                    dc.w    0
 refresh_pattern_pos:
                     dc.w    0
 bar_to_draw_pos:
                     dc.w    0
-bar_to_erase_pos:
+drawn_bar_pos:
                     dc.w    0
 OKT_dmacon:
                     dc.w    0
@@ -8048,18 +8034,7 @@ OKT_init_buffers:
                     EXEC    AllocMem
                     tst.l   d0
                     beq     .OKT_error
-                    lea     (OKT_volumes_scaling_table_l,pc),a0
-                    move.l  d0,(a0)
-                    move.l  #256*65,d0
-                    btst    #1,(OKT_processor,pc)
-                    beq     .OKT_alloc_table_020_r
-                    move.l  #256*65*4,d0
-.OKT_alloc_table_020_r:
-                    moveq   #MEMF_ANY,d1
-                    EXEC    AllocMem
-                    tst.l   d0
-                    beq     .OKT_error
-                    lea     (OKT_volumes_scaling_table_r,pc),a0
+                    lea     (OKT_volumes_scaling_table,pc),a0
                     move.l  d0,(a0)
                     move.l  #512*8,d0
                     move.l  #MEMF_CLEAR|MEMF_CHIP,d1
@@ -8068,8 +8043,7 @@ OKT_init_buffers:
                     beq     .OKT_error
                     lea     (OKT_final_mixing_buffers,pc),a0
                     move.l  d0,(a0)
-                    move.l  (OKT_volumes_scaling_table_l,pc),a0
-                    move.l  (OKT_volumes_scaling_table_r,pc),a1
+                    move.l  (OKT_volumes_scaling_table,pc),a0
                     moveq   #65-1,d6
                     move.l  #256,d2
 .OKT_make_volumes_table_outer:
@@ -8084,20 +8058,13 @@ OKT_init_buffers:
                     muls.w  d2,d0
                     asr.l   #8,d0
                     neg.w   d0
-                    move.w  d0,d1
                     asr.b   #1,d0
-                    muls.w  #65,d1
-                    divs.w  #128,d1
                     move.b  d0,(a0)+
-                    move.b  d1,(a1)+
                     btst    #1,(OKT_processor,pc)
                     beq     .OKT_sel_020_table
                     move.b  d0,(a0)+
                     move.b  d0,(a0)+
                     move.b  d0,(a0)+
-                    move.b  d1,(a1)+
-                    move.b  d1,(a1)+
-                    move.b  d1,(a1)+
 .OKT_sel_020_table:
                     addq.l  #1,d3
                     dbf     d7,.OKT_make_volumes_table_inner
@@ -8127,18 +8094,8 @@ OKT_release_buffers:
                     move.l  #512*8,d0
                     EXEC    FreeMem
 .OKT_empty_1:
-                    move.l  (OKT_volumes_scaling_table_r,pc),d0
+                    move.l  (OKT_volumes_scaling_table,pc),d0
                     beq     .OKT_empty_2
-                    move.l  d0,a1
-                    move.l  #256*65,d0
-                    btst    #1,(OKT_processor,pc)
-                    beq     .OKT_free_table_r
-                    move.l  #256*65*4,d0
-.OKT_free_table_r:
-                    EXEC    FreeMem
-.OKT_empty_2:
-                    move.l  (OKT_volumes_scaling_table_l,pc),d0
-                    beq     .OKT_empty_3
                     move.l  d0,a1
                     move.l  #256*65,d0
                     btst    #1,(OKT_processor,pc)
@@ -8146,25 +8103,25 @@ OKT_release_buffers:
                     move.l  #256*65*4,d0
 .OKT_free_table_l:
                     EXEC    FreeMem
-.OKT_empty_3:
+.OKT_empty_2:
                     move.l  (OKT_channels_notes_buffers,pc),d0
-                    beq     .OKT_empty_4
+                    beq     .OKT_empty_3
                     move.l  d0,a1
                     move.l  #512,d0
                     EXEC    FreeMem
-.OKT_empty_4:
+.OKT_empty_3:
                     move.l  (OKT_scaling_code_lines,pc),d0
-                    beq     .OKT_empty_5
+                    beq     .OKT_empty_4
                     move.l  d0,a1
                     move.l  #OKT_SCALING_LINES,d0
                     EXEC    FreeMem
-.OKT_empty_5:
+.OKT_empty_4:
                     move.l  (OKT_scaling_code_buffer,pc),d0
-                    beq     .OKT_empty_6
+                    beq     .OKT_empty_5
                     move.l  d0,a1
                     move.l  #OKT_CODE_LENGTH,d0
                     EXEC    FreeMem
-.OKT_empty_6:
+.OKT_empty_5:
                     movem.l (a7)+,d0-a6
                     rts
                 ENDC
@@ -8361,6 +8318,9 @@ OKT_audio_int:
                     and.w   (OKT_audio_int_single_bit,pc),d0
                     beq     .OKT_no_int
                     move.w	d0,INTREQ-INTREQR(a1)
+                IFD SHOW_RASTERS
+                    move.w  #$77,(_CUSTOM|COLOR00)
+                ENDC
                     bsr     OKT_main
                     lea     (_CUSTOM|OKT_AUDIO_BASE),a1
                     move.l  (OKT_final_mixing_buffers,pc),a0
@@ -8388,6 +8348,9 @@ OKT_audio_int:
                     lea     (512*2,a0),a0
                     move.l  a0,($30,a1)
 .OKT_no_int:
+                IFD SHOW_RASTERS
+                    move.w  #0,(_CUSTOM|COLOR00)
+                ENDC
                     movem.l	(a7)+,d0-a6
                     rte
                 ENDC
@@ -8399,7 +8362,13 @@ OKT_cia_int:
                     lea     _CUSTOM|INTREQ,a0
                     move.w  #$2000,(a0)
                     move.w  #$2000,(a0)
+                IFD SHOW_RASTERS
+                    move.w  #$770,(_CUSTOM|COLOR00)
+                ENDC
                     bsr     OKT_replay_handler
+                IFD SHOW_RASTERS
+                    move.w  #0,(_CUSTOM|COLOR00)
+                ENDC
                     movem.l (a7)+,d0-a6
                     rte
 
@@ -8439,19 +8408,18 @@ OKT_main:
                     beq     .OKT_020_table_l
                     lsl.l   #2,d1
 .OKT_020_table_l:
-                    move.l  (OKT_volumes_scaling_table_r,pc),a5
+                    move.l  (OKT_volumes_scaling_table,pc),a5
                     add.l   d1,a5
                     bsr     OKT_create_channel_waveform_data
                     add.w   d0,(OKT_mixing_routines_index)
                     move.l  (a7),d7
                     subq.w  #1,d7
                     move.l  4(a7),a1
-                    move.l  (OKT_volumes_scaling_table_l,pc),a5
+                    move.l  (OKT_volumes_scaling_table,pc),a5
                     tst.b   d0
                     bne     .OKT_no_buffer
                     ; wasn't processed
                     move.l  (OKT_channels_notes_buffers,pc),a1
-                    move.l  (OKT_volumes_scaling_table_r,pc),a5
 .OKT_no_buffer:
                     lea     (CHAN_LEN,a2),a3
                     lea     (OKT_channels_volumes,pc),a0
@@ -9008,9 +8976,7 @@ OKT_scaling_code_lines:
                     dc.l    0
 OKT_channels_notes_buffers:
                     dc.l    0
-OKT_volumes_scaling_table_l:
-                    dc.l    0
-OKT_volumes_scaling_table_r:
+OKT_volumes_scaling_table:
                     dc.l    0
 OKT_final_mixing_buffers:
                     dc.l    0
@@ -9995,9 +9961,9 @@ lbC025712:
                     GFX     WaitBlit
                     move.w  d2,(BLTBMOD,a6)
                     sub.w   d3,d2
-                    bge     lbC025734
+                    bge     .signed_octant
                     ori.b   #SIGNFLAG,d5
-lbC025734:
+.signed_octant:
                     move.w  d2,(BLTAPTL,a6)
                     sub.w   d3,d2
                     move.w  d2,(BLTAMOD,a6)
@@ -10636,8 +10602,9 @@ cmd_clear_main_menu:
 ; ===========================================================================
 cmd_prepare_sub_screen:
                     bsr     clear_1_line_blitter
+                    bsr     clear_rows_palette
                     clr.w   refresh_pattern_pos
-                    or.b    #(1<<VIS_DRAW_PATT_POS),refresh_visual
+                    or.w    #(1<<VIS_DRAW_PATT_POS),refresh_visual
                     bra     next_command
 
 ; ===========================================================================
@@ -13434,6 +13401,7 @@ lbW028006:
 lbB028008:
                     dc.b    0
                     even
+; sample ed.
 lbC02800C:
                     sf      (lbB028218)
                     moveq   #-1,d0
@@ -13448,8 +13416,8 @@ lbC02801A:
                     move.w  #226,d0
                     bsr     lbC02823A
                     st      (lbB029EE7)
+                    ; loop
                     bsr     lbC028284
-                    bsr     lbC0280AE
                     lea     (lbW028074,pc),a0
                     jsr     (stop_audio_and_process_event)
                     bsr     lbC028292
@@ -13461,7 +13429,7 @@ lbC02801A:
 lbC028066:
                     tst.b   (quit_flag)
                     beq     lbC02801A
-                    bra     lbC0280FE
+                    rts
 lbW028074:
                     dc.w    EVT_MORE_EVENTS
                     dc.l    lbC0208FA
@@ -13483,36 +13451,6 @@ gadgets_list_to_fix:
                     dc.l    lbL0293F0
                     dc.l    lbL029A1E
                     dc.l    0
-lbC0280AE:
-                    tst.b   (ntsc_flag)
-                    beq     lbC0280FC
-                    EXEC    Disable
-                    move.w  #DMAF_COPPER,(_CUSTOM|DMACON)
-                    addq.b  #1,(dma_copper_spinlock)
-                    move.b  #$F0,(copper_credits_line)
-                    move.b  #$F8,(copper_end_line)
-                    subq.b  #1,(dma_copper_spinlock)
-                    bgt     lbC0280F0
-                    move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
-lbC0280F0:
-                    EXEC    Enable
-lbC0280FC:
-                    rts
-lbC0280FE:
-                    tst.b   (ntsc_flag)
-                    beq     lbC02814C
-                    EXEC    Disable
-                    move.w  #DMAF_COPPER,(_CUSTOM|DMACON)
-                    addq.b  #1,(dma_copper_spinlock)
-                    move.b  #$EC,(copper_credits_line)
-                    move.b  #$F4,(copper_end_line)
-                    subq.b  #1,(dma_copper_spinlock)
-                    bgt     lbC028140
-                    move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
-lbC028140:
-                    EXEC    Enable
-lbC02814C:
-                    rts
 lbC02814E:
                     move.w  d1,d0
                     andi.w  #$FF00,d0
@@ -13648,26 +13586,28 @@ lbC0282CE:
                     st      d4
 lbC0282D0:
                     move.w  d2,d0
-                    cmpi.w  #96,d0
-                    blt     lbC028306
                     tst.b   (ntsc_flag)
                     beq     lbC0282E8
-                    cmpi.w  #128,d0
+                    cmpi.w  #96-56,d0
+                    blt     lbC028306
+                    cmpi.w  #160-56-32,d0
                     bge     lbC028306
                     bra     lbC0282EE
 lbC0282E8:
+                    cmpi.w  #96,d0
+                    blt     lbC028306
                     cmpi.w  #160,d0
                     bge     lbC028306
 lbC0282EE:
                     tst.b   d4
                     beq     lbC0282FA
                     move.w  d1,d0
-                    bsr     lbC028938
+                    bsr     sample_ed_set_mark
                     bra     lbC028306
 lbC0282FA:
                     move.w  (sample_ed_mouse_block_start),d0
                     bmi     lbC028306
-                    bsr     lbC028938
+                    bsr     sample_ed_set_mark
 lbC028306:
                     move.l  (a7)+,d4
                     moveq   #ERROR,d0
@@ -13878,10 +13818,16 @@ lbC02855C:
                     bsr     lbC028324
                     bsr     lbC02837A
                     bra     sample_ed_draw_sample_infos
-lbC02860A:
+
+; ===========================================================================
+sample_ed_mark_all:
+                    tst.l   (work_sample_address_ptr)
+                    beq     lbC029E96
                     moveq   #0,d0
                     move.w  #SCREEN_WIDTH-1,d1
-                    bra     lbC028938
+                    bra     sample_ed_set_mark
+
+; ===========================================================================
 lbC028614:
                     tst.l   (work_sample_address_ptr)
                     beq     lbC029E96
@@ -14074,7 +14020,29 @@ lbC028914:
                     EXEC    FreeMem
 lbC028936:
                     rts
-lbC028938:
+
+; ===========================================================================
+sample_ed_clear_mark:
+                    tst.l   (work_sample_address_ptr)
+                    beq     lbC029E96
+                    movem.l d0/d1/d2,-(a7)
+                    moveq   #-1,d0
+                    moveq   #-1,d1
+                    move.w  d0,d2
+                    swap    d2
+                    move.w  d1,d2
+                    cmp.l   (sample_ed_mouse_block_start),d2
+                    beq     .not_marked
+                    movem.w d0/d1,-(a7)
+                    bsr     lbC02896C
+                    movem.w (a7)+,d0/d1
+                    bsr     sample_ed_draw_sample_infos
+.not_marked:
+                    movem.l (a7)+,d0/d1/d2
+                    rts
+
+; ===========================================================================
+sample_ed_set_mark:
                     move.l  d2,-(a7)
                     move.w  d0,d2
                     swap    d2
@@ -14097,12 +14065,12 @@ lbC02895C:
 lbC02896C:
                     moveq   #-1,d0
                     cmp.l   (sample_ed_mouse_block_start),d0
-                    beq     lbC028988
+                    beq     .not_marked
                     movem.w (sample_ed_mouse_block_start),d0/d1
                     bsr     sample_ed_set_and_draw_mouse_block
                     moveq   #-1,d0
                     move.l  d0,(sample_ed_mouse_block_start)
-lbC028988:
+.not_marked:
                     rts
 
 ; ===========================================================================
@@ -14393,7 +14361,7 @@ sample_ed_draw_sample_infos:
                     lea     (lbL028DD8,pc),a0
                     move.l  (a1,d0.w),(a0)
                     sf      (3,a0)
-                    moveq   #75,d0
+                    moveq   #74,d0
                     move.w  (max_lines,pc),d1
                     jsr     (draw_text)
                     lea     (L_MSG,pc),a0
@@ -14401,7 +14369,7 @@ sample_ed_draw_sample_infos:
                     add.w   d0,d0
                     add.w   d0,d0
                     add.w   d0,a0
-                    moveq   #75,d0
+                    moveq   #74,d0
                     move.w  (max_lines,pc),d1
                     addq.w  #1,d1
                     jsr     (draw_text)
@@ -15359,7 +15327,7 @@ lbC0297CC:
                     move.w  #184,d5
                     tst.b   (ntsc_flag)
                     beq     lbC0297E0
-                    subi.w  #32,d5
+                    subi.w  #56+32,d5
 lbC0297E0:
                     sub.w   d5,d1
                     bmi     lbC02988E
@@ -15447,7 +15415,7 @@ lbC0298A8:
                     move.w  #17,(a0,d0.w)
                     rts
 lbC0298CC:
-                    jsr     (own_blitter)
+                    bsr     own_blitter
                     move.l  #(BC0F_DEST<<16),(BLTCON0,a6)
                     clr.w   (BLTDMOD,a6)
                     lea     (main_screen+(192*80)),a0
@@ -15457,7 +15425,7 @@ lbC0298CC:
 lbC0298F0:
                     move.l  a0,(BLTDPTH,a6)
                     move.w  #(33*64)+(SCREEN_BYTES/2),(BLTSIZE,a6)
-                    jmp     (disown_blitter)
+                    bra     disown_blitter
 lbC029902:
                     bsr     lbC0298CC
                     jsr     (prepare_line_drawing)
@@ -15506,7 +15474,12 @@ lbC029966:
                     rts
 
 ; ===========================================================================
+sample_ed_boost:
+                    st      (sample_filter_boost_flag)
+                    bra     go_boost
 sample_ed_delta_filter:
+                    sf      (sample_filter_boost_flag)
+go_boost:
                     tst.l   (work_sample_address_ptr)
                     beq     lbC029E96
                     tst.b   (sample_ed_mode_flag)
@@ -15595,15 +15568,53 @@ lbC029A88:
                     move.l  (sample_block_end),d0
                     sub.l   (sample_block_start),d0
 lbC029AB8:
+                    ; min. length
                     subq.l  #2,d0
-                    bmi     lbC029AE4
+                    bmi     .done_filter
                     jsr     (stop_audio_channels)
+                    tst.b   (sample_filter_boost_flag)
+                    beq     .go_filter
+                    ; boost
+                    moveq   #0,d1
+.boost_loop:
+                    subq.l  #1,d0
+                    bmi     .done_filter
+                    move.b  (a0),d2
+                    ext.w   d2
+                    move.w  d2,d3
+                    sub.w   d1,d2
+                    move.w  d3,d1
+                    tst.w   d2
+                    bmi.b   .neg
+                    asr.w   #2,d2
+                    add.w   d2,d3
+                    bra     .l1
+.neg:
+                    neg.w   d2
+                    asr.w   #2,d2
+                    sub.w   d2,d3
+.l1:
+                    cmp.w   #127,d3
+                    bgt.b   .hi
+                    cmp.w   #-128,d3
+                    blt.b   .lo
+.set:
+                    move.b  d3,(a0)+
+                    bra     .boost_loop
+.hi:
+                    moveq   #127,d3
+                    bra.b   .set
+.lo:
+                    moveq   #-128,d3
+                    bra.b   .set
+.go_filter:
+                    ; filter
                     moveq   #3,d4
                     move.b  (a0)+,d1
                     ext.w   d1
-lbC029AC8:
+.filter_loop:
                     subq.l  #1,d0
-                    bmi     lbC029AE4
+                    bmi     .done_filter
                     move.b  (1,a0),d3
                     ext.w   d3
                     add.w   d1,d3
@@ -15614,8 +15625,8 @@ lbC029AC8:
                     ext.l   d3
                     divs.w  d4,d3
                     move.b  d3,(a0)+
-                    bra     lbC029AC8
-lbC029AE4:
+                    bra     .filter_loop
+.done_filter:
                     rts
 
 ; ===========================================================================
@@ -15729,8 +15740,8 @@ lbC029BAC:
                     dbra    d4,lbC029BA4
                     bra     lbC029B8A
 lbC029BDA:
-                    move.w   (main_back_color+2),(lbW029F0C)
-                    move.w   #$400,(main_back_color+2)
+                    move.w   (main_back_color),(lbW029F0C)
+                    move.w   #$400,(main_back_color)
                     move.l   (lbL029EF2),a6
                     move.l   (lbL029EF6),d3
                     moveq    #2,d6
@@ -15768,7 +15779,7 @@ lbC029C1C:
                     cmp.l   a6,d3
                     bne     lbC029BFA
 lbC029C50:
-                    move.w  (lbW029F0C),(main_back_color+2)
+                    move.w  (lbW029F0C),(main_back_color)
                     move.l  a6,d0
                     moveq   #-8,d1
                     and.l   d1,d0
@@ -15975,6 +15986,8 @@ lbW029EE4:
 lbB029EE7:
                     dc.b    0
 sample_ed_mode_flag:
+                    dc.b    0
+sample_filter_boost_flag:
                     dc.b    0
                     even
 lbL029EEA:
@@ -17580,7 +17593,7 @@ set_colors_palette:
                     move.w  (a0)+,(main_menu_front_color+2)
                     move.w  (a0)+,(main_menu_back_color+2)
                     move.w  (a0)+,(main_front_color+2)
-                    move.w  (a0),(main_back_color+2)
+                    move.w  (a0),(main_back_color)
                     rts
 
 ; ===========================================================================
@@ -18523,7 +18536,7 @@ xxFROMxTOxIFx_MSG:
                     dc.b    ' xx FROM x TO x IF xxxxxxxxxxxxxxxxxxxxxxxl THEN V=xxxxxxxxxxxxxxxxxxxxxxxl',0
 lbC02C1D4:
                     move.w  d0,-(a7)
-                    jsr     (own_blitter)
+                    bsr     own_blitter
                     move.l  #(BC0F_DEST<<16),(BLTCON0,a6)
                     move.w  #4,(BLTDMOD,a6)
                     lea     (main_screen+2),a0
@@ -18532,7 +18545,7 @@ lbC02C1D4:
                     adda.l  d0,a0
                     move.l  a0,(BLTDPTH,a6)
                     move.w  #(8*64)+((SCREEN_BYTES/2)-(4/2)),(BLTSIZE,a6)
-                    jmp     (disown_blitter)
+                    bra     disown_blitter
 lbC02C20A:
                     tst.b   d0
                     bmi     lbC02C214
@@ -18548,7 +18561,7 @@ lbC02C21A:
                     cmpi.w  #12,d0
                     bls     lbC02C276
                     lea     (main_screen+((136*80)+2)),a0
-                    jsr     (own_blitter)
+                    bsr     own_blitter
                     move.l  #((SRCA|BC0F_DEST|ABC|ABNC|ANBC|ANBNC)<<16),(BLTCON0,a6)
                     moveq   #-1,d0
                     move.l  d0,(BLTAFWM,a6)
@@ -18557,7 +18570,7 @@ lbC02C21A:
                     lea     ((SCREEN_BYTES*8),a0),a0
                     move.l  a0,(BLTAPTH,a6)
                     move.w  #(88*64)+((SCREEN_BYTES/2)-(4/2)),(BLTSIZE,a6)
-                    jsr     (disown_blitter)
+                    bsr     disown_blitter
                     addq.w  #1,(lbW02B70E)
                     moveq   #11,d0
                     move.w  (lbW02B70E,pc),d1
@@ -18569,7 +18582,7 @@ lbC02C278:
                     tst.w   (lbW02B70E)
                     beq     lbC02C2CA
                     lea     (main_screen+17916),a0
-                    jsr     (own_blitter)
+                    bsr     own_blitter
                     move.l  #((SRCA|BC0F_DEST|ABC|ABNC|ANBC|ANBNC)<<16)|BLITREVERSE,(BLTCON0,a6)
                     moveq   #-1,d0
                     move.l  d0,(BLTAFWM,a6)
@@ -18578,7 +18591,7 @@ lbC02C278:
                     lea     ((SCREEN_BYTES*8),a0),a0
                     move.l  a0,(BLTDPTH,a6)
                     move.w  #(88*64)+((SCREEN_BYTES/2)-(4/2)),(BLTSIZE,a6)
-                    jsr     (disown_blitter)
+                    bsr     disown_blitter
                     subq.w  #1,(lbW02B70E)
                     moveq   #0,d0
                     move.w  (lbW02B70E,pc),d1
@@ -20045,6 +20058,7 @@ main_menu_text:
                     dc.b    CMD_TEXT,71,5,'S',0
                     dc.b    CMD_TEXT,71,6,'C',0
                     dc.b    CMD_END
+; shift+help
 patterns_ed_help_text_1:
                     dc.b    CMD_SET_SUB_COPPERLIST
                     dc.b    CMD_PREPARE_SUB_SCREEN
@@ -20084,6 +20098,7 @@ patterns_ed_help_text_2:
                     dc.b    CMD_TEXT,23,22,'AM_DEL Clear  Effect',0
                     dc.b    CMD_TEXT,23,23,'CT_DEL Like ___DEL + QuantPolyMove',0
                     dc.b    CMD_END
+; amiga+help
 effects_help_text:
                     dc.b    CMD_SET_SUB_COPPERLIST
                     dc.b    CMD_PREPARE_SUB_SCREEN
@@ -20106,6 +20121,7 @@ effects_help_text:
                     dc.b    CMD_TEXT,38,29,                     '6x:Vol Down Once (VO)',0
                     dc.b    CMD_TEXT,38,30,                     '7x:Vol Up   Once (VO)',0
                     dc.b    CMD_END
+; alt+help
 play_help_text:
                     dc.b    CMD_SET_SUB_COPPERLIST
                     dc.b    CMD_PREPARE_SUB_SCREEN
@@ -20686,14 +20702,15 @@ sample_ed_text:
                     dc.b    CMD_TEXT,38,9,'Length RepStr RepLen  Mode  BStart  BEnd',0
                     dc.b    CMD_DRAW_FILLED_BOX_FROM_POINTER,0,94,13,0
                     dc.l    max_lines
-                    dc.b    CMD_TEXT,1,0,'Exit  Mark  Cut    Paste   Change  Change  Delta   Set',0
-                    dc.b    CMD_TEXT,1,1,'Swap  All   Copy  Reverse  Volume  Period  Filter  Repeat',0
+                    dc.b    CMD_TEXT,1,0,'Exit  Mark  Cut    Paste   Change  Change  Delta  Set',0
+                    dc.b    CMD_TEXT,1,1,'Swap  All   Copy  Reverse  Volume  Period  Boost  Repeat',0
                     dc.b    CMD_MOVE_TO_LINE
                     dc.l    max_lines
-                    dc.b    CMD_TEXT,60,0,'Monitor  Rate:',0
-                    dc.b    CMD_TEXT,60,1,'Sampler  Chan:',0
+                    dc.b    CMD_TEXT,59,0,'Monitor  Rate:',0
+                    dc.b    CMD_TEXT,59,1,'Sampler  Chan:',0
                     dc.b    CMD_END
                     even
+; shift+help
 sample_ed_help_text:
                     dc.b    CMD_SET_SUB_COPPERLIST
                     dc.b    CMD_PREPARE_SUB_SCREEN
@@ -20777,21 +20794,25 @@ lbW018A16:
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    1,1,4,1
                     dc.l    lbC02855C,0
+; mark all
 lbW018A28:
                     dc.l    lbW018A3A
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    7,0,4,2
-                    dc.l    lbC02860A,0
+                    dc.l    sample_ed_mark_all,sample_ed_clear_mark
+; cut
 lbW018A3A:
                     dc.l    lbW018A4C
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    13,0,4,1
                     dc.l    lbC028614,lbC02862C
+; copy
 lbW018A4C:
                     dc.l    lbW018A5E
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    13,1,4,1
                     dc.l    lbC028692,0
+; paste
 lbW018A5E:
                     dc.l    lbW018A70
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
@@ -20815,32 +20836,37 @@ lbW018A94:
 lbW018AA6:
                     dc.l    lbL018AB8b
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    44,0,6,2
+                    dc.b    44,0,5,1
                     dc.l    sample_ed_delta_filter,0
 lbL018AB8b:
+                    dc.l    lbL018AB8c
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
+                    dc.b    44,1,5,1
+                    dc.l    sample_ed_boost,0
+lbL018AB8c:
                     dc.l    lbL018AB8
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    52,0,6,2
+                    dc.b    51,0,6,2
                     dc.l    sample_ed_set_repeat,sample_ed_clear_repeat
 lbL018AB8:
                     dc.l    lbL018ACA
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    60,0,7,1
+                    dc.b    59,0,7,1
                     dc.l    sample_ed_monitor,0
 lbL018ACA:
                     dc.l    lbL018ADC
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    60,1,7,1
+                    dc.b    59,1,7,1
                     dc.l    sample_ed_sampler,0
 lbL018ADC:
                     dc.l    lbL018AEE
                     dc.w    %1
-                    dc.b    69,0,9,1
+                    dc.b    68,0,9,1
                     dc.l    sample_ed_inc_note_rate,sample_ed_dec_note_rate
 lbL018AEE:
                     dc.l    0
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    69,1,9,1
+                    dc.b    68,1,9,1
                     dc.l    sample_ed_switch_left_right,0
 lbW018B00:
                     dc.w    10,0
@@ -20961,6 +20987,7 @@ prefs_text:
                     dc.b    CMD_TEXT,34,27,'Smps:   Trks:',0
                     dc.b    CMD_END
                     even
+; shift+help
 prefs_help_text:
                     dc.b    CMD_SET_SUB_COPPERLIST
                     dc.b    CMD_PREPARE_SUB_SCREEN
@@ -21325,6 +21352,7 @@ effects_ed_text:
                     dc.b    CMD_TEXT,1,15,'Effect Conversion Filter Term Table',0
                     dc.b    CMD_DRAW_BOX,1,16,78,14
                     dc.b    CMD_END
+; shift+help
 effects_ed_help_text:
                     dc.b    CMD_SET_SUB_COPPERLIST
                     dc.b    CMD_PREPARE_SUB_SCREEN
@@ -21339,6 +21367,7 @@ effects_ed_help_text:
                     dc.b    CMD_TEXT,21,22,'AM_Q   Exit  SH_HELP Here you are!',0
                     dc.b    CMD_TEXT,21,23,'___ESC Exit  AL_HELP Compute Help Page',0
                     dc.b    CMD_END
+; alt+help
 compute_help_text:
                     dc.b    CMD_SET_SUB_COPPERLIST
                     dc.b    CMD_PREPARE_SUB_SCREEN
@@ -21508,6 +21537,14 @@ work_sample_size:
                     dc.l    0
 current_viewed_pattern:
                     dc.w    0
+max_copper_bar_line:
+                    dc.w    15
+max_copper_lines:
+                    dc.w    24-1
+delay_fade:
+                    dc.w    0
+main_back_color:
+                    dc.w    0
 lbL01A13A:
                     dcb.b   12,0
 lbL01A146:
@@ -21661,12 +21698,18 @@ lbL01DA2C:
 
 ; ===========================================================================
                     section chip_data,data_c
-
+                IFD SHOW_RASTERS
+BACK_COLOR          equ     COLOR10
+                ELSE
+BACK_COLOR          equ     COLOR00
+                ENDC
 copperlist:
 sprites_bps:
                     dc.w    SPR0PTH,0,SPR0PTL,0,SPR1PTH,0,SPR1PTL,0,SPR2PTH,0,SPR2PTL,0,SPR3PTH,0,SPR3PTL,0
                     dc.w    SPR4PTH,0,SPR4PTL,0,SPR5PTH,0,SPR5PTL,0,SPR6PTH,0,SPR6PTL,0,SPR7PTH,0,SPR7PTL,0
-                    dc.w    DIWSTRT,$581,DIWSTOP,$40C1
+                    dc.w    DIWSTRT,$2C81
+copper_diwstop:
+                    dc.w    DIWSTOP,$2CC1
 copper_ddfstrt:
                     dc.w    DDFSTRT,$3C
 copper_ddfstop:
@@ -21674,6 +21717,7 @@ copper_ddfstop:
 copper_fmode:
                     dc.w    FMODE,0
                     dc.w    BPLCON3,$C20
+                    dc.w    $2B09,-2
                     ; mouse pointer colors
                     dc.w    COLOR17,$805,COLOR18,$B06,COLOR19,$E08
                     dc.w    BPLCON1,0,BPLCON2,%111111
@@ -21685,49 +21729,75 @@ pattern_copper_jump:
                     dcb.w   6,0
 ; =====
 copper_start_line:
-                    dc.w    $6411,$FFFE
-main_back_color:
-                    dc.w    COLOR00,0
+                    dc.w    $6409,-2
 main_front_color:
-                    dc.w    COLOR01,0
+                    dc.w    COLOR01,$000
 main_bp:
                     dc.w    BPL1PTH,0,BPL1PTL,0
 main_bplcon0:
-                    dc.w    BPLCON0,$9201
+                    dc.w    BPLCON0,$9200
+main_back_palette:
+                    dc.w    BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $6C09,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $7409,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $7C09,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $8409,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $8C09,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $9409,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $9C09,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $A409,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $AC09,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $B409,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $BC09,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $C409,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $CC09,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $D409,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $DC09,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $E409,-2,BACK_COLOR,$000,COLOR31,$000
+copper_extra_lines_1:
+                    dc.w    $EC09,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $F409,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $FC09,-2,BACK_COLOR,$000
+ecopper_extra_lines_1:
 copper_pal_line:
-                    dc.w    $FFDF,$FFFE
+                    dc.w    $FFDF,-2
+copper_extra_lines_2:
+                    dc.w    $0409,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $0C09,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $1409,-2,BACK_COLOR,$000,COLOR31,$000
+                    dc.w    $1C09,-2,BACK_COLOR,$000,COLOR31,$000
+ecopper_extra_lines_2:
 copper_credits_line:
-                    dc.w    $2411,$FFFE
+                    dc.w    $2409,-2
 copper_credits_back_color:
-                    dc.w    COLOR00,0
+                    dc.w    BACK_COLOR,$000
 copper_credits_front_color:
-                    dc.w    COLOR01,0
+                    dc.w    COLOR01,$000
 credits_bp:
                     dc.w    BPL1PTH,0,BPL1PTL,0
-                    dc.w    BPLCON0,$9201
+                    dc.w    BPLCON0,$9200
 copper_end_line:
-                    dc.w    $2C11,$FFFE
-                    dc.w    BPLCON0,$201
-                    dc.w    $FFFF,$FFFE
-                    dc.w    $FFFF,$FFFE
+                    dc.w    $2C09,-2
+                    dc.w    BPLCON0,$200
+                    dc.l    -2
+                    dc.l    -2
 ; =====
 main_menu_copper_part:
-                    dc.w    $2C11,$FFFE
+                    dc.w    $2C09,-2
 main_menu_bp:
                     dc.w    BPL1PTH,0,BPL1PTL,0
-                    dc.w    BPLCON0,$9201
-                    dc.w    $3311,$FFFE
+                    dc.w    BPLCON0,$9200
+                    dc.w    $3309,-2
 main_menu_back_color:
-                    dc.w    COLOR00,0
+                    dc.w    BACK_COLOR,$000
 main_menu_front_color:
-                    dc.w    COLOR01,0
+                    dc.w    COLOR01,$000
 main_menu_copper_back_jump:
                     dcb.w   6,0
 ; =====
 pattern_copper_part:
-                    dc.w    $4411,$FFFE
-copper_int:
-                    dc.w    BPLCON0,$9201
+                    dc.w    $4409,-2
+                    dc.w    BPLCON0,$9200
 pattern_copper_back_jump:
                     dcb.w   6,0
 
@@ -21736,7 +21806,7 @@ pattern_copper_back_jump:
 mouse_pointer:
                     dc.b    0,0,0,0
                     dc.w    %1100001110000000,%1111110000000000
-                    dc.w    %1000001100000000,%1001100000000000
+                    dc.w    %1000001100000000,%1101100000000000
                     dc.w    %0000011000000000,%1011000000000000
                     dc.w    %0000110000000000,%1110000000000000
                     dc.w    %0001100000000000,%1100000000000000

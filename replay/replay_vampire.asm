@@ -134,7 +134,7 @@ OKT_cia_int:
                     move.w  #$2000,(a0)
                     move.w  #$2000,(a0)
                 IFD SHOW_RASTERS
-                    move.w  #$77,$dff180
+                    move.w  #$770,$dff180
                 ENDC
                     bsr     OKT_replay_handler
                 IFD SHOW_RASTERS

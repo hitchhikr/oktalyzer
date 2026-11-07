@@ -7,6 +7,7 @@
                 IFD __VASM
                     opt     o+
                     opt     a+
+                    mc68000
                 ENDC
 
 ; just for testing

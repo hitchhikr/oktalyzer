@@ -5,9 +5,10 @@ of the Amiga Vampire cards and extract an asm replay routine.
 
 To do:
 
-- Make samples start from 1 instead of 0 (so reduce them to 35) and mimic Protracker replay behaviours.
+- Make samples start from 1 instead of 0 and mimic Protracker replay behaviours.
+- Increase the number of samples to 71.
 - 16 bit samples support in the Vampire version (keep the sample type word in infos).
-- The possibility to load riff samples (8 bit but also 16 bit for Vampire).
+- Possibility to load riff samples (8 bit but also 16 bit for Vampire).
 - Remove the 15 samples/8 tracks modules loading and check for 4 tracks to 8 tracks modules signatures<br>
   (and load them).
 - Decode the rest of the source.
@@ -29,7 +30,7 @@ Done:
 - CLI/WB requester is now correctly positioned on top right coords regardless of the width of the screen.
 - Chip/Fast memory display will show 'Plenty!' message if there's a too great amount of memory available.
 - Added independant channels volume support to doubled channels.
-- Increased the speed upper limit to 31 (0x1F).
+- Increased the speed upper limit to 63 (0x3F).
 - Now displays a requester when trying to save over a file that already exists.
 - Set a new colorscheme for the default config.
 - Integrated the new replay into the tracker.
@@ -47,5 +48,8 @@ Done:
 - DEL key now works.
 - Samples repeat start & length can be set from range selected with the mouse.
 - Fixed the random crashes.
+- Sample editor mouse coordinates were shifted in NTSC mode.
+- Right mouse button on 'Mark All' will remove sample marking.
+- Added a Boost function in Sample Editor (lifted from Protracker).
 
 A work in progress...
