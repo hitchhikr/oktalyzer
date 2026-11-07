@@ -205,6 +205,26 @@ KEY_REPEAT          equ     4
 KEY_RANGE_NO_REPEAT equ     6
 KEY_RANGE_REPEAT    equ     8
 
+KEY_TAB             equ     $42-$40
+KEY_RETURN          equ     $44-$40
+KEY_ESC             equ     $45-$40
+KEY_DEL             equ     $46-$40
+KEY_UP              equ     $4C-$40
+KEY_DOWN            equ     $4D-$40
+KEY_RIGHT           equ     $4E-$40
+KEY_LEFT            equ     $4F-$40
+KEY_F1              equ     $50-$40
+KEY_F2              equ     $51-$40
+KEY_F3              equ     $52-$40
+KEY_F4              equ     $53-$40
+KEY_F5              equ     $54-$40
+KEY_F6              equ     $55-$40
+KEY_F7              equ     $56-$40
+KEY_F8              equ     $57-$40
+KEY_F9              equ     $58-$40
+KEY_F10             equ     $59-$40
+KEY_HELP            equ     $5F-$40
+
 ; ===========================================================================
                 IFD OKT_AUDIO_VAMPIRE
 OKT_AUDIO_BASE      equ     $400

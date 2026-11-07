@@ -14931,7 +14931,7 @@ lbW029012:
                     KL_HEAD KEY_MOD_NONE,lbW02901C
                     KL_DONE
 lbW02901C:
-                    KEY     KEY_NO_REPEAT,5,lbC028F82
+                    KEY     KEY_NO_REPEAT,KEY_ESC,lbC028F82
                     KL_DONE
 lbC029026:
                     moveq   #$1D,d0
@@ -15062,7 +15062,7 @@ lbW0291EE:
                     KL_HEAD KEY_MOD_NONE,lbW0291F8
                     KL_DONE
 lbW0291F8:
-                    KEY     KEY_NO_REPEAT,5,lbC029202
+                    KEY     KEY_NO_REPEAT,KEY_ESC,lbC029202
                     KL_DONE
 lbC029202:
                     jsr     (change_work_sample_size)
@@ -15243,7 +15243,7 @@ lbW029438:
                     KL_HEAD KEY_MOD_NONE,lbW029442
                     KL_DONE
 lbW029442:
-                    KEY     KEY_NO_REPEAT,5,lbC02944C
+                    KEY     KEY_NO_REPEAT,KEY_ESC,lbC02944C
                     KL_DONE
 lbC02944C:
                     jsr     (change_work_sample_size)
@@ -15761,7 +15761,7 @@ lbW029A54:
                     KL_HEAD KEY_MOD_NONE,lbW029A5E
                     KL_DONE
 lbW029A5E:
-                    KEY     KEY_NO_REPEAT,5,lbC029A68
+                    KEY     KEY_NO_REPEAT,KEY_ESC,lbC029A68
                     KL_DONE
 lbC029A68:
                     jsr     (change_work_sample_size)
@@ -20522,75 +20522,75 @@ main_screen_keys:
                     KL_HEAD KEY_MOD_ALT|KEY_MOD_NUMPAD,lbW017BCE
                     KL_DONE
 lbW0179BE:
-                    KEY     KEY_NO_REPEAT,16,lbC01F298
-                    KEY     KEY_NO_REPEAT,17,lbC01F2B2
-                    KEY     KEY_NO_REPEAT,18,copy_pattern_block
-                    KEY     KEY_NO_REPEAT,19,replace_block
-                    KEY     KEY_NO_REPEAT,20,mix_block
-                    KEY     KEY_NO_REPEAT,21,go_to_f6_row_jump
-                    KEY     KEY_NO_REPEAT,22,go_to_f7_row_jump
-                    KEY     KEY_NO_REPEAT,23,go_to_f8_row_jump
-                    KEY     KEY_NO_REPEAT,24,go_to_f9_row_jump
-                    KEY     KEY_NO_REPEAT,25,go_to_f10_row_jump
-                    KEY     KEY_NO_REPEAT,2,switch_edit_mode
-                    KEY     KEY_NO_REPEAT,31,lbC01FA6C
-                    KEY     KEY_NO_REPEAT,32,lbC01F42C
-                    KEY     KEY_NO_REPEAT,5,play_pattern
-                    KEY     KEY_NO_REPEAT,96,play_pattern
-                    KEY     KEY_REPEAT,15,lbC01F10A
-                    KEY     KEY_REPEAT,14,lbC01F142
-                    KEY     KEY_REPEAT,12,previous_pattern_row
-                    KEY     KEY_REPEAT,13,next_pattern_row
+                    KEY     KEY_NO_REPEAT,KEY_F1,lbC01F298
+                    KEY     KEY_NO_REPEAT,KEY_F2,lbC01F2B2
+                    KEY     KEY_NO_REPEAT,KEY_F3,copy_pattern_block
+                    KEY     KEY_NO_REPEAT,KEY_F4,replace_block
+                    KEY     KEY_NO_REPEAT,KEY_F5,mix_block
+                    KEY     KEY_NO_REPEAT,KEY_F6,go_to_f6_row_jump
+                    KEY     KEY_NO_REPEAT,KEY_F7,go_to_f7_row_jump
+                    KEY     KEY_NO_REPEAT,KEY_F8,go_to_f8_row_jump
+                    KEY     KEY_NO_REPEAT,KEY_F9,go_to_f9_row_jump
+                    KEY     KEY_NO_REPEAT,KEY_F10,go_to_f10_row_jump
+                    KEY     KEY_NO_REPEAT,KEY_TAB,switch_edit_mode
+                    KEY     KEY_NO_REPEAT,KEY_HELP,lbC01FA6C
+                    KEY     KEY_NO_REPEAT,' ',lbC01F42C
+                    KEY     KEY_NO_REPEAT,KEY_ESC,play_pattern
+                    KEY     KEY_NO_REPEAT,'`',play_pattern
+                    KEY     KEY_REPEAT,KEY_LEFT,lbC01F10A
+                    KEY     KEY_REPEAT,KEY_RIGHT,lbC01F142
+                    KEY     KEY_REPEAT,KEY_UP,previous_pattern_row
+                    KEY     KEY_REPEAT,KEY_DOWN,next_pattern_row
                     KL_DONE
 lbW017A58:
-                    KEY     KEY_NO_REPEAT,18,cut_pattern_block
-                    KEY     KEY_NO_REPEAT,19,lbC01F6F2
-                    KEY     KEY_NO_REPEAT,20,lbC01F846
-                    KEY     KEY_NO_REPEAT,21,note_down_block
-                    KEY     KEY_NO_REPEAT,22,note_up_block
-                    KEY     KEY_NO_REPEAT,23,octave_down_block
-                    KEY     KEY_NO_REPEAT,24,octave_up_block
-                    KEY     KEY_NO_REPEAT,25,change_block_sample
-                    KEY     KEY_NO_REPEAT,32,lbC01F3DA
-                    KEY     KEY_NO_REPEAT,66,switch_copy_blocks_mode
-                    KEY     KEY_NO_REPEAT,69,sample_editor
-                    KEY     KEY_NO_REPEAT,76,load_sample
-                    KEY     KEY_NO_REPEAT,83,save_sample
-                    KEY     KEY_NO_REPEAT,31,display_pattern_help
-                    KEY     KEY_REPEAT,15,lbC01F378
-                    KEY     KEY_REPEAT,14,lbC01F366
-                    KEY     KEY_REPEAT,12,lbC01F39E
-                    KEY     KEY_REPEAT,13,lbC01F38C
+                    KEY     KEY_NO_REPEAT,KEY_F3,cut_pattern_block
+                    KEY     KEY_NO_REPEAT,KEY_F4,lbC01F6F2
+                    KEY     KEY_NO_REPEAT,KEY_F5,lbC01F846
+                    KEY     KEY_NO_REPEAT,KEY_F6,note_down_block
+                    KEY     KEY_NO_REPEAT,KEY_F7,note_up_block
+                    KEY     KEY_NO_REPEAT,KEY_F8,octave_down_block
+                    KEY     KEY_NO_REPEAT,KEY_F9,octave_up_block
+                    KEY     KEY_NO_REPEAT,KEY_F10,change_block_sample
+                    KEY     KEY_NO_REPEAT,' ',lbC01F3DA
+                    KEY     KEY_NO_REPEAT,'B',switch_copy_blocks_mode
+                    KEY     KEY_NO_REPEAT,'E',sample_editor
+                    KEY     KEY_NO_REPEAT,'L',load_sample
+                    KEY     KEY_NO_REPEAT,'S',save_sample
+                    KEY     KEY_NO_REPEAT,KEY_HELP,display_pattern_help
+                    KEY     KEY_REPEAT,KEY_LEFT,lbC01F378
+                    KEY     KEY_REPEAT,KEY_RIGHT,lbC01F366
+                    KEY     KEY_REPEAT,KEY_UP,lbC01F39E
+                    KEY     KEY_REPEAT,KEY_DOWN,lbC01F38C
                     KL_DONE
 lbW017AF2:
-                    KEY     KEY_NO_REPEAT,32,lbC01F40C
-                    KEY     KEY_NO_REPEAT,20,lbC01F82C
-                    KEY     KEY_NO_REPEAT,21,note_down_block_current_sample
-                    KEY     KEY_NO_REPEAT,22,note_up_block_current_sample
-                    KEY     KEY_NO_REPEAT,23,octave_down_block_current_sample
-                    KEY     KEY_NO_REPEAT,24,octave_up_block_current_sample
-                    KEY     KEY_NO_REPEAT,25,change_block_effect
-                    KEY     KEY_NO_REPEAT,14,lbC01F276
-                    KEY     KEY_NO_REPEAT,15,lbC01F262
-                    KEY     KEY_NO_REPEAT,31,display_play_help
-                    KEY     KEY_REPEAT,12,dec_current_pattern_rows
-                    KEY     KEY_REPEAT,13,inc_current_pattern_rows
+                    KEY     KEY_NO_REPEAT,' ',lbC01F40C
+                    KEY     KEY_NO_REPEAT,KEY_F5,lbC01F82C
+                    KEY     KEY_NO_REPEAT,KEY_F6,note_down_block_current_sample
+                    KEY     KEY_NO_REPEAT,KEY_F7,note_up_block_current_sample
+                    KEY     KEY_NO_REPEAT,KEY_F8,octave_down_block_current_sample
+                    KEY     KEY_NO_REPEAT,KEY_F9,octave_up_block_current_sample
+                    KEY     KEY_NO_REPEAT,KEY_F10,change_block_effect
+                    KEY     KEY_NO_REPEAT,KEY_RIGHT,lbC01F276
+                    KEY     KEY_NO_REPEAT,KEY_LEFT,lbC01F262
+                    KEY     KEY_NO_REPEAT,KEY_HELP,display_play_help
+                    KEY     KEY_REPEAT,KEY_UP,dec_current_pattern_rows
+                    KEY     KEY_REPEAT,KEY_DOWN,inc_current_pattern_rows
                     KEY     KEY_RANGE_NO_REPEAT,'0','9',0,set_current_sample_number
                     KEY     KEY_RANGE_NO_REPEAT,'a','z',10,set_current_sample_number
                     KL_DONE
 lbW017B6C:
-                    KEY     KEY_REPEAT,12,dec_sample_number
-                    KEY     KEY_REPEAT,13,inc_sample_number
-                    KEY     KEY_REPEAT,15,lbC01F122
-                    KEY     KEY_REPEAT,14,lbC01F160
+                    KEY     KEY_REPEAT,KEY_UP,dec_sample_number
+                    KEY     KEY_REPEAT,KEY_DOWN,inc_sample_number
+                    KEY     KEY_REPEAT,KEY_LEFT,lbC01F122
+                    KEY     KEY_REPEAT,KEY_RIGHT,lbC01F160
                     KL_DONE
 lbW017B8E:
-                    KEY     KEY_NO_REPEAT,25,effect_editor
-                    KEY     KEY_NO_REPEAT,31,display_effects_help
-                    KEY     KEY_REPEAT,15,lbC01F2FC
-                    KEY     KEY_REPEAT,14,lbC01F2D4
-                    KEY     KEY_REPEAT,13,lbC01F31E
-                    KEY     KEY_REPEAT,12,lbC01F344
+                    KEY     KEY_NO_REPEAT,KEY_F10,effect_editor
+                    KEY     KEY_NO_REPEAT,KEY_HELP,display_effects_help
+                    KEY     KEY_REPEAT,KEY_LEFT,lbC01F2FC
+                    KEY     KEY_REPEAT,KEY_RIGHT,lbC01F2D4
+                    KEY     KEY_REPEAT,KEY_DOWN,lbC01F31E
+                    KEY     KEY_REPEAT,KEY_UP,lbC01F344
                     KL_DONE
 lbW017BC0:
                     KEY     KEY_RANGE_NO_REPEAT,'0','9',48,lbC01F21A
@@ -20641,10 +20641,10 @@ file_selector_keys:
                     KL_HEAD KEY_MOD_NONE,lbW01881E
                     KL_DONE
 lbW01881E:
-                    KEY     KEY_NO_REPEAT,5,file_selector_cancel
-                    KEY     KEY_NO_REPEAT,4,file_selector_ok
-                    KEY     KEY_NO_REPEAT,97,lbC02756A
-                    KEY     KEY_NO_REPEAT,99,lbC027532
+                    KEY     KEY_NO_REPEAT,KEY_ESC,file_selector_cancel
+                    KEY     KEY_NO_REPEAT,KEY_RETURN,file_selector_ok
+                    KEY     KEY_NO_REPEAT,'a',lbC02756A
+                    KEY     KEY_NO_REPEAT,'c',lbC027532
                     KL_DONE
 
 ; ===========================================================================
@@ -20717,12 +20717,12 @@ sample_editor_keys:
                     KL_HEAD KEY_MOD_ALT,lbW018BC0
                     KL_DONE
 lbW018B22:
-                    KEY     KEY_NO_REPEAT,5,sample_editor_exit
-                    KEY     KEY_NO_REPEAT,6,sample_editor_clear_repeat
-                    KEY     KEY_REPEAT,15,lbC028ABC
-                    KEY     KEY_REPEAT,14,lbC028AD8
-                    KEY     KEY_REPEAT,12,lbC028AF2
-                    KEY     KEY_REPEAT,13,lbC028B08
+                    KEY     KEY_NO_REPEAT,KEY_ESC,sample_editor_exit
+                    KEY     KEY_NO_REPEAT,KEY_DEL,sample_editor_clear_repeat
+                    KEY     KEY_REPEAT,KEY_LEFT,lbC028ABC
+                    KEY     KEY_REPEAT,KEY_RIGHT,lbC028AD8
+                    KEY     KEY_REPEAT,KEY_UP,lbC028AF2
+                    KEY     KEY_REPEAT,KEY_DOWN,lbC028B08
                     KL_DONE
 lbW018B54:
                     KEY     KEY_REPEAT,'0',lbC0289EE
@@ -20735,17 +20735,17 @@ lbW018B66:
                     KEY     KEY_NO_REPEAT,'X',sample_editor_swap_samples
                     KEY     KEY_NO_REPEAT,'M',sample_editor_mix_samples
                     KEY     KEY_NO_REPEAT,'F',sample_editor_free_sample_copy_buffer
-                    KEY     KEY_REPEAT,15,lbC028AC0
-                    KEY     KEY_REPEAT,14,lbC028ADC
-                    KEY     KEY_REPEAT,12,lbC028AF6
-                    KEY     KEY_REPEAT,13,lbC028B0C
-                    KEY     KEY_NO_REPEAT,31,display_sample_editor_help
+                    KEY     KEY_REPEAT,KEY_LEFT,lbC028AC0
+                    KEY     KEY_REPEAT,KEY_RIGHT,lbC028ADC
+                    KEY     KEY_REPEAT,KEY_UP,lbC028AF6
+                    KEY     KEY_REPEAT,KEY_DOWN,lbC028B0C
+                    KEY     KEY_NO_REPEAT,KEY_HELP,display_sample_editor_help
                     KL_DONE
 lbW018BC0:
-                    KEY     KEY_REPEAT,15,lbC028AC4
-                    KEY     KEY_REPEAT,14,lbC028AE0
-                    KEY     KEY_REPEAT,12,lbC028AFA
-                    KEY     KEY_REPEAT,13,lbC028B10
+                    KEY     KEY_REPEAT,KEY_LEFT,lbC028AC4
+                    KEY     KEY_REPEAT,KEY_RIGHT,lbC028AE0
+                    KEY     KEY_REPEAT,KEY_UP,lbC028AFA
+                    KEY     KEY_REPEAT,KEY_DOWN,lbC028B10
                     KEY     KEY_RANGE_NO_REPEAT,'0','9',0,sample_editor_set_current_sample_number
                     KEY     KEY_RANGE_NO_REPEAT,'a','z',10,sample_editor_set_current_sample_number
                     KL_DONE
@@ -20882,18 +20882,18 @@ prefs_keys:
                     KL_HEAD KEY_MOD_AMIGA|KEY_MOD_ALT|KEY_MOD_SHIFT,lbW019514
                     KL_DONE
 lbW0194C0:
-                    KEY     KEY_NO_REPEAT,5,cancel_prefs
-                    KEY     KEY_REPEAT,15,dec_selected_char_key
-                    KEY     KEY_REPEAT,14,inc_selected_char_key
-                    KEY     KEY_REPEAT,12,dec_selected_char_column_key
-                    KEY     KEY_REPEAT,13,inc_selected_char_column_key
+                    KEY     KEY_NO_REPEAT,KEY_ESC,cancel_prefs
+                    KEY     KEY_REPEAT,KEY_LEFT,dec_selected_char_key
+                    KEY     KEY_REPEAT,KEY_RIGHT,inc_selected_char_key
+                    KEY     KEY_REPEAT,KEY_UP,dec_selected_char_column_key
+                    KEY     KEY_REPEAT,KEY_DOWN,inc_selected_char_column_key
                     KL_DONE
 lbW0194EA:
-                    KEY     KEY_REPEAT,15,rotate_char_left
-                    KEY     KEY_REPEAT,14,rotate_char_right
-                    KEY     KEY_REPEAT,12,rotate_char_up
-                    KEY     KEY_REPEAT,13,rotate_char_down
-                    KEY     KEY_NO_REPEAT,31,display_prefs_help
+                    KEY     KEY_REPEAT,KEY_LEFT,rotate_char_left
+                    KEY     KEY_REPEAT,KEY_RIGHT,rotate_char_right
+                    KEY     KEY_REPEAT,KEY_UP,rotate_char_up
+                    KEY     KEY_REPEAT,KEY_DOWN,rotate_char_down
+                    KEY     KEY_NO_REPEAT,KEY_HELP,display_prefs_help
                     KL_DONE
 lbW019514:
                     KEY     KEY_NO_REPEAT,'C',save_font
@@ -20977,19 +20977,19 @@ effects_editor_keys:
                     KL_HEAD KEY_MOD_AMIGA,lbW019760
                     KL_DONE
 lbW019712:
-                    KEY     KEY_NO_REPEAT,5,lbC02B7DE
-                    KEY     KEY_REPEAT,12,lbC02C278
-                    KEY     KEY_REPEAT,13,lbC02C21A
+                    KEY     KEY_NO_REPEAT,KEY_ESC,lbC02B7DE
+                    KEY     KEY_REPEAT,KEY_UP,lbC02C278
+                    KEY     KEY_REPEAT,KEY_DOWN,lbC02C21A
                     KL_DONE
 lbW01972C:
-                    KEY     KEY_NO_REPEAT,12,lbC02C2CC
-                    KEY     KEY_NO_REPEAT,13,lbC02C2D8
-                    KEY     KEY_NO_REPEAT,31,display_effects_editor_help
+                    KEY     KEY_NO_REPEAT,KEY_UP,lbC02C2CC
+                    KEY     KEY_NO_REPEAT,KEY_DOWN,lbC02C2D8
+                    KEY     KEY_NO_REPEAT,KEY_HELP,display_effects_editor_help
                     KL_DONE
 lbW019746:
-                    KEY     KEY_REPEAT,12,lbC02B7A4
-                    KEY     KEY_REPEAT,13,lbC02B780
-                    KEY     KEY_NO_REPEAT,31,display_compute_help
+                    KEY     KEY_REPEAT,KEY_UP,lbC02B7A4
+                    KEY     KEY_REPEAT,KEY_DOWN,lbC02B780
+                    KEY     KEY_NO_REPEAT,KEY_HELP,display_compute_help
                     KL_DONE
 lbW019760:
                     KEY     KEY_NO_REPEAT,'c',lbC02B8FE
