@@ -17,6 +17,7 @@ To do:
 - Using (Shift)TAB key to navigate among the tracks (change edit mode toggle to spacebar).
 - Add scrollbars in files requesters.
 - Create an option to display rows numbers in decimal or hexadecimal.
+- Better handling of line editing when quantization is turned off.
 - And maybe more...
 
 Done:
