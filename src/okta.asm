@@ -4,9 +4,6 @@
 ; Original code by Armin 'TIP' Sander.
 ; Disassembled and improved by Franck 'hitchhikr' Charlet.
 ; ===========================================================================
-; add cross-fade
-; add echo
-; add normalize
 
 ; ===========================================================================
             IFD __VASM
@@ -15708,10 +15705,10 @@ sample_xfade_op:
                     blo     .loop
                     rts
 .hi:
-                    move.l  d2,d0
+                    move.w  d2,d0
                     bra     .set
 .lo:
-                    move.l  d3,d0
+                    move.w  d3,d0
                     bra     .set
 
 ; ===========================================================================
