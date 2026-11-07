@@ -182,6 +182,29 @@ OKT_SAMPLE_FILTER   equ     1*2
 OKT_SAMPLE_XFADE    equ     2*2
 OKT_SAMPLE_NORM     equ     3*2
 
+KEY_MOD_NONE_BIT    equ     0
+KEY_MOD_SHIFT_BIT   equ     8
+KEY_MOD_ALT_BIT     equ     9
+KEY_MOD_AMIGA_BIT   equ     10
+KEY_MOD_NUMPAD_BIT  equ     11
+KEY_MOD_CTRL_BIT    equ     12
+KEY_MOD_REPEAT_BIT  equ     15
+
+KEY_MOD_NONE        equ     (0)                         ;$0
+KEY_MOD_SHIFT       equ     (1<<KEY_MOD_SHIFT_BIT)      ;$100
+KEY_MOD_ALT         equ     (1<<KEY_MOD_ALT_BIT)        ;$200
+KEY_MOD_AMIGA       equ     (1<<KEY_MOD_AMIGA_BIT)      ;$400
+KEY_MOD_NUMPAD      equ     (1<<KEY_MOD_NUMPAD_BIT)     ;$800
+KEY_MOD_CTRL        equ     (1<<KEY_MOD_CTRL_BIT)       ;$1000
+KEY_MOD_REPEAT      equ     (1<<KEY_MOD_REPEAT_BIT)     ;$8000
+
+KL_ENTRY_DONE       equ     0
+KL_ENTRY_HEAD       equ     10
+KEY_NO_REPEAT       equ     2
+KEY_REPEAT          equ     4
+KEY_RANGE_NO_REPEAT equ     6
+KEY_RANGE_REPEAT    equ     8
+
 ; ===========================================================================
                 IFD OKT_AUDIO_VAMPIRE
 OKT_AUDIO_BASE      equ     $400
@@ -221,6 +244,48 @@ GADGET              MACRO
                     dc.b    \3,\4,\5,\6
                     dc.l    \7,\8
 next\@:
+                    ENDM
+
+                    ; modifier.w
+                    ; associated function.l
+KL_HEAD             MACRO
+                    dc.w    KL_ENTRY_HEAD,\1
+                    dc.l    \2
+                    ENDM
+                    ; type.w,code.w
+                    ; associated function.l
+                    ; or
+                    ; type.w,low code.w,hi code.w,added value.w passed to function
+                    ; associated function.l
+KEY                 MACRO
+            IF \1=KEY_RANGE_NO_REPEAT
+                    dc.w    \1,\2,\3,\4
+                    dc.l    \5
+            ELSE
+                IF \1=KEY_RANGE_REPEAT
+                    dc.w    \1,\2,\3,\4
+                    dc.l    \5
+                ELSE
+                    dc.w    \1,\2
+                    dc.l    \3
+                ENDC
+            ENDC
+                    ENDM
+KL_DONE             MACRO
+                    dc.w    KL_ENTRY_DONE
+                    ENDM
+                    ; layout list.l
+                    ; keyboard shortcuts list.l
+                    ; gadgets list.l
+SCREEN              MACRO
+                    dc.w    1
+                    dc.l    \1
+                    dc.w    2
+                    dc.l    \2
+                    dc.w    3
+                    dc.l    \3
+                    dc.w    0
+                    dc.l    0,0,0
                     ENDM
 
 ; ===========================================================================

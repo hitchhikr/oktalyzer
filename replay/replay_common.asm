@@ -653,7 +653,7 @@ OKT_effects_table_d:
                     dc.w    0,                                      0,                                  0
                     dc.w    0,                                      0,                                  0
                     dc.w    0,                                      OKT_arp_d-OKT_effects_table_d,      OKT_arp2_d-OKT_effects_table_d
-                    dc.w    OKT_arp3_d-OKT_effects_table_d,         OKT_slide_d_d-OKT_effects_table_d,  0
+                    dc.w    OKT_arp3_d-OKT_effects_table_d,         OKT_slide_d_d-OKT_effects_table_d,  OKT_arp4_d-OKT_effects_table_d
                     dc.w    OKT_filter-OKT_effects_table_d,         0,                                  OKT_slide_u_once_d-OKT_effects_table_d
                     dc.w    0,                                      0,                                  0
                     dc.w    OKT_slide_d_once_d-OKT_effects_table_d, 0,                                  0
@@ -705,7 +705,7 @@ OKT_effects_table_s:
                     dc.w    0,                                      0,                                  0
                     dc.w    0,                                      0,                                  0
                     dc.w    0,                                      OKT_arp_s-OKT_effects_table_s,      OKT_arp2_s-OKT_effects_table_s
-                    dc.w    OKT_arp3_s-OKT_effects_table_s,         OKT_slide_d_s-OKT_effects_table_s,  0
+                    dc.w    OKT_arp3_s-OKT_effects_table_s,         OKT_slide_d_s-OKT_effects_table_s,  OKT_arp4_s-OKT_effects_table_s
                     dc.w    OKT_filter-OKT_effects_table_s,         0,                                  OKT_slide_u_once_s-OKT_effects_table_s
                     dc.w    0,                                      0,                                  0
                     dc.w    OKT_slide_d_once_s-OKT_effects_table_s, 0,                                  0
@@ -737,10 +737,13 @@ OKT_port_d:
 ; ===========================================================================
 OKT_arp_s:
                     move.w  (CHAN_NOTE_S,a3),d2
+                    moveq   #0,d0
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
-                    move.b  (OKT_arp_div_table,pc,d0.w),d0
+                    divs.w  #3,d0
+                    swap    d0
+                    tst.w   d0
                     bne     .OKT_step_2
-                    ; step 1: add the first value
+                    ; step 1: subtract the first value
                     and.w   #$F0,d1
                     lsr.w   #4,d1
                     sub.w   d1,d2
@@ -755,9 +758,6 @@ OKT_arp_s:
                     and.w   #$F,d1
                     add.w   d1,d2
                     bra     OKT_set_arp_s
-OKT_arp_div_table:
-                    dc.b    0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
-                    dc.b    0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
 
 ; ===========================================================================
 OKT_arp2_s:
@@ -778,7 +778,7 @@ OKT_arp2_s:
                     ; step 4: play the note
                     subq.b  #1,d0
                     beq     OKT_set_arp_s
-                    ; step 3: add the first value
+                    ; step 3: subtract the first value
                     and.w   #$F0,d1
                     lsr.w   #4,d1
                     sub.w   d1,d2
@@ -787,15 +787,40 @@ OKT_arp2_s:
 ; ===========================================================================
 OKT_arp3_s:
                     move.w  (CHAN_NOTE_S,a3),d2
+                    moveq   #0,d0
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
-                    move.b  (OKT_arp_div_table_3,pc,d0.w),d0
+                    divs.w  #3,d0
+                    swap    d0
+                    tst.w   d0
+                    bne     .OKT_step_2
+                    ; step 1: play the note
+                    bra     OKT_set_arp_s
+.OKT_step_2:
+                    subq.b  #1,d0
+                    bne     .OKT_step_3
+                    ; step 2: add the first value
+                    and.w   #$F0,d1
+                    lsr.w   #4,d1
+                    add.w   d1,d2
+                    bra     OKT_set_arp_s
+.OKT_step_3:
+                    ; step 3: add the second value
+                    and.w   #$F,d1
+                    add.w   d1,d2
+                    bra     OKT_set_arp_s
+
+; ===========================================================================
+OKT_arp4_s:
+                    move.w  (CHAN_NOTE_S,a3),d2
+                    move.w  (OKT_action_cycle-OKT_vars,a6),d0
+                    and.w   #3,d0
                     bne     .OKT_step_1
                     ; step 1: don't change anything
-                    rts
+                    bra     OKT_set_arp_s
 .OKT_step_1:
                     subq.b  #1,d0
                     bne     .OKT_step_2
-                    ; step 2: play the first value
+                    ; step 2: add the first value
                     and.w   #$F0,d1
                     lsr.w   #4,d1
                     add.w   d1,d2
@@ -803,15 +828,12 @@ OKT_arp3_s:
 .OKT_step_2:
                     subq.b  #1,d0
                     bne     .OKT_step_3
-                    ; step 3: play the second value
+                    ; step 3: add the second value
                     and.w   #$F,d1
                     add.w   d1,d2
 .OKT_step_3:
                     ; step 4: play the note
                     bra     OKT_set_arp_s
-OKT_arp_div_table_3:
-                    dc.b    0,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3
-                    dc.b    0,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3
 
 ; ===========================================================================
 OKT_slide_u_once_s:
@@ -858,21 +880,23 @@ OKT_set_arp_s:
                 IFND OKT_AUDIO_VAMPIRE
 OKT_arp_d:
                     move.w  (CHAN_BASE_NOTE_D,a3),d2
+                    moveq   #0,d0
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
-                    lea     (OKT_arp_div_table-OKT_vars,a6),a0
-                    move.b  (a0,d0.w),d0
-                    bne     .OKT_step_1
+                    divs.w  #3,d0
+                    swap    d0
+                    tst.w   d0
+                    bne     .OKT_step_2
                     and.w   #$F0,d1
                     lsr.w   #4,d1
                     sub.w   d1,d2
                     move.w  d2,(CHAN_NOTE_D,a3)
                     rts
-.OKT_step_1:
+.OKT_step_2:
                     subq.b  #1,d0
-                    bne     .OKT_step_2
+                    bne     .OKT_step_3
                     move.w  d2,(CHAN_NOTE_D,a3)
                     rts
-.OKT_step_2:
+.OKT_step_3:
                     and.w   #$F,d1
                     add.w   d1,d2
                     move.w  d2,(CHAN_NOTE_D,a3)
@@ -884,7 +908,7 @@ OKT_arp2_d:
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
                     and.w   #3,d0
                     bne     .OKT_step_1
-.OKT_step_0:
+.OKT_step_4:
                     move.w  d2,(CHAN_NOTE_D,a3)
                     rts
 .OKT_step_1:
@@ -896,7 +920,7 @@ OKT_arp2_d:
                     rts
 .OKT_step_2:
                     subq.b  #1,d0
-                    beq     .OKT_step_0
+                    beq     .OKT_step_4
                     and.w   #$F0,d1
                     lsr.w   #4,d1
                     sub.w   d1,d2
@@ -906,10 +930,35 @@ OKT_arp2_d:
 ; ===========================================================================
 OKT_arp3_d:
                     move.w  (CHAN_BASE_NOTE_D,a3),d2
+                    moveq   #0,d0
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
-                    lea     (OKT_arp_div_table_3-OKT_vars,a6),a0
-                    move.b  (a0,d0.w),d0
+                    divs.w  #3,d0
+                    swap    d0
+                    tst.w   d0
+                    bne     .OKT_step_2
+                    move.w  d2,(CHAN_NOTE_D,a3)
+                    rts
+.OKT_step_2:
+                    subq.b  #1,d0
+                    bne     .OKT_step_3
+                    and.w   #$F0,d1
+                    lsr.w   #4,d1
+                    add.w   d1,d2
+                    move.w  d2,(CHAN_NOTE_D,a3)
+                    rts
+.OKT_step_3:
+                    and.w   #$F,d1
+                    add.w   d1,d2
+                    move.w  d2,(CHAN_NOTE_D,a3)
+                    rts
+
+; ===========================================================================
+OKT_arp4_d:
+                    move.w  (CHAN_BASE_NOTE_D,a3),d2
+                    move.w  (OKT_action_cycle-OKT_vars,a6),d0
+                    and.w   #3,d0
                     bne     .OKT_step_1
+                    move.w  d2,(CHAN_NOTE_D,a3)
                     rts
 .OKT_step_1:
                     subq.b  #1,d0
