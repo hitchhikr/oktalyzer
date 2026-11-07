@@ -3111,6 +3111,7 @@ free_song:
                     dbra    d0,.loop
                     move.w  #6,(OKT_default_speed)
                     move.w  #1,(OKT_song_length)
+                    ; all channels on
                     st      (channels_mute_flags)
                     clr.w   (current_song_position)
                     clr.w   (current_viewed_pattern)
@@ -6144,39 +6145,104 @@ lbW0221DC:
                     dc.w    0
 
 ; ===========================================================================
-lbC022202:
-                    st      (channels_mute_flags)
+set_all_channels_on:
+                    moveq   #-1,d0
+                    bra     set_all_channels_mute_state
+
+; ===========================================================================
+set_all_channels_off:
+                    ; all channels off
+                    moveq   #0,d0
+
+; ===========================================================================
+set_all_channels_mute_state:
+                    move.b  d0,(channels_mute_flags)
                     bra     display_main_menu
-lbC02220C:
-                    sf      (channels_mute_flags)
-                    bra     display_main_menu
-lbC022216:
+
+; ===========================================================================
+switch_channel_on_off:
                     bchg    d0,(channels_mute_flags)
                     bra     display_main_menu
-lbC022220:
+
+; ===========================================================================
+switch_channel_1_on_off:
                     moveq   #7,d0
-                    bra     lbC022216
-lbC022224:
+                    bra     switch_channel_on_off
+
+; ===========================================================================
+switch_channel_2_on_off:
                     moveq   #6,d0
-                    bra     lbC022216
-lbC022228:
+                    bra     switch_channel_on_off
+
+; ===========================================================================
+switch_channel_3_on_off:
                     moveq   #5,d0
-                    bra     lbC022216
-lbC02222C:
+                    bra     switch_channel_on_off
+
+; ===========================================================================
+switch_channel_4_on_off:
                     moveq   #4,d0
-                    bra     lbC022216
-lbC022230:
+                    bra     switch_channel_on_off
+
+; ===========================================================================
+switch_channel_5_on_off:
                     moveq   #3,d0
-                    bra     lbC022216
-lbC022234:
+                    bra     switch_channel_on_off
+
+; ===========================================================================
+switch_channel_6_on_off:
                     moveq   #2,d0
-                    bra     lbC022216
-lbC022238:
+                    bra     switch_channel_on_off
+
+; ===========================================================================
+switch_channel_7_on_off:
                     moveq   #1,d0
-                    bra     lbC022216
-lbC02223C:
+                    bra     switch_channel_on_off
+
+; ===========================================================================
+switch_channel_8_on_off:
                     moveq   #0,d0
-                    bra     lbC022216
+                    bra     switch_channel_on_off
+
+; ===========================================================================
+set_channel_1_solo:
+                    moveq   #-($100-(1<<7)),d0
+                    bra     set_all_channels_mute_state
+
+; ===========================================================================
+set_channel_2_solo:
+                    moveq   #1<<6,d0
+                    bra     set_all_channels_mute_state
+
+; ===========================================================================
+set_channel_3_solo:
+                    moveq   #1<<5,d0
+                    bra     set_all_channels_mute_state
+
+; ===========================================================================
+set_channel_4_solo:
+                    moveq   #1<<4,d0
+                    bra     set_all_channels_mute_state
+
+; ===========================================================================
+set_channel_5_solo:
+                    moveq   #1<<3,d0
+                    bra     set_all_channels_mute_state
+
+; ===========================================================================
+set_channel_6_solo:
+                    moveq   #1<<2,d0
+                    bra     set_all_channels_mute_state
+
+; ===========================================================================
+set_channel_7_solo:
+                    moveq   #1<<1,d0
+                    bra     set_all_channels_mute_state
+
+; ===========================================================================
+set_channel_8_solo:
+                    moveq   #1<<0,d0
+                    bra     set_all_channels_mute_state
 
 ; ===========================================================================
 play_song:
@@ -17637,6 +17703,7 @@ calc_new_channels_and_patterns_size:
                     move.w  d0,(current_channels_size)
                     mulu.w  (a0)+,d0
                     move.l  d0,(current_default_patterns_size)
+                    ; all channels on
                     st      (channels_mute_flags)
                     rts
 
@@ -20509,47 +20576,47 @@ lbL0178AC:
                     dc.l    lbB0178BE
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    71,5,1,2
-                    dc.l    lbC022202,lbC02220C
+                    dc.l    set_all_channels_on,set_all_channels_off
 lbB0178BE:
                     dc.l    lbB0178D0
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    72,5,1,2
-                    dc.l    lbC022220,0
+                    dc.l    switch_channel_1_on_off,set_channel_1_solo
 lbB0178D0:
                     dc.l    lbB0178E2
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    73,5,1,2
-                    dc.l    lbC022224,0
+                    dc.l    switch_channel_2_on_off,set_channel_2_solo
 lbB0178E2:
                     dc.l    lbB0178F4
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    74,5,1,2
-                    dc.l    lbC022228,0
+                    dc.l    switch_channel_3_on_off,set_channel_3_solo
 lbB0178F4:
                     dc.l    lbB017906
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    75,5,1,2
-                    dc.l    lbC02222C,0
+                    dc.l    switch_channel_4_on_off,set_channel_4_solo
 lbB017906:
                     dc.l    lbB017918
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    76,5,1,2
-                    dc.l    lbC022230,0
+                    dc.l    switch_channel_5_on_off,set_channel_5_solo
 lbB017918:
                     dc.l    lbB01792A
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    77,5,1,2
-                    dc.l    lbC022234,0
+                    dc.l    switch_channel_6_on_off,set_channel_6_solo
 lbB01792A:
                     dc.l    lbB01793C
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    78,5,1,2
-                    dc.l    lbC022238,0
+                    dc.l    switch_channel_7_on_off,set_channel_7_solo
 lbB01793C:
                     dc.l    lbB01794E
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    79,5,1,2
-                    dc.l    lbC02223C,0
+                    dc.l    switch_channel_8_on_off,set_channel_8_solo
 lbB01794E:
                     dc.l    lbB017960
                     dc.w    %1|MOUSE_CMD_NO_REPEAT

@@ -54,5 +54,6 @@ Done:
 - Added a boost function in sample editor (lifted from ProTracker).
 - Added a cross fading function in sample editor (lifted from ProTracker).
 - Added a normalization function in sample editor.
+- Right mouse button click on a channel status will solo it.
 
 A work in progress...
