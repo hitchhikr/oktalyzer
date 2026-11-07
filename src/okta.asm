@@ -184,7 +184,7 @@ set_pal_ntsc_context:
                     move.w  #17,(max_lines)
                     move.w  #8,(max_copper_bar_line)
 .pal_machine:
-                    lea     (gadgets_list_to_fix),a0
+                    lea     (gadgets_lists_to_fix),a0
                     move.w  (max_lines),d0
                     bra     fix_gadgets_coords
 ntsc_flag:
@@ -261,13 +261,13 @@ display_pattern_help:
                     move.l  #do_display_pattern_help,(current_cmd_ptr)
                     rts
 do_display_pattern_help:
-                    lea     (patterns_ed_help_text_1),a0
+                    lea     (patterns_editor_help_text_1),a0
                     moveq   #0,d0
                     moveq   #0,d1
                     jsr     (process_commands)
                     bsr     wait_any_key_and_mouse_press
                     ; second page
-                    lea     (patterns_ed_help_text_2),a0
+                    lea     (patterns_editor_help_text_2),a0
                     moveq   #0,d0
                     moveq   #0,d1
                     jsr     (process_commands)
@@ -285,17 +285,21 @@ do_display_effects_help:
                     bra     wait_any_key_and_mouse_press
 
 ; ===========================================================================
-lbC01E096:
-                    jmp     (lbC028904)
-lbC01E09E:
-                    move.l  #lbC02800C,(current_cmd_ptr)
+sample_editor:
+                    move.l  #do_sample_editor,(current_cmd_ptr)
                     rts
-lbC01E0AA:
-                    move.l  #lbC02A772,(current_cmd_ptr)
+
+; ===========================================================================
+prefs:
+                    move.l  #do_prefs,(current_cmd_ptr)
                     rts
-fx_editor:
-                    move.l  #do_fx_editor,(current_cmd_ptr)
+
+; ===========================================================================
+effect_editor:
+                    move.l  #do_effect_editor,(current_cmd_ptr)
                     rts
+
+; ===========================================================================
 lbC01E0C2:
                     jsr     (wait_drive_ready)
                     jsr     (own_blitter)
@@ -921,7 +925,7 @@ install_our_copperlist:
                     rts
 
 ; ===========================================================================
-lbC01E9DC:
+click_on_pattern:
                     move.w  d1,d2
                     move.w  d0,d1
                     movem.l d2/d3,-(a7)
@@ -1931,7 +1935,9 @@ lbC01F508:
                     bra     lbC020C9A
 lbC01F51A:
                     rts
-lbC01F51C:
+
+; ===========================================================================
+copy_pattern_block:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
                     bne     lbC01F52A
@@ -1939,7 +1945,9 @@ lbC01F51C:
 lbC01F52A:
                     bsr     lbC01F54E
                     bra     error_block_copied
-lbC01F532:
+
+; ===========================================================================
+cut_pattern_block:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
                     bne     lbC01F540
@@ -1947,7 +1955,7 @@ lbC01F532:
 lbC01F540:
                     bsr     lbC01F54E
                     lea     (lbC01F54A,pc),a0
-                    bra     lbC01F694
+                    bra     perform_block_operation
 lbC01F54A:
                     clr.l   (a0)
                     rts
@@ -1995,13 +2003,17 @@ lbW01F5C4:
                     dc.w    -1
 lbW01F5C6:
                     dc.w    -1
-lbC01F5C8:
+
+; ===========================================================================
+replace_block:
                     lea     (lbC01F5CE,pc),a0
                     bra     lbC01F5E4
 lbC01F5CE:
                     move.l  (a3)+,(a0)
                     rts
-lbC01F5D2:
+
+; ===========================================================================
+mix_block:
                     lea     (lbC01F5D8,pc),a0
                     bra     lbC01F5E4
 lbC01F5D8:
@@ -2077,7 +2089,7 @@ lbC01F674:
                     bra     draw_pattern
 lbW01F692:
                     dc.w    0
-lbC01F694:
+perform_block_operation:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
                     beq     error_what_block
@@ -2165,17 +2177,23 @@ lbC01F760:
                     bra     draw_pattern
 lbC01F786:
                     rts
-lbC01F788:
-                    lea     (lbC01F798,pc),a0
-                    bra     lbC01F694
-lbC01F790:
-                    lea     (lbC01F7A2,pc),a0
-                    bra     lbC01F694
-lbC01F798:
+
+; ===========================================================================
+note_up_block_current_sample:
+                    lea     (cb_note_up_block_current_sample,pc),a0
+                    bra     perform_block_operation
+
+; ===========================================================================
+note_up_block:
+                    lea     (cb_note_up_block,pc),a0
+                    bra     perform_block_operation
+
+; ===========================================================================
+cb_note_up_block_current_sample:
                     move.b  (1,a0),d0
                     cmp.b   (current_sample_index+1,pc),d0
                     bne     lbC01F7B0
-lbC01F7A2:
+cb_note_up_block:
                     move.b  (a0),d0
                     beq     lbC01F7B0
                     cmpi.b  #$24,d0
@@ -2184,63 +2202,81 @@ lbC01F7A2:
                     move.b  d0,(a0)
 lbC01F7B0:
                     rts
-lbC01F7B2:
-                    lea     (lbC01F7C2,pc),a0
-                    bra     lbC01F694
-lbC01F7BA:
-                    lea     (lbC01F7CC,pc),a0
-                    bra     lbC01F694
-lbC01F7C2:
+
+; ===========================================================================
+note_down_block_current_sample:
+                    lea     (cb_note_down_block_current_sample,pc),a0
+                    bra     perform_block_operation
+
+; ===========================================================================
+note_down_block:
+                    lea     (cb_note_down_block,pc),a0
+                    bra     perform_block_operation
+
+; ===========================================================================
+cb_note_down_block_current_sample:
                     move.b  (1,a0),d0
                     cmp.b   (current_sample_index+1,pc),d0
                     bne     lbC01F7D4
-lbC01F7CC:
+cb_note_down_block:
                     move.b  (a0),d0
                     subq.b  #1,d0
                     ble     lbC01F7D4
                     move.b  d0,(a0)
 lbC01F7D4:
                     rts
-lbC01F7D6:
-                    lea     (lbC01F7E6,pc),a0
-                    bra     lbC01F694
-lbC01F7DE:
-                    lea     (lbC01F7F0,pc),a0
-                    bra     lbC01F694
-lbC01F7E6:
+
+; ===========================================================================
+octave_up_block_current_sample:
+                    lea     (cb_octave_up_block_current_sample,pc),a0
+                    bra     perform_block_operation
+
+; ===========================================================================
+octave_up_block:
+                    lea     (cb_octave_up_block,pc),a0
+                    bra     perform_block_operation
+
+; ===========================================================================
+cb_octave_up_block_current_sample:
                     move.b  (1,a0),d0
                     cmp.b   (current_sample_index+1,pc),d0
                     bne     lbC01F800
-lbC01F7F0:
+cb_octave_up_block:
                     move.b  (a0),d0
                     beq     lbC01F800
-                    cmpi.b  #$18,d0
+                    cmpi.b  #24,d0
                     bgt     lbC01F800
-                    addi.b  #$C,d0
+                    addi.b  #12,d0
                     move.b  d0,(a0)
 lbC01F800:
                     rts
-lbC01F802:
-                    lea     (lbC01F812,pc),a0
-                    bra     lbC01F694
-lbC01F80A:
-                    lea     (lbC01F81C,pc),a0
-                    bra     lbC01F694
-lbC01F812:
+
+; ===========================================================================
+octave_down_block_current_sample:
+                    lea     (cb_octave_down_block_current_sample,pc),a0
+                    bra     perform_block_operation
+octave_down_block:
+                    lea     (cb_octave_down_block,pc),a0
+                    bra     perform_block_operation
+
+; ===========================================================================
+cb_octave_down_block_current_sample:
                     move.b  (1,a0),d0
                     cmp.b   (current_sample_index+1,pc),d0
                     bne     lbC01F82A
-lbC01F81C:
+cb_octave_down_block:
                     move.b  (a0),d0
-                    cmpi.b  #$C,d0
+                    cmpi.b  #12,d0
                     ble     lbC01F82A
-                    subi.b  #$C,d0
+                    subi.b  #12,d0
                     move.b  d0,(a0)
 lbC01F82A:
                     rts
+
+; ===========================================================================
 lbC01F82C:
                     lea     (lbC01F834,pc),a0
-                    bra     lbC01F694
+                    bra     perform_block_operation
 lbC01F834:
                     tst.b   (a0)
                     beq     lbC01F844
@@ -2259,7 +2295,7 @@ lbC01F846:
                     bmi     lbC01F868
                     move.b  d0,(lbB01F87C)
                     lea     (lbC01F86A,pc),a0
-                    bra     lbC01F694
+                    bra     perform_block_operation
 lbC01F868:
                     rts
 lbC01F86A:
@@ -2275,7 +2311,9 @@ lbB01F87C:
                     dc.b    0
 DeleteSample_MSG:
                     dc.b    'Delete Sample..:',0
-lbC01F88E:
+
+; ===========================================================================
+change_block_sample:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
                     beq     error_what_block
@@ -2283,11 +2321,11 @@ lbC01F88E:
                     lea     (NewInstrument_MSG,pc),a1
                     bsr     lbC0247B8
                     bmi     lbC01F8AE
-                    lea     (lbC01F8B0,pc),a0
-                    bra     lbC01F694
+                    lea     (cb_change_block_sample,pc),a0
+                    bra     perform_block_operation
 lbC01F8AE:
                     rts
-lbC01F8B0:
+cb_change_block_sample:
                     tst.b   (a0)+
                     beq     lbC01F8C4
                     move.b  (lbW01B7DA),d0
@@ -2300,7 +2338,9 @@ OldInstrument_MSG:
                     dc.b    ' Old Instrument:',0
 NewInstrument_MSG:
                     dc.b    ' New Instrument:',0
-lbC01F8E8:
+
+; ===========================================================================
+change_block_effect:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
                     bne     lbC01F8F6
@@ -2310,11 +2350,11 @@ lbC01F8F6:
                     lea     (NewEffect_MSG,pc),a1
                     bsr     lbC0247B8
                     bmi     lbC01F90C
-                    lea     (lbC01F90E,pc),a0
-                    bra     lbC01F694
+                    lea     (cb_change_block_effect,pc),a0
+                    bra     perform_block_operation
 lbC01F90C:
                     rts
-lbC01F90E:
+cb_change_block_effect:
                     move.b  (2,a0),d0
                     cmp.b   (lbW01B7DA),d0
                     bne     lbC01F922
@@ -2719,7 +2759,7 @@ draw_current_sample_infos:
                     moveq   #5,d1
                     jsr     (draw_2_digits_decimal_number_leading_zeroes)
                     ; allow volume modifications
-                    lea     (lbB0177D4),a0
+                    lea     (change_sample_number_gadget),a0
                     bsr     lbC020C8A
                     bra     .sample_mode
 .empty:
@@ -2728,7 +2768,7 @@ draw_current_sample_infos:
                     moveq   #3,d1
                     jsr     (process_commands)
                     ; forbid volume modifications
-                    lea     (lbB0177D4),a0
+                    lea     (change_sample_number_gadget),a0
                     bsr     lbC020C92
 .sample_mode:
                     move.l  (a7)+,a0
@@ -2750,12 +2790,12 @@ draw_current_sample_infos:
                     dc.b    CMD_TEXT,0,0,'RStr:',0
                     dc.b    CMD_TEXT,0,1,'RLen:',0
                     dc.b    CMD_TEXT,0,2,'Vol.:',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
 .empty_infos_text:
                     dc.b    CMD_TEXT,0,0,'            ',0
                     dc.b    CMD_TEXT,0,1,'            ',0
                     dc.b    CMD_TEXT,0,2,'        ',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
                     even
 .sample_mode_text:
                     dc.b    '8B ',0
@@ -2785,11 +2825,11 @@ available_memory_text_ptr:
 Chip_MSG:
                     dc.b    CMD_TEXT,67,1,'Chip:',0
                     dc.b    CMD_TEXT,67,2,'Fast:',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
 CMax_MSG:
                     dc.b    CMD_TEXT,67,1,'CMax:',0
                     dc.b    CMD_TEXT,67,2,'FMax:',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
                     even
 
 ; ===========================================================================
@@ -2818,13 +2858,13 @@ song_metrics_text_ptr:
                     dc.l    Song_MSG
 Song_MSG:
                     dc.b    CMD_TEXT,67,3,'Song:',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
 Ptts_MSG:
                     dc.b    CMD_TEXT,67,3,'Ptts:',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
 Smps_MSG:
                     dc.b    CMD_TEXT,67,3,'Smps:',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
 
 ; ===========================================================================
 do_draw_available_memory_and_song_metrics:
@@ -3102,7 +3142,7 @@ renew_current_pattern:
 
 ; ===========================================================================
 free_song:
-                    bsr     dec_song_position
+                    bsr     free_last_pattern
                     bne     free_song
                     lea     (OKT_patterns),a0
                     moveq   #128-1,d0
@@ -3139,7 +3179,7 @@ free_current_pattern:
                     rts
 
 ; ===========================================================================
-dec_song_position:
+free_last_pattern:
                     tst.w   (number_of_patterns)
                     beq     .empty
                     move.w  (number_of_patterns),d0
@@ -3840,7 +3880,7 @@ lbC020A60:
                     move.w  (4,a0),d0
                     btst    #MOUSE_CMD_NO_REPEAT_BIT,d0
                     bne     lbC020A86
-                    btst    #11,d0
+                    btst    #MOUSE_CMD_TRAP_RMB_BIT,d0
                     bne     lbC020A86
                     movem.l (a7)+,d0/a0
                     bra     lbC020A8C
@@ -3870,7 +3910,7 @@ lbC020A8C:
                     bra     lbC020AE0
 lbC020AC4:
                     move.w  (4,a2),d7
-                    btst    #11,d7
+                    btst    #MOUSE_CMD_TRAP_RMB_BIT,d7
                     bne     lbC020AE0
                     move.l  (a2,d4.w),d7
                     beq     lbC020AE0
@@ -4198,7 +4238,7 @@ free_all_samples_and_song:
                     bra     free_song
 
 ; ===========================================================================
-lbC020DCE:
+new_song:
                     bsr     ask_are_you_sure_requester
                     bne     .cancelled
                     bsr     free_song
@@ -4600,10 +4640,10 @@ lbC0211B0:
                     andi.w  #$F,d0
                     add.b   d0,d0
                     moveq   #0,d1
-                    move.b  .fx_trans_table(pc,d0.w),d1
+                    move.b  .effect_trans_table(pc,d0.w),d1
                     move.b  d1,(2,a1)
                     ; fx data
-                    move.b  .fx_trans_table+1(pc,d0.w),d1
+                    move.b  .effect_trans_table+1(pc,d0.w),d1
                     moveq   #0,d0
                     tst.b   d1
                     beq     .store
@@ -4640,7 +4680,7 @@ lbC0211B0:
 .store:
                     move.b  d0,(3,a1)
                     rts
-.fx_trans_table:
+.effect_trans_table:
                     dc.b    $A,-2         ; 0:arpeggio
                     dc.b    $1,-3         ; 1:port up
                     dc.b    $2,-3         ; 2:port down
@@ -4972,10 +5012,10 @@ SAMP_MSG:
                     dc.l    0
 
 ; ===========================================================================
-lbC02145E:
-                    move.l  #lbC02146A,(current_cmd_ptr)
+save_song:
+                    move.l  #do_save_song,(current_cmd_ptr)
                     rts
-lbC02146A:
+do_save_song:
                     lea     (SaveSong_MSG),a0
                     moveq   #DIR_SONGS,d0
                     jsr     (display_file_requester)
@@ -5203,7 +5243,7 @@ free_current_sample:
                     rts
 
 ; ===========================================================================
-lbC0216DC:
+copy_sample:
                     bsr     get_current_sample_ptr_address
                     move.l  (a0)+,(lbL021778)
                     beq     error_what_sample
@@ -5257,7 +5297,9 @@ lbL021778:
                     dc.l    0
 lbW02177C:
                     dc.w    0
-lbC02177E:
+
+; ===========================================================================
+mix_samples:
                     lea     (OKT_samples_infos),a0
                     move.w  (current_sample_index,pc),d0
                     lsl.w   #5,d0
@@ -5342,7 +5384,9 @@ lbC021888:
 MixWithSample_MSG:
                     dc.b    'Mix With Sample:',0
                     even
-lbC02189C:
+
+; ===========================================================================
+swap_samples:
                     lea     (SwapWith_MSG,pc),a0
                     bsr     lbC024876
                     bmi     lbC021908
@@ -6001,19 +6045,23 @@ dec_replay_speed:
                     bra     display_main_menu
 
 ; ===========================================================================
-lbC022028:
+inc_song_position:
                     move.w  (OKT_song_length),d0
                     subq.w  #1,d0
                     cmp.w   (current_song_position),d0
                     beq     error_no_more_positions
                     addq.w  #1,(current_song_position)
                     bra     display_main_menu
-lbC022044:
+
+; ===========================================================================
+dec_song_position:
                     tst.w   (current_song_position)
                     beq     error_no_more_positions
                     subq.w  #1,(current_song_position)
                     bra     display_main_menu
-lbC022058:
+
+; ===========================================================================
+inc_pattern:
                     lea     (OKT_patterns),a0
                     move.w  (current_song_position),d0
                     move.w  (number_of_patterns),d1
@@ -6022,14 +6070,18 @@ lbC022058:
                     beq     error_no_more_patterns
                     addq.b  #1,(a0,d0.w)
                     bra     display_main_menu
-lbC02207C:
+
+; ===========================================================================
+dec_pattern:
                     lea     (OKT_patterns),a0
                     move.w  (current_song_position),d0
                     tst.b   (a0,d0.w)
                     beq     error_no_more_patterns
                     subq.b  #1,(a0,d0.w)
                     bra     display_main_menu
-lbC022098:
+
+; ===========================================================================
+dec_song_length:
                     cmpi.w  #1,(OKT_song_length)
                     beq     error_no_more_positions
                     subq.w  #1,(OKT_song_length)
@@ -6040,12 +6092,16 @@ lbC022098:
                     bne     display_main_menu
                     subq.w  #1,(current_song_position)
                     bra     display_main_menu
-lbC0220CE:
+
+; ===========================================================================
+inc_song_length:
                     cmpi.w  #128,(OKT_song_length)
                     beq     error_no_more_positions
                     addq.w  #1,(OKT_song_length)
                     bra     display_main_menu
-lbC0220E4:
+
+; ===========================================================================
+insert_song_position:
                     cmpi.w  #128,(OKT_song_length)
                     beq     error_no_more_positions
                     lea     (OKT_patterns,pc),a0
@@ -6058,8 +6114,10 @@ lbC0220FE:
                     bra     lbC0220FE
 lbC022108:
                     sf      (a0)
-                    bra     lbC0220CE
-lbC02210C:
+                    bra     inc_song_length
+
+; ===========================================================================
+delete_song_position:
                     cmpi.w  #1,(OKT_song_length)
                     beq     error_no_more_positions
                     lea     (OKT_patterns,pc),a0
@@ -6072,8 +6130,10 @@ lbC022126:
                     bra     lbC022126
 lbC022130:
                     sf      (a0)
-                    bra     lbC022098
-lbC022136:
+                    bra     dec_song_length
+
+; ===========================================================================
+dec_patterns:
                     move.w  (number_of_patterns),d0
                     subq.w  #1,d0
                     lea     (OKT_patterns,pc),a0
@@ -6087,9 +6147,11 @@ lbC022144:
                     subq.w  #1,(current_viewed_pattern)
                     bsr     draw_pattern
 lbC022160:
-                    bsr     dec_song_position
+                    bsr     free_last_pattern
                     bra     display_main_menu
-lbC022168:
+
+; ===========================================================================
+inc_patterns:
                     bra     create_new_empty_pattern
 
 ; ===========================================================================
@@ -9154,7 +9216,7 @@ do_go_to_cli_workbench:
                     bra     display_main_menu
 
 ; ===========================================================================
-lbC0245D0:
+exit_oktalyzer:
                     bsr     ask_are_you_sure_requester
                     bne     .cancelled
                     st      (quit_flag)
@@ -9371,7 +9433,7 @@ lbC0247D6:
                     moveq   #2,d3
                     moveq   #0,d4
                     lea     (lbW01B7DA),a0
-                    jsr     (lbC0264DC)
+                    jsr     (input_string)
                     bmi     lbC024866
                     move.b  (lbW01B7DA),d0
                     bsr     lbC01F094
@@ -9387,7 +9449,7 @@ lbC02482C:
                     moveq   #2,d2
                     moveq   #2,d3
                     moveq   #0,d4
-                    jsr     (lbC0264DC)
+                    jsr     (input_string)
                     bmi     lbC024866
                     move.b  (lbW01B7DC),d0
                     bsr     lbC01F094
@@ -9418,7 +9480,7 @@ lbC02487C:
                     moveq   #2,d2
                     moveq   #2,d3
                     moveq   #0,d4
-                    jsr     (lbC0264DC)
+                    jsr     (input_string)
                     bmi     lbC0248C0
                     move.b  (lbW0248CA,pc),d0
                     bsr     lbC01F094
@@ -9458,7 +9520,7 @@ lbC0248CC:
                     moveq   #3,d2
                     moveq   #3,d3
                     move.w  (lbW024948,pc),d4
-                    jsr     (lbC0264DC)
+                    jsr     (input_string)
                     bmi     lbC02493E
                     lea     (lbL02494A,pc),a0
                     jsr     (lbC0257A6)
@@ -11150,7 +11212,7 @@ workbench_opened_flag:
                     even
 
 ; ===========================================================================
-lbC0264DC:
+input_string:
                     moveq   #0,d5
 lbC0264DE:
                     move.l  a0,(lbL02680E)
@@ -11695,11 +11757,11 @@ lbW026B0C:
                     dc.w    EVT_LIST_END
 lbW026B22:
                     dc.w    1
-                    dc.l    files_sel_text
+                    dc.l    files_selector_text
                     dc.w    2
                     dc.l    lbW018814
                     dc.w    3
-                    dc.l    lbW018706
+                    dc.l    files_selector_gadgets
                     dc.w    0
                     dc.l    0,0,0
 lbC026B42:
@@ -11736,12 +11798,14 @@ On_MSG:
                     dc.b    ' On',0
 Off_MSG:
                     dc.b    'Off',0
-lbC026BAC:
+file_selector_cancel:
                     moveq   #-1,d0
                     move.l  d0,(lbL027FDC)
                     st      (quit_flag)
                     rts
-lbC026BBC:
+
+; ===========================================================================
+file_selector_ok:
                     bsr     get_current_directory_name
                     tst.b   (lbB028008)
                     beq     lbC026BDA
@@ -12021,7 +12085,9 @@ lbC026F06:
 lbC026F14:
                     moveq   #ERROR,d0
                     rts
-lbC026F18:
+
+; ===========================================================================
+file_selector_reread_dir:
                     st      d0
                     bra     lbC026F1E
 lbC026F1C:
@@ -12103,7 +12169,7 @@ lbC02703A:
                     clr.l   (a0)
                     DOS     UnLock
 lbC027052:
-                    bsr     lbC027E2A
+                    bsr     draw_ok_dir_status
                     bsr     lbC02774C
                     bsr     lbC027762
                     tst.b   (lbB027FDA)
@@ -12541,7 +12607,7 @@ lbC027500:
                     st      (5,a0)
                     bra     lbC027350
 lbC02750E:
-                    bsr     lbC026BBC
+                    bsr     file_selector_ok
                     bra     lbC027738
 lbC027516:
                     rts
@@ -12662,7 +12728,9 @@ lbC02766E:
                     bra     lbC027724
 lbC027672:
                     rts
-lbC027674:
+
+; ===========================================================================
+file_selector_set_drawer_name:
                     lea     (curent_dir_name),a0
                     moveq   #9,d0
                     moveq   #10,d1
@@ -12673,11 +12741,13 @@ lbC027674:
                     jsr     (lbC0264DE)
                     bmi     lbC027696
                     tst.b   d1
-                    bne     lbC027698
+                    bne     file_selector_set_file_name
                     bra     lbC026F1C
 lbC027696:
                     rts
-lbC027698:
+
+; ===========================================================================
+file_selector_set_file_name:
                     lea     (curent_dir_name+80),a0
                     moveq   #9,d0
                     moveq   #11,d1
@@ -12688,11 +12758,13 @@ lbC027698:
                     jsr     (lbC0264DE)
                     bmi     lbC0276BA
                     tst.b   d1
-                    bne     lbC027674
-                    bra     lbC026BBC
+                    bne     file_selector_set_drawer_name
+                    bra     file_selector_ok
 lbC0276BA:
                     rts
-lbC0276BC:
+
+; ===========================================================================
+file_selector_parent_dir:
                     lea     (curent_dir_name),a0
                     move.l  a0,a1
                     moveq   #80,d0
@@ -12702,7 +12774,9 @@ lbC0276BC:
                     bra     lbC026F1C
 lbC0276D6:
                     bra     lbC027724
-lbC0276DC:
+
+; ===========================================================================
+file_selector_delete_file:
                     tst.b   (curent_dir_name+80)
                     beq     lbC02771C
                     jsr     (ask_are_you_sure_requester)
@@ -12716,7 +12790,7 @@ lbC0276DC:
                     lea     (current_file_name),a0
                     jsr     (delete_file)
                     bmi     .cancelled
-                    bra     lbC026F18
+                    bra     file_selector_reread_dir
 .cancelled:
                     rts
 lbC02771C:
@@ -13182,7 +13256,9 @@ lbL027CEC:
                     dc.l    0
 lbL027CF0:
                     dc.l    0
-lbC027CF4:
+
+; ===========================================================================
+file_selector_install_ok_dir:
                     tst.b   (lbB027FDA)
                     beq     lbC027D04
                     jmp     (error_already_installed)
@@ -13238,14 +13314,16 @@ lbC027D88:
 lbC027DB4:
                     dbra    d7,lbC027D88
                     st      (lbB027FDA)
-                    bsr     lbC027E2A
+                    bsr     draw_ok_dir_status
                     jsr     (close_file)
                     moveq   #0,d0
                     rts
 lbC027DCC:
                     jsr     (close_file)
                     jmp     (error_cant_install)
-lbC027DDA:
+
+; ===========================================================================
+file_selector_delete_ok_dir:
                     tst.b   (lbB027FDA)
                     bne     lbC027DEA
                     jmp     (error_no_okdir)
@@ -13256,7 +13334,7 @@ lbC027DEA:
                     jsr     (delete_file)
                     bmi     lbC027E0E
                     sf      (lbB027FDA)
-                    bsr     lbC027E2A
+                    bsr     draw_ok_dir_status
                     moveq   #OK,d0
                     rts
 lbC027E0E:
@@ -13268,12 +13346,14 @@ lbC027E12:
                     lea     (current_file_name),a2
                     move.w  #160,d0
                     bra     construct_file_name
-lbC027E2A:
+
+; ===========================================================================
+draw_ok_dir_status:
                     lea     (On_MSG0,pc),a0
                     tst.b   (lbB027FDA)
-                    bne     lbC027E3A
+                    bne     .on
                     lea     (Off_MSG0,pc),a0
-lbC027E3A:
+.on:
                     moveq   #76,d0
                     moveq   #10,d1
                     jmp     (draw_text)
@@ -13485,11 +13565,12 @@ lbW028006:
 lbB028008:
                     dc.b    0
                     even
-; sample ed.
-lbC02800C:
+
+; ===========================================================================
+do_sample_editor:
                     sf      (lbB028218)
                     moveq   #-1,d0
-                    move.l  d0,(sample_ed_mouse_block_start)
+                    move.l  d0,(sample_editor_mouse_block_start)
 lbC02801A:
                     lea     (lbW02821A,pc),a0
                     jsr     (process_commands_sequence)
@@ -13528,8 +13609,8 @@ lbW028074:
                     dc.w    EVT_LIST_END
 max_lines:
                     dc.w    21
-gadgets_list_to_fix:
-                    dc.l    lbW018A04
+gadgets_lists_to_fix:
+                    dc.l    sample_editor_commands_gadgets
                     dc.l    lbW028FDC
                     dc.l    lbL0291B8
                     dc.l    lbL0293F0
@@ -13598,7 +13679,7 @@ lbC0281F2:
                     rts
 
 ; ===========================================================================
-sample_ed_exit:
+sample_editor_exit:
                     tst.b   (lbB028218)
                     beq     .approved
                     jsr     (ask_are_you_sure_requester)
@@ -13611,11 +13692,11 @@ lbB028218:
                     dcb.b   2,0
 lbW02821A:
                     dc.w    1
-                    dc.l    sample_ed_text
+                    dc.l    sample_editor_text
                     dc.w    2
                     dc.l    lbW018B00
                     dc.w    3
-                    dc.l    lbW01892C
+                    dc.l    sample_editor_gadgets
                     dc.w    0
                     dc.l    0,0,0
 lbC02823A:
@@ -13633,12 +13714,12 @@ lbC02824A:
                     rts
 
 ; ===========================================================================
-display_sample_ed_help:
-                    move.l  #do_display_sample_ed_help,(current_cmd_ptr)
+display_sample_editor_help:
+                    move.l  #do_display_sample_editor_help,(current_cmd_ptr)
                     rts
 
-do_display_sample_ed_help:
-                    lea     (sample_ed_help_text),a0
+do_display_sample_editor_help:
+                    lea     (sample_editor_help_text),a0
                     moveq   #0,d0
                     moveq   #0,d1
                     jsr     (process_commands)
@@ -13647,8 +13728,8 @@ do_display_sample_ed_help:
 ; ===========================================================================
 lbC028284:
                     moveq   #-1,d0
-                    move.l  d0,(sample_ed_loop_bar_start)
-                    bra     lbC02837A
+                    move.l  d0,(sample_editor_loop_bar_start)
+                    bra     sample_editor_display_sample
 lbC028292:
                     sf      (lbB029EE7)
                     lea     (lbW0282A8,pc),a0
@@ -13661,7 +13742,7 @@ lbW0282A8:
                     ; x,y,amount of chars to clear from position
                     dc.b    CMD_CLEAR_CHARS,0,0,SCREEN_BYTES
                     dc.b    CMD_CLEAR_CHARS,0,1,SCREEN_BYTES
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
                     even
 lbC0282B8:
                     move.l  d4,-(a7)
@@ -13693,12 +13774,12 @@ lbC0282EE:
                     tst.b   d4
                     beq     lbC0282FA
                     move.w  d1,d0
-                    bsr     sample_ed_set_mark
+                    bsr     sample_editor_set_mark
                     bra     lbC028306
 lbC0282FA:
-                    move.w  (sample_ed_mouse_block_start),d0
+                    move.w  (sample_editor_mouse_block_start),d0
                     bmi     lbC028306
-                    bsr     sample_ed_set_mark
+                    bsr     sample_editor_set_mark
 lbC028306:
                     move.l  (a7)+,d4
                     moveq   #ERROR,d0
@@ -13706,8 +13787,8 @@ lbC028306:
 lbC02830C:
                     jsr     (do_free_sample_and_infos)
                     bsr     lbC02896C
-                    bsr     lbC02837A
-                    bsr     sample_ed_draw_sample_infos
+                    bsr     sample_editor_display_sample
+                    bsr     sample_editor_draw_sample_infos
                     jmp     (error_sample_cleared)
 lbC028324:
                     move.l  (lbL029ECE),d0
@@ -13732,7 +13813,9 @@ lbC02836A:
 lbC028372:
                     jsr     (error_sample_too_long)
                     bra     lbC02830C
-lbC02837A:
+
+; ===========================================================================
+sample_editor_display_sample:
                     lea     (OKT_samples_infos),a0
                     move.w  (current_sample_index),d0
                     lsl.w   #5,d0
@@ -13802,7 +13885,7 @@ lbC02844A:
                     jsr     (release_after_line_drawing)
                     movem.l (a7)+,d2-d7/a2
                     bsr     lbC028E96
-                    bsr     sample_ed_draw_repeat_bars
+                    bsr     sample_editor_draw_repeat_bars
                     bra     lbC02895C
 lbC028460:
                     movem.l d2-d4/a2,-(a7)
@@ -13853,7 +13936,7 @@ lbC0284DE:
                     movem.l (a7)+,d2-d4/a2
                     move.w  #256,(lbW029ED2)
                     bsr     lbC028E96
-                    bsr     sample_ed_draw_repeat_bars
+                    bsr     sample_editor_draw_repeat_bars
                     bra     lbC02895C
 lbC0284F6:
                     bsr     own_blitter
@@ -13867,7 +13950,9 @@ lbC0284F6:
 lbC028520:
                     move.w  d0,(BLTSIZE,a6)
                     bra     disown_blitter
-lbC02852A:
+
+; ===========================================================================
+sample_editor_set_sample_name:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
                     lea     (OKT_samples_infos),a0
@@ -13879,11 +13964,11 @@ lbC02852A:
                     moveq   #21,d2
                     moveq   #21,d3
                     moveq   #0,d4
-                    jsr     (lbC0264DC)
+                    jsr     (input_string)
                     jmp     (display_main_menu)
 
 ; ===========================================================================
-sample_ed_swap:
+sample_editor_swap:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
                     tst.l   (lbL029EDC)
@@ -13909,31 +13994,33 @@ sample_ed_swap:
                     not.b   (lbB028218)
                     bsr     lbC02896C
                     bsr     lbC028324
-                    bsr     lbC02837A
-                    bra     sample_ed_draw_sample_infos
+                    bsr     sample_editor_display_sample
+                    bra     sample_editor_draw_sample_infos
 
 ; ===========================================================================
-sample_ed_mark_all:
+sample_editor_mark_all:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
                     moveq   #0,d0
                     move.w  #SCREEN_WIDTH-1,d1
-                    bra     sample_ed_set_mark
+                    bra     sample_editor_set_mark
 
 ; ===========================================================================
-lbC028614:
+sample_editor_copy_and_cut:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
                     clr.w   (lbW029EE4)
                     bsr     lbC02869A
                     bmi     lbC02862A
-                    bra     lbC02862C
+                    bra     sample_editor_cut
 lbC02862A:
                     rts
-lbC02862C:
+
+; ===========================================================================
+sample_editor_cut:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
-                    tst.b   (sample_ed_mode_flag)
+                    tst.b   (sample_editor_mode_flag)
                     beq     _error_what_block
                     movem.l (sample_block_start),d0/d1
                     sub.l   d0,d1
@@ -13955,16 +14042,16 @@ lbC028676:
                     move.l  a0,(lbL029ECE)
                     bsr     lbC02896C
                     bsr     lbC028324
-                    bsr     lbC02837A
-                    bra     sample_ed_draw_sample_infos
+                    bsr     sample_editor_display_sample
+                    bra     sample_editor_draw_sample_infos
 
 ; ===========================================================================
-sample_ed_copy:
+sample_editor_copy:
                     move.w  #-1,(lbW029EE4)
 lbC02869A:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
-                    tst.b   (sample_ed_mode_flag)
+                    tst.b   (sample_editor_mode_flag)
                     beq     _error_what_block
                     movem.l (sample_block_start),a0/a1
                     sub.l   a0,a1
@@ -13983,12 +14070,14 @@ lbC02869A:
 lbC0286F0:
                     moveq   #OK,d0
                     rts
-lbC0286F4:
+
+; ===========================================================================
+sample_editor_paste:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
                     tst.l   (lbL029EDC)
                     beq     _error_what_block
-                    tst.w   (sample_ed_mouse_block_start)
+                    tst.w   (sample_editor_mouse_block_start)
                     bmi     _error_what_position
                     move.l  (work_sample_size),d0
                     add.l   (lbL029EE0),d0
@@ -14009,17 +14098,15 @@ lbC0286F4:
                     move.l  (work_sample_size),d0
                     sub.l   (sample_block_start),d0
                     EXEC    CopyMem
-                    jsr     (change_work_sample_size)
-                    bmi     lbC02830C
-                    bsr     lbC02896C
-                    bsr     lbC02837A
-                    bra     sample_ed_draw_sample_infos
-lbC02879C:
+                    bra     lbC028852
+
+; ===========================================================================
+sample_editor_replace:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
                     tst.l   (lbL029EDC)
                     beq     _error_what_block
-                    tst.w   (sample_ed_mouse_block_start)
+                    tst.w   (sample_editor_mouse_block_start)
                     bmi     _error_what_position
                     move.l  (work_sample_size),d1
                     move.l  d1,d0
@@ -14053,12 +14140,14 @@ lbC028852:
                     jsr     (change_work_sample_size)
                     bmi     lbC02830C
                     bsr     lbC02896C
-                    bsr     lbC02837A
-                    bra     sample_ed_draw_sample_infos
-sample_ed_reverse:
+                    bsr     sample_editor_display_sample
+                    bra     sample_editor_draw_sample_infos
+
+; ===========================================================================
+sample_editor_reverse:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
-                    tst.b   (sample_ed_mode_flag)
+                    tst.b   (sample_editor_mode_flag)
                     beq     lbC028884
                     movem.l (sample_block_start),d0/d1
                     bra     lbC02888C
@@ -14086,8 +14175,8 @@ lbC0288B0:
                     bra     lbC0288B0
 lbC0288BE:
                     bsr     lbC028324
-                    bsr     lbC02837A
-                    bra     sample_ed_draw_sample_infos
+                    bsr     sample_editor_display_sample
+                    bra     sample_editor_draw_sample_infos
 lbC0288CA:
                     move.l  d0,(lbL029F04)
                     bsr     lbC028914
@@ -14102,7 +14191,9 @@ lbC0288CA:
 lbC028900:
                     tst.l   d0
                     rts
-lbC028904:
+
+; ===========================================================================
+free_sample_copy_buffer:
                     bsr     lbC028914
                     jsr     (error_copy_buffer_free)
                     jmp     (display_main_menu)
@@ -14117,7 +14208,7 @@ lbC028936:
                     rts
 
 ; ===========================================================================
-sample_ed_clear_mark:
+sample_editor_clear_mark:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
                     movem.l d0/d1/d2,-(a7)
@@ -14126,52 +14217,52 @@ sample_ed_clear_mark:
                     move.w  d0,d2
                     swap    d2
                     move.w  d1,d2
-                    cmp.l   (sample_ed_mouse_block_start),d2
+                    cmp.l   (sample_editor_mouse_block_start),d2
                     beq     .not_marked
                     movem.w d0/d1,-(a7)
                     bsr     lbC02896C
                     movem.w (a7)+,d0/d1
-                    bsr     sample_ed_draw_sample_infos
+                    bsr     sample_editor_draw_sample_infos
 .not_marked:
                     movem.l (a7)+,d0/d1/d2
                     rts
 
 ; ===========================================================================
-sample_ed_set_mark:
+sample_editor_set_mark:
                     move.l  d2,-(a7)
                     move.w  d0,d2
                     swap    d2
                     move.w  d1,d2
-                    cmp.l   (sample_ed_mouse_block_start),d2
+                    cmp.l   (sample_editor_mouse_block_start),d2
                     beq     lbC028958
                     movem.w d0/d1,-(a7)
                     bsr     lbC02896C
                     movem.w (a7)+,d0/d1
-                    bsr     sample_ed_set_and_draw_mouse_block
-                    bsr     sample_ed_draw_sample_infos
+                    bsr     sample_editor_set_and_draw_mouse_block
+                    bsr     sample_editor_draw_sample_infos
 lbC028958:
                     move.l  (a7)+,d2
                     rts
 lbC02895C:
-                    move.l  (sample_ed_mouse_block_start),-(a7)
+                    move.l  (sample_editor_mouse_block_start),-(a7)
                     bsr     lbC02896C
-                    move.l  (a7)+,(sample_ed_mouse_block_start)
+                    move.l  (a7)+,(sample_editor_mouse_block_start)
                     rts
 lbC02896C:
                     moveq   #-1,d0
-                    cmp.l   (sample_ed_mouse_block_start),d0
+                    cmp.l   (sample_editor_mouse_block_start),d0
                     beq     .not_marked
-                    movem.w (sample_ed_mouse_block_start),d0/d1
-                    bsr     sample_ed_set_and_draw_mouse_block
+                    movem.w (sample_editor_mouse_block_start),d0/d1
+                    bsr     sample_editor_set_and_draw_mouse_block
                     moveq   #-1,d0
-                    move.l  d0,(sample_ed_mouse_block_start)
+                    move.l  d0,(sample_editor_mouse_block_start)
 .not_marked:
                     rts
 
 ; ===========================================================================
-sample_ed_set_and_draw_mouse_block:
+sample_editor_set_and_draw_mouse_block:
                     movem.l d2/d3,-(a7)
-                    movem.w d0/d1,(sample_ed_mouse_block_start)
+                    movem.w d0/d1,(sample_editor_mouse_block_start)
                     move.w  d1,d2
                     move.w  #96,d1
                     move.w  #159,d3
@@ -14184,13 +14275,13 @@ sample_ed_set_and_draw_mouse_block:
                     movem.l (a7)+,d0-d7/a0-a6
                     movem.l (a7)+,d2/d3
                     rts
-sample_ed_mouse_block_start:
+sample_editor_mouse_block_start:
                     dc.w    -1
-sample_ed_mouse_block_end:
+sample_editor_mouse_block_end:
                     dc.w    -1
 
 ; ===========================================================================
-sample_ed_clear_repeat:
+sample_editor_clear_repeat:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
                     lea     (OKT_samples_infos),a0
@@ -14201,7 +14292,7 @@ sample_ed_clear_repeat:
                     beq     _error_what_repeat
                     ; SMP_REP_START+SMP_REP_LEN
                     clr.l   (SMP_REP_START,a0)
-                    bra     sample_ed_renew_repeat_bars
+                    bra     sample_editor_renew_repeat_bars
 
 ; ===========================================================================
 lbC0289EE:
@@ -14234,7 +14325,7 @@ lbC028A2A:
                     add.w   d1,a0
                     add.w   d0,(SMP_REP_START,a0)
                     sub.w   d0,(SMP_REP_LEN,a0)
-                    bra     sample_ed_renew_repeat_bars
+                    bra     sample_editor_renew_repeat_bars
 lbC028A58:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
@@ -14266,7 +14357,7 @@ lbC028A92:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     move.w  d1,(SMP_REP_LEN,a0)
-                    bra     sample_ed_renew_repeat_bars
+                    bra     sample_editor_renew_repeat_bars
 lbC028ABC:
                     moveq   #0,d0
                     bra     lbC028AC6
@@ -14280,7 +14371,7 @@ lbC028AC6:
                     bmi     lbC028AD6
                     sub.w   d0,(SMP_REP_START,a0)
                     add.w   d0,(SMP_REP_LEN,a0)
-                    bra     sample_ed_renew_repeat_bars
+                    bra     sample_editor_renew_repeat_bars
 lbC028AD6:
                     rts
 lbC028AD8:
@@ -14296,7 +14387,7 @@ lbC028AE2:
                     bmi     lbC028AF0
                     add.w   d0,(SMP_REP_START,a0)
                     sub.w   d0,(SMP_REP_LEN,a0)
-                    bra     sample_ed_renew_repeat_bars
+                    bra     sample_editor_renew_repeat_bars
 lbC028AF0:
                     rts
 lbC028AF2:
@@ -14311,7 +14402,7 @@ lbC028AFC:
                     bsr     lbC028B1E
                     bmi     lbC028B06
                     sub.w   d0,(SMP_REP_LEN,a0)
-                    bra     sample_ed_renew_repeat_bars
+                    bra     sample_editor_renew_repeat_bars
 lbC028B06:
                     rts
 lbC028B08:
@@ -14326,7 +14417,7 @@ lbC028B12:
                     bsr     lbC028B1E
                     bmi     lbC028B1C
                     add.w   d0,(SMP_REP_LEN,a0)
-                    bra     sample_ed_renew_repeat_bars
+                    bra     sample_editor_renew_repeat_bars
 lbC028B1C:
                     rts
 lbC028B1E:
@@ -14353,11 +14444,11 @@ lbC028B4C:
 lbC028B54:
                     tst.w   d0
                     rts
-sample_ed_renew_repeat_bars:
-                    bsr     sample_ed_remove_repeat_bars
-sample_ed_draw_repeat_bars:
+sample_editor_renew_repeat_bars:
+                    bsr     sample_editor_remove_repeat_bars
+sample_editor_draw_repeat_bars:
                     bsr     normalize_current_sample_repeat
-sample_ed_redraw_repeat_bars:
+sample_editor_redraw_repeat_bars:
                     lea     (OKT_samples_infos),a0
                     move.w  (current_sample_index),d0
                     lsl.w   #5,d0
@@ -14369,10 +14460,10 @@ sample_ed_redraw_repeat_bars:
                     add.l   d0,d0
                     lsl.l   #8,d0
                     divu.w  (lbW029ED2),d0
-                    move.w  d0,(sample_ed_loop_bar_start)
+                    move.w  d0,(sample_editor_loop_bar_start)
                     move.l  a0,-(a7)
                     moveq   #0,d1
-                    bsr     sample_ed_draw_repeat_bar
+                    bsr     sample_editor_draw_repeat_bar
                     move.l  (a7)+,a0
                     moveq   #0,d0
                     move.w  (SMP_REP_START,a0),d0
@@ -14383,33 +14474,33 @@ sample_ed_redraw_repeat_bars:
                     add.l   d1,d0
                     lsl.l   #8,d0
                     divu.w  (lbW029ED2),d0
-                    move.w  d0,(sample_ed_loop_bar_end)
+                    move.w  d0,(sample_editor_loop_bar_end)
                     moveq   #1,d1
-                    bsr     sample_ed_draw_repeat_bar
+                    bsr     sample_editor_draw_repeat_bar
 .no_repeat:
-                    bra     sample_ed_draw_sample_infos
+                    bra     sample_editor_draw_sample_infos
 
 ; ===========================================================================
-sample_ed_remove_repeat_bars:
-                    tst.l   (sample_ed_loop_bar_start)
+sample_editor_remove_repeat_bars:
+                    tst.l   (sample_editor_loop_bar_start)
                     bmi     .empty
-                    move.w  (sample_ed_loop_bar_start,pc),d0
+                    move.w  (sample_editor_loop_bar_start,pc),d0
                     moveq   #0,d1
-                    bsr     sample_ed_draw_repeat_bar
-                    move.w  (sample_ed_loop_bar_end,pc),d0
+                    bsr     sample_editor_draw_repeat_bar
+                    move.w  (sample_editor_loop_bar_end,pc),d0
                     moveq   #1,d1
-                    bsr     sample_ed_draw_repeat_bar
+                    bsr     sample_editor_draw_repeat_bar
                     moveq   #-1,d0
-                    move.l  d0,(sample_ed_loop_bar_start)
+                    move.l  d0,(sample_editor_loop_bar_start)
 .empty:
                     rts
-sample_ed_loop_bar_start:
+sample_editor_loop_bar_start:
                     dc.w    -1
-sample_ed_loop_bar_end:
+sample_editor_loop_bar_end:
                     dc.w    -1
 
 ; ===========================================================================
-sample_ed_draw_repeat_bar:
+sample_editor_draw_repeat_bar:
                     cmpi.w  #SCREEN_WIDTH-1,d0
                     ble     .max_screen
                     move.w  #SCREEN_WIDTH-1,d0
@@ -14446,7 +14537,7 @@ sample_ed_draw_repeat_bar:
                     rts
 
 ; ===========================================================================
-sample_ed_draw_sample_infos:
+sample_editor_draw_sample_infos:
                     tst.b   (lbB029EE7)
                     beq     lbC028C8C
                     lea     (full_note_table),a1
@@ -14507,16 +14598,16 @@ lbC028C8C:
                     ; mode
                     lea     (Block_MSG),a0
                     st      d1
-                    move.w  (sample_ed_mouse_block_start,pc),d0
-                    cmp.w   (sample_ed_mouse_block_end,pc),d0
+                    move.w  (sample_editor_mouse_block_start,pc),d0
+                    cmp.w   (sample_editor_mouse_block_end,pc),d0
                     bne     .block_mode
                     lea     (All_MSG),a0
                     sf      d1
 .block_mode:
-                    move.b  d1,(sample_ed_mode_flag)
+                    move.b  d1,(sample_editor_mode_flag)
                     jsr     (draw_text_with_coords_struct)
 
-                    movem.w (sample_ed_mouse_block_start,pc),d6/d7
+                    movem.w (sample_editor_mouse_block_start,pc),d6/d7
                     cmp.w   d7,d6
                     blt     lbC028D38
                     exg     d6,d7
@@ -14545,7 +14636,7 @@ lbC028D38:
                     lea     (B_MSG),a0
                     jsr     (draw_text_with_coords_struct)
 lbC028D82:
-                    tst.b   (sample_ed_mode_flag)
+                    tst.b   (sample_editor_mode_flag)
                     beq     .bend_empty
                     cmpi.w  #SCREEN_WIDTH-1,d7
                     beq     .bend_screen_max
@@ -14580,53 +14671,81 @@ B_MSG:
                     dc.b    66,10,'------',0
 I_MSG:
                     dc.b    73,10,'------',0
-lbC028E0E:
+
+; ===========================================================================
+sample_editor_inc_sample_number:
                     jsr     (inc_sample_number)
                     bmi     lbC028E1A
-                    bra     lbC02837A
+                    bra     sample_editor_display_sample
 lbC028E1A:
                     rts
-lbC028E1C:
+
+; ===========================================================================
+sample_editor_dec_sample_number:
                     jsr     (dec_sample_number)
                     bmi     lbC028E28
-                    bra     lbC02837A
+                    bra     sample_editor_display_sample
 lbC028E28:
                     rts
-;lbC028E2A:
+
+; ===========================================================================
+;sample_editor_inc_sample_type:
 ;                    jsr     (inc_sample_type)
 ;                    bmi     lbC028E36
-;                    bra     lbC02837A
+;                    bra     sample_editor_display_sample
 ;lbC028E36:
 ;                    rts
-;lbC028E38:
+
+; ===========================================================================
+;sample_editor_dec_sample_type:
 ;                    jsr     (dec_sample_type)
 ;                    bmi     lbC028E44
-;                    bra     lbC02837A
+;                    bra     sample_editor_display_sample
 ;lbC028E44:
 ;                    rts
-lbC028E46:
+
+; ===========================================================================
+sample_editor_set_current_sample_number:
                     jsr     (set_current_sample_number)
-                    bra     lbC02837A
-lbC028E50:
+                    bra     sample_editor_display_sample
+
+; ===========================================================================
+sample_editor_load_sample:
                     jmp     (load_sample)
-lbC028E58:
+
+; ===========================================================================
+sample_editor_save_sample:
                     jmp     (save_sample)
-lbC028E60:
-                    jsr     (lbC02189C)
-                    bra     lbC02837A
-lbC028E6A:
+
+; ===========================================================================
+sample_editor_swap_samples:
+                    jsr     (swap_samples)
+                    bra     sample_editor_display_sample
+
+; ===========================================================================
+sample_editor_clear_sample:
                     jsr     (clear_sample)
-                    bra     lbC02837A
-lbC028E74:
+                    bra     sample_editor_display_sample
+
+; ===========================================================================
+sample_editor_clear_all_samples:
                     jsr     (clear_all_samples)
-                    bra     lbC02837A
-lbC028E7E:
-                    jsr     (lbC02177E)
-                    bra     lbC02837A
-lbC028E88:
-                    jmp     (lbC028904,pc)
-lbC028E8E:
-                    jmp     (lbC0216DC)
+                    bra     sample_editor_display_sample
+
+; ===========================================================================
+sample_editor_mix_samples:
+                    jsr     (mix_samples)
+                    bra     sample_editor_display_sample
+
+; ===========================================================================
+sample_editor_free_sample_copy_buffer:
+                    jmp     (free_sample_copy_buffer,pc)
+
+; ===========================================================================
+sample_editor_copy_sample:
+                    jmp     (copy_sample)
+
+; ===========================================================================
 lbC028E96:
                     movem.l d2,-(a7)
                     lea     (OKT_samples_infos),a0
@@ -14683,10 +14802,10 @@ lbC028F0A:
                     rts
 
 ; ===========================================================================
-sample_ed_change_volume_linear:
+sample_editor_change_volume_linear:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
-                    tst.b   (sample_ed_mode_flag)
+                    tst.b   (sample_editor_mode_flag)
                     beq     lbC028F32
                     move.l  (sample_block_start),d0
                     cmp.l   (sample_block_end),d0
@@ -14734,7 +14853,7 @@ ascii_MSG15:
                     dc.l    max_lines
                     dc.b    CMD_TEXT,28,0,'    % ',0
                     dc.b    CMD_TEXT,28,1,'Do! Ok',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
                     even
 lbW028FDC:
                     dc.l    lbW028FEE
@@ -14782,7 +14901,7 @@ lbC02905A:
                     bra     lbC029026
 lbC02905E:
                     bsr     lbC029066
-                    bra     lbC02837A
+                    bra     sample_editor_display_sample
 lbC029066:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
@@ -14820,7 +14939,7 @@ lbC0290AA:
                     move.l  (work_sample_address_ptr),a2
                     move.l  (work_sample_size),d0
                     moveq   #0,d1
-                    tst.b   (sample_ed_mode_flag)
+                    tst.b   (sample_editor_mode_flag)
                     beq     lbC0290EE
                     adda.l  (sample_block_start),a2
                     adda.l  (sample_block_start),a1
@@ -14837,10 +14956,10 @@ lbC0290FA:
                     rts
 
 ; ===========================================================================
-sample_ed_change_volume_curve:
+sample_editor_change_volume_curve:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
-                    tst.b   (sample_ed_mode_flag)
+                    tst.b   (sample_editor_mode_flag)
                     beq     lbC02911E
                     move.l  (sample_block_start),d0
                     cmp.l   (sample_block_end),d0
@@ -14885,7 +15004,7 @@ ascii_MSG16:
                     dc.l    max_lines
                     dc.b    CMD_TEXT,28,0,'Cancel',0
                     dc.b    CMD_TEXT,28,1,'Do! Ok',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
                     even
 lbL0291B8:
                     dc.l    lbL0291CA
@@ -14915,7 +15034,7 @@ lbC029202:
                     bra     lbC029170
 lbC02920C:
                     bsr     lbC02921E
-                    bra     lbC02837A
+                    bra     sample_editor_display_sample
 lbC029214:
                     bsr     lbC02921E
                     bsr     lbC028324
@@ -15041,10 +15160,10 @@ lbC02932C:
                     rts
 
 ; ===========================================================================
-sample_ed_change_period:
+sample_editor_change_period:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
-                    tst.b   (sample_ed_mode_flag)
+                    tst.b   (sample_editor_mode_flag)
                     beq     lbC029366
                     move.l  (sample_block_start),d0
                     cmp.l   (sample_block_end),d0
@@ -15085,7 +15204,7 @@ ascii_MSG17:
                     dc.l    max_lines
                     dc.b    CMD_TEXT,38,0,'to',0
                     dc.b    CMD_TEXT,35,1,'Do!   Ok',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
                     even
 lbL0293F0:
                     dc.l    lbL029402
@@ -15130,8 +15249,8 @@ lbC029472:
                     lea     (lbC029688,pc),a0
                     lea     (lbC0296A4,pc),a1
                     bsr     lbC029564
-                    bsr     lbC02837A
-                    bra     sample_ed_draw_sample_infos
+                    bsr     sample_editor_display_sample
+                    bra     sample_editor_draw_sample_infos
 lbC029488:
                     bsr     lbC0294C2
                     bra     lbC02951A
@@ -15218,7 +15337,7 @@ lbC029564:
                     jsr     (stop_audio_channels)
                     tst.l   (work_sample_address_ptr)
                     beq     lbC02966E
-                    tst.b   (sample_ed_mode_flag)
+                    tst.b   (sample_editor_mode_flag)
                     beq     lbC029634
                     move.l  (lbL029F18,pc),d0
                     sub.l   (lbL029F14,pc),d0
@@ -15386,9 +15505,9 @@ lbC02975C:
                     rts
 lbC029762:
                     move.l  #SCREEN_WIDTH-1,(lbB029F1C)
-                    tst.b   (sample_ed_mode_flag)
+                    tst.b   (sample_editor_mode_flag)
                     beq     lbC029788
-                    movem.w (sample_ed_mouse_block_start,pc),d0/d1
+                    movem.w (sample_editor_mouse_block_start,pc),d0/d1
                     cmp.w   d0,d1
                     bgt     lbC029780
                     exg     d0,d1
@@ -15569,37 +15688,37 @@ lbC029966:
                     rts
 
 ; ===========================================================================
-sample_ed_normalize:
+sample_editor_normalize:
                     move.W  #OKT_SAMPLE_NORM,(sample_work_op)
                     bra     go_work
 
 ; ===========================================================================
-sample_ed_xfade:
+sample_editor_xfade:
                     move.W  #OKT_SAMPLE_XFADE,(sample_work_op)
                     bra     go_work
 
 ; ===========================================================================
-sample_ed_boost:
+sample_editor_boost:
                     move.W  #OKT_SAMPLE_BOOST,(sample_work_op)
                     bra     go_work
 
 ; ===========================================================================
-sample_ed_filter:
+sample_editor_filter:
                     move.W  #OKT_SAMPLE_FILTER,(sample_work_op)
 go_work:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
-                    tst.b   (sample_ed_mode_flag)
+                    tst.b   (sample_editor_mode_flag)
                     beq     .wrong_mode
                     move.l  (sample_block_start),d0
                     cmp.l   (sample_block_end),d0
                     beq     _error_what_block
 .wrong_mode:
-                    move.l  #sample_ed_do_delta_filter,(current_cmd_ptr)
+                    move.l  #sample_editor_do_delta_filter,(current_cmd_ptr)
                     rts
 
 ; ===========================================================================
-sample_ed_do_delta_filter:
+sample_editor_do_delta_filter:
                     lea     (lbW0299E2,pc),a0
                     jsr     (process_commands_sequence)
                     lea     (lbW0299C0,pc),a0
@@ -15628,7 +15747,7 @@ ascii_MSG19:
                     dc.l    max_lines
                     dc.b    CMD_TEXT,44,0,'Cancel',0
                     dc.b    CMD_TEXT,44,1,'Do! Ok',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
                     even
 lbL029A1E:
                     dc.l    lbL029A30
@@ -15663,13 +15782,13 @@ lbC029A76:
                     rts
 lbC029A82:
                     bsr     lbC029A88
-                    bra     lbC02837A
+                    bra     sample_editor_display_sample
 lbC029A88:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
                     move.l  (work_sample_address_ptr),a0
                     move.l  (work_sample_size),d0
-                    tst.b   (sample_ed_mode_flag)
+                    tst.b   (sample_editor_mode_flag)
                     beq     lbC029AB8
                     adda.l  (sample_block_start),a0
                     move.l  (sample_block_end),d0
@@ -15826,7 +15945,7 @@ sample_normalize_op:
                     bra     .set
 
 ; ===========================================================================
-sample_ed_set_repeat:
+sample_editor_set_repeat:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
                     cmp.l   #-1,(sample_block_start)
@@ -15846,12 +15965,12 @@ sample_ed_set_repeat:
                     sub.l   (sample_block_start),d2
                     lsr.l   #1,d2
                     move.w  d2,(SMP_REP_LEN,a0)
-                    bsr     sample_ed_remove_repeat_bars
-                    bsr     sample_ed_redraw_repeat_bars
-                    jmp     sample_ed_draw_sample_infos
+                    bsr     sample_editor_remove_repeat_bars
+                    bsr     sample_editor_redraw_repeat_bars
+                    jmp     sample_editor_draw_sample_infos
 
 ; ===========================================================================
-sample_ed_monitor:
+sample_editor_monitor:
                     jsr     (lbC01E0C2)
                     move.l  a7,(lbL029F00)
                     bsr     lbC029CAE
@@ -15892,7 +16011,7 @@ lbC029B46:
                     jmp     (lbC01E0FA)
 
 ; ===========================================================================
-sample_ed_sampler:
+sample_editor_sampler:
                     tst.l   (work_sample_address_ptr)
                     beq     lbC029B72
                     jsr     (ask_are_you_sure_requester)
@@ -15994,8 +16113,8 @@ lbC029C50:
                     move.w  #64,(SMP_VOL,a0)
                     bsr     lbC02896C
                     bsr     lbC028324
-                    bsr     lbC02837A
-                    bra     sample_ed_draw_sample_infos
+                    bsr     sample_editor_display_sample
+                    bra     sample_editor_draw_sample_infos
 lbC029CAC:
                     rts
 lbC029CAE:
@@ -16072,29 +16191,29 @@ lbC029DBA:
                     rts
 
 ; ===========================================================================
-sample_ed_dec_note_rate:
+sample_editor_dec_note_rate:
                     lea     (lbW029E10,pc),a0
                     cmpi.w  #1,(a0)
                     beq     .min
                     subq.w  #1,(a0)
-                    bra     sample_ed_draw_sample_infos
+                    bra     sample_editor_draw_sample_infos
 .min:
                     rts
 
 ; ===========================================================================
-sample_ed_inc_note_rate:
+sample_editor_inc_note_rate:
                     lea     (lbW029E10,pc),a0
                     cmpi.w  #SMPS_NUMBER,(a0)
                     beq     .max
                     addq.w  #1,(a0)
-                    bra     sample_ed_draw_sample_infos
+                    bra     sample_editor_draw_sample_infos
 .max:
                     rts
 
 ; ===========================================================================
-sample_ed_switch_left_right:
+sample_editor_switch_left_right:
                     eori.w  #1,(lbW029EFE)
-                    bra     sample_ed_draw_sample_infos
+                    bra     sample_editor_draw_sample_infos
 lbW029E10:
                     dc.w    25
 L_MSG:
@@ -16181,7 +16300,7 @@ lbW029EE4:
 ;                    dc.b    0
 lbB029EE7:
                     dc.b    0
-sample_ed_mode_flag:
+sample_editor_mode_flag:
                     dc.b    0
 sample_work_op:
                     dc.w    0
@@ -16275,7 +16394,7 @@ lbL02A76A:
                     dcb.l   2,0
 
 ; ===========================================================================
-lbC02A772:
+do_prefs:
                     bsr     backup_prefs
 .loop:
                     lea     (lbW02A7BA,pc),a0
@@ -16303,7 +16422,7 @@ lbW02A7BA:
                     dc.w    2
                     dc.l    lbW0194A6
                     dc.w    3
-                    dc.l    lbW019080
+                    dc.l    prefs_gadgets
                     dc.w    0
                     dc.l    0,0,0
 
@@ -17778,14 +17897,14 @@ caret_default_positions:
                     dc.b    63,67,68,69,70
                     dc.b    72,76,77,78,79
 lbL02B684:
-                    dc.l    lbB0178BE
-                    dc.l    lbB0178D0
-                    dc.l    lbB0178E2
-                    dc.l    lbB0178F4
-                    dc.l    lbB017906
-                    dc.l    lbB017918
-                    dc.l    lbB01792A
-                    dc.l    lbB01793C
+                    dc.l    change_channel_1_gadget
+                    dc.l    change_channel_2_gadget
+                    dc.l    change_channel_3_gadget
+                    dc.l    change_channel_4_gadget
+                    dc.l    change_channel_5_gadget
+                    dc.l    change_channel_6_gadget
+                    dc.l    change_channel_7_gadget
+                    dc.l    change_channel_8_gadget
 
 ; ===========================================================================
 set_colors_palette:
@@ -17799,7 +17918,7 @@ set_colors_palette:
                     rts
 
 ; ===========================================================================
-do_fx_editor:
+do_effect_editor:
                     lea     (lbW02B712,pc),a0
                     jsr     (process_commands_sequence)
                     bsr     lbC02C054
@@ -17809,10 +17928,10 @@ do_fx_editor:
                     beq     lbC02B6F2
                     move.l  d0,a0
                     jsr     (a0)
-                    bra     do_fx_editor
+                    bra     do_effect_editor
 lbC02B6F2:
                     tst.b   (quit_flag)
-                    beq     do_fx_editor
+                    beq     do_effect_editor
                     lea     (lbL02C53C,pc),a0
                     jmp     (free_mem_block_from_struct)
 lbW02B706:
@@ -17825,7 +17944,7 @@ lbW02B710:
                     dc.w    0
 lbW02B712:
                     dc.w    1
-                    dc.l    effects_ed_text
+                    dc.l    effects_editor_text
                     dc.w    2
                     dc.l    lbW0196F0
                     dc.w    3
@@ -17836,11 +17955,11 @@ lbC02B732:
                     bra     lbC02BFE0
 
 ; ===========================================================================
-display_effects_ed_help:
-                    move.l  #do_display_effects_ed_help,(current_cmd_ptr)
+display_effects_editor_help:
+                    move.l  #do_display_effects_editor_help,(current_cmd_ptr)
                     rts
-do_display_effects_ed_help:
-                    lea     (effects_ed_help_text),a0
+do_display_effects_editor_help:
+                    lea     (effects_editor_help_text),a0
                     moveq   #0,d0
                     moveq   #0,d1
                     jsr     (process_commands)
@@ -20222,12 +20341,12 @@ main_screen_sequence:
                     dc.w    1
                     dc.l    ascii_MSG0
                     dc.w    3
-                    dc.l    lbB017594
+                    dc.l    main_screen_gadgets
                     dc.w    0
                     dc.l    0,0,0
 ascii_MSG0:
                     dc.b    CMD_SET_MAIN_COPPERLIST
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
 main_menu_text:
                     dc.b    CMD_CLEAR_MAIN_MENU
                     dc.b    CMD_TEXT,1,0,'Current Song:',0
@@ -20265,9 +20384,9 @@ main_menu_text:
                     dc.l    song_metrics_text_ptr
                     dc.b    CMD_TEXT,71,5,'S',0
                     dc.b    CMD_TEXT,71,6,'C',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
 ; shift+help
-patterns_ed_help_text_1:
+patterns_editor_help_text_1:
                     dc.b    CMD_SET_SUB_COPPERLIST
                     dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,0,8,  '- Pattern Editor Help Page 1 --------------------------------------------------',0
@@ -20291,8 +20410,8 @@ patterns_ed_help_text_1:
                     dc.b    CMD_TEXT,0,28, 'SH_E       Edit Sample    AL_F10 Change Effect',0
                     dc.b    CMD_TEXT,0,29, 'AL_0-9/a-z Set  Sample    AM_F10 Effect Editor',0
                     dc.b    CMD_TEXT,0,30, 'CT_CURSUD  Add/Sub Sample',0
-                    dc.b    CMD_END
-patterns_ed_help_text_2:
+                    dc.b    CMD_DONE
+patterns_editor_help_text_2:
                     dc.b    CMD_SET_SUB_COPPERLIST
                     dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,23,12,'- Pattern Editor Help Page 2 -----',0
@@ -20305,7 +20424,7 @@ patterns_ed_help_text_2:
                     dc.b    CMD_TEXT,23,21,'AL_DEL Clear  Note + Inst + Effect',0
                     dc.b    CMD_TEXT,23,22,'AM_DEL Clear  Effect',0
                     dc.b    CMD_TEXT,23,23,'CT_DEL Like ___DEL + QuantPolyMove',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
 ; amiga+help
 effects_help_text:
                     dc.b    CMD_SET_SUB_COPPERLIST
@@ -20328,7 +20447,7 @@ effects_help_text:
                     dc.b    CMD_TEXT,38,28,                     '5x:Vol Up        (VO)',0
                     dc.b    CMD_TEXT,38,29,                     '6x:Vol Down Once (VO)',0
                     dc.b    CMD_TEXT,38,30,                     '7x:Vol Up   Once (VO)',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
 ; alt+help
 play_help_text:
                     dc.b    CMD_SET_SUB_COPPERLIST
@@ -20346,292 +20465,82 @@ play_help_text:
                     dc.b    CMD_TEXT,9,24, 'NB_4         Sub Poly',0
                     dc.b    CMD_TEXT,9,25, 'NB_5         Add Poly',0
                     dc.b    CMD_TEXT,9,27, 'NB_7         Change MidiMode',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
                     even
 wb_cli_text_ptr:
                     dc.l    CLI_MSG
 CLI_MSG:
                     dc.b    CMD_TEXT,1,6,'CLI',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
 WB_MSG:
                     dc.b    CMD_TEXT,1,6,'WB',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
                     even
-lbB017594:
-                    dc.l    lbB0175A6
-                    dc.w    %1
-                    dc.b    1,1,4,1
-                    dc.l    lbC020DCE,0
-lbB0175A6:
-                    dc.l    lbB0175B8
-                    dc.w    %1
-                    dc.b    1,2,4,1
-                    dc.l    load_song,0
-lbB0175B8:
-                    dc.l    lbB0175CA
-                    dc.w    %1
-                    dc.b    1,3,4,1
-                    dc.l    lbC02145E,0
-lbB0175CA:
-                    dc.l    lbB0175DC
-                    dc.w    %1
-                    dc.b    1,4,4,1
-                    dc.l    lbC01E0AA,0
-lbB0175DC:
-                    dc.l    lbB0175EE
-                    dc.w    %1
-                    dc.b    1,5,4,1
-                    dc.l    lbC0245D0,0
-lbB0175EE:
-                    dc.l    lbB017600
-                    dc.w    %1
-                    dc.b    1,6,4,1
-                    dc.l    go_to_cli_workbench,0
-lbB017600:
-                    dc.l    lbB017612
-                    dc.w    %1
-                    dc.b    6,1,9,1
-                    dc.l    lbC022028,lbC022044
-lbB017612:
-                    dc.l    lbB017624
-                    dc.w    %1
-                    dc.b    6,2,9,1
-                    dc.l    lbC022058,lbC02207C
-lbB017624:
-                    dc.l    lbB017636
-                    dc.w    %1
-                    dc.b    6,3,9,1
-                    dc.l    lbC0220CE,lbC022098
-lbB017636:
-                    dc.l    lbB017648
-                    dc.w    %1
-                    dc.b    6,4,4,1
-                    dc.l    lbC0220E4,0
-lbB017648:
-                    dc.l    lbB01765A
-                    dc.w    %1
-                    dc.b    11,4,4,1
-                    dc.l    lbC02210C,0
-lbB01765A:
-                    dc.l    lbB01766C
-                    dc.w    %1
-                    dc.b    6,5,9,1
-                    dc.l    inc_replay_speed,dec_replay_speed
-lbB01766C:
-                    dc.l    lbB01767E
-                    dc.w    %1
-                    dc.b    6,6,9,1
-                    dc.l    lbC022168,lbC022136
-lbB01767E:
-                    dc.l    lbB017690
-                    dc.w    %1
-                    dc.b    16,1,9,1
-                    dc.l    play_song,0
-lbB017690:
-                    dc.l    lbB0176A2
-                    dc.w    %1
-                    dc.b    16,2,9,1
-                    dc.l    play_pattern,0
-lbB0176A2:
-                    dc.l    lbB0176B4
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    16,3,9,1
-                    dc.l    switch_edit_mode,0
-lbB0176B4:
-                    dc.l    lbB0176C6
-                    dc.w    %1
-                    dc.b    16,4,9,1
-                    dc.l    inc_polyphony_channels_count,dec_polyphony_channels_count
-lbB0176C6:
-                    dc.l    lbB0176D8
-                    dc.w    %1
-                    dc.b    16,5,9,1
-                    dc.l    inc_quantize_amount,dec_quantize_amount
-lbB0176D8:
-                    dc.l    lbB0176EA
-                    dc.w    %1
-                    dc.b    16,6,9,1
-                    dc.l    inc_current_pattern_rows,dec_current_pattern_rows
-lbB0176EA:
-                    dc.l    lbB0176FC
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    26,1,13,1
-                    dc.l    cycle_midi_modes_stop_audio_and_draw,0
-lbB0176FC:
-                    dc.l    lbB01770E
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    26,2,4,1
-                    dc.l    lbC01F51C,0
-lbB01770E:
-                    dc.l    lbB017720
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    31,2,3,1
-                    dc.l    lbC01F532,0
-lbB017720:
-                    dc.l    lbB017732
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    35,2,4,1
-                    dc.l    switch_copy_blocks_mode,0
-lbB017732:
-                    dc.l    lbB017744
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    26,3,6,1
-                    dc.l    lbC01F5C8,0
-lbB017744:
-                    dc.l    lbB017756
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    33,3,6,1
-                    dc.l    lbC01F5D2,0
-lbB017756:
-                    dc.l    lbB017768
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    26,4,6,1
-                    dc.l    lbC01F790,lbC01F788
-lbB017768:
-                    dc.l    lbB01777A
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    33,4,6,1
-                    dc.l    lbC01F7BA,lbC01F7B2
-lbB01777A:
-                    dc.l    lbB01778C
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    26,5,6,1
-                    dc.l    lbC01F7DE,lbC01F7D6
-lbB01778C:
-                    dc.l    lbB01779E
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    33,5,6,1
-                    dc.l    lbC01F80A,lbC01F802
-lbB01779E:
-                    dc.l    lbB0177B0
-                    dc.w    %1
-                    dc.b    26,6,6,1
-                    dc.l    lbC01F88E,0
-lbB0177B0:
-                    dc.l    lbB0177C2
-                    dc.w    %1
-                    dc.b    33,6,6,1
-                    dc.l    lbC01F8E8,fx_editor
-lbB0177C2:
-                    dc.l    lbB0177D4
-                    dc.w    %1
-                    dc.b    40,1,26,1
-                    dc.l    inc_sample_number,dec_sample_number
-lbB0177D4:
-                    dc.l    lbB0177F8
-                    dc.w    %1
-                    dc.b    40,5,8,1
-                    dc.l    inc_sample_volume,dec_sample_volume
-;lbB0177E6:
-;                    dc.l    lbB0177F8
-;                    dc.w    %1
-;                    dc.b    40,6,7,1
-;                    dc.l    inc_sample_type,dec_sample_type
-lbB0177F8:
-                    dc.l    lbB01780A
-                    dc.w    %1
-                    dc.b    54,2,4,1
-                    dc.l    load_sample,0
-lbB01780A:
-                    dc.l    lbB01781C
-                    dc.w    %1
-                    dc.b    54,3,4,1
-                    dc.l    save_sample,0
-lbB01781C:
-                    dc.l    lbB01782E
-                    dc.w    %1
-                    dc.b    54,4,4,1
-                    dc.l    lbC01E09E,0
-lbB01782E:
-                    dc.l    lbB017840
-                    dc.w    %1
-                    dc.b    54,5,4,1
-                    dc.l    lbC0216DC,0
-lbB017840:
-                    dc.l    lbB017852
-                    dc.w    %1
-                    dc.b    54,6,4,1
-                    dc.l    lbC02189C,0
-lbB017852:
-                    dc.l    lbB017864
-                    dc.w    %1
-                    dc.b    60,2,5,1
-                    dc.l    clear_sample,0
-lbB017864:
-                    dc.l    lbB017876
-                    dc.w    %1
-                    dc.b    60,3,5,2
-                    dc.l    clear_all_samples,0
-lbB017876:
-                    dc.l    lbB017888
-                    dc.w    %1
-                    dc.b    60,5,5,1
-                    dc.l    lbC02177E,0
-lbB017888:
-                    dc.l    lbL0178AC
-                    dc.w    %1
-                    dc.b    60,6,5,1
-                    dc.l    lbC01E096,0
-lbL0178AC:
-                    dc.l    lbB0178BE
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    71,5,1,2
-                    dc.l    set_all_channels_on,set_all_channels_off
-lbB0178BE:
-                    dc.l    lbB0178D0
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    72,5,1,2
-                    dc.l    switch_channel_1_on_off,set_channel_1_solo
-lbB0178D0:
-                    dc.l    lbB0178E2
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    73,5,1,2
-                    dc.l    switch_channel_2_on_off,set_channel_2_solo
-lbB0178E2:
-                    dc.l    lbB0178F4
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    74,5,1,2
-                    dc.l    switch_channel_3_on_off,set_channel_3_solo
-lbB0178F4:
-                    dc.l    lbB017906
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    75,5,1,2
-                    dc.l    switch_channel_4_on_off,set_channel_4_solo
-lbB017906:
-                    dc.l    lbB017918
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    76,5,1,2
-                    dc.l    switch_channel_5_on_off,set_channel_5_solo
-lbB017918:
-                    dc.l    lbB01792A
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    77,5,1,2
-                    dc.l    switch_channel_6_on_off,set_channel_6_solo
-lbB01792A:
-                    dc.l    lbB01793C
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    78,5,1,2
-                    dc.l    switch_channel_7_on_off,set_channel_7_solo
-lbB01793C:
-                    dc.l    lbB01794E
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    79,5,1,2
-                    dc.l    switch_channel_8_on_off,set_channel_8_solo
-lbB01794E:
-                    dc.l    lbB017960
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    67,1,13,2
-                    dc.l    draw_available_memory,0
-lbB017960:
-                    dc.l    lbL017972
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    67,3,13,1
-                    dc.l    draw_song_metrics,0
-lbL017972:
-                    dc.l    0
-                    dc.w    MOUSE_CMD_NO_HILITE|%1
-                    dc.b    0,7,80,24
-                    dc.l    lbC01E9DC,0
+main_screen_gadgets:
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,1,1,4,1,new_song,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,1,2,4,1,load_song,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,1,3,4,1,save_song,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,1,4,4,1,prefs,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,1,5,4,1,exit_oktalyzer,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,1,6,4,1,go_to_cli_workbench,0
+                    GADGET  GAD_NEXT,%1,6,1,9,1,inc_song_position,dec_song_position
+                    GADGET  GAD_NEXT,%1,6,2,9,1,inc_pattern,dec_pattern
+                    GADGET  GAD_NEXT,%1,6,3,9,1,inc_song_length,dec_song_length
+                    GADGET  GAD_NEXT,%1,6,4,4,1,insert_song_position,0
+                    GADGET  GAD_NEXT,%1,11,4,4,1,delete_song_position,0
+                    GADGET  GAD_NEXT,%1,6,5,9,1,inc_replay_speed,dec_replay_speed
+                    GADGET  GAD_NEXT,%1,6,6,9,1,inc_patterns,dec_patterns
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,16,1,9,1,play_song,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,16,2,9,1,play_pattern,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,16,3,9,1,switch_edit_mode,0
+                    GADGET  GAD_NEXT,%1,16,4,9,1,inc_polyphony_channels_count,dec_polyphony_channels_count
+                    GADGET  GAD_NEXT,%1,16,5,9,1,inc_quantize_amount,dec_quantize_amount
+                    GADGET  GAD_NEXT,%1,16,6,9,1,inc_current_pattern_rows,dec_current_pattern_rows
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,26,1,13,1,cycle_midi_modes_stop_audio_and_draw,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,26,2,4,1,copy_pattern_block,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,31,2,3,1,cut_pattern_block,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,35,2,4,1,switch_copy_blocks_mode,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,26,3,6,1,replace_block,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,33,3,6,1,mix_block,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,26,4,6,1,note_up_block,note_up_block_current_sample
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,33,4,6,1,note_down_block,note_down_block_current_sample
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,26,5,6,1,octave_up_block,octave_up_block_current_sample
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,33,5,6,1,octave_down_block,octave_down_block_current_sample
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,26,6,6,1,change_block_sample,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,33,6,6,1,change_block_effect,effect_editor
+change_sample_number_gadget:
+                    GADGET  GAD_NEXT,%1,40,1,26,1,inc_sample_number,dec_sample_number
+                    GADGET  GAD_NEXT,%1,40,5,8,1,inc_sample_volume,dec_sample_volume
+;                    GADGET  GAD_NEXT,%1,40,6,7,1,inc_sample_type,dec_sample_type
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,54,2,4,1,load_sample,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,54,3,4,1,save_sample,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,54,4,4,1,sample_editor,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,54,5,4,1,copy_sample,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,54,6,4,1,swap_samples,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,60,2,5,1,clear_sample,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,60,3,5,2,clear_all_samples,0
+                    GADGET  GAD_NEXT,%1,60,5,5,1,mix_samples,0
+                    GADGET  GAD_NEXT,%1,60,6,5,1,free_sample_copy_buffer,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,71,5,1,2,set_all_channels_on,set_all_channels_off
+change_channel_1_gadget:
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,72,5,1,2,switch_channel_1_on_off,set_channel_1_solo
+change_channel_2_gadget:
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,73,5,1,2,switch_channel_2_on_off,set_channel_2_solo
+change_channel_3_gadget:
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,74,5,1,2,switch_channel_3_on_off,set_channel_3_solo
+change_channel_4_gadget:
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,75,5,1,2,switch_channel_4_on_off,set_channel_4_solo
+change_channel_5_gadget:
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,76,5,1,2,switch_channel_5_on_off,set_channel_5_solo
+change_channel_6_gadget:
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,77,5,1,2,switch_channel_6_on_off,set_channel_6_solo
+change_channel_7_gadget:
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,78,5,1,2,switch_channel_7_on_off,set_channel_7_solo
+change_channel_8_gadget:
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,79,5,1,2,switch_channel_8_on_off,set_channel_8_solo
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,67,1,13,2,draw_available_memory,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,67,3,13,1,draw_song_metrics,0
+                    GADGET  GAD_DONE,%1|MOUSE_CMD_NO_HILITE,0,7,80,24,click_on_pattern,0
 lbW017984:
                     dc.w    10,0
                     dc.l    lbW0179BE
@@ -20654,11 +20563,11 @@ lbW0179BE:
                     dc.w    2,17
                     dc.l    lbC01F2B2
                     dc.w    2,18
-                    dc.l    lbC01F51C
+                    dc.l    copy_pattern_block
                     dc.w    2,19
-                    dc.l    lbC01F5C8
+                    dc.l    replace_block
                     dc.w    2,20
-                    dc.l    lbC01F5D2
+                    dc.l    mix_block
                     dc.w    2,21
                     dc.l    go_to_f6_row_jump
                     dc.w    2,22
@@ -20690,27 +20599,27 @@ lbW0179BE:
                     dc.w    0
 lbW017A58:
                     dc.w    2,18
-                    dc.l    lbC01F532
+                    dc.l    cut_pattern_block
                     dc.w    2,19
                     dc.l    lbC01F6F2
                     dc.w    2,20
                     dc.l    lbC01F846
                     dc.w    2,21
-                    dc.l    lbC01F7BA
+                    dc.l    note_down_block
                     dc.w    2,22
-                    dc.l    lbC01F790
+                    dc.l    note_up_block
                     dc.w    2,23
-                    dc.l    lbC01F80A
+                    dc.l    octave_down_block
                     dc.w    2,24
-                    dc.l    lbC01F7DE
+                    dc.l    octave_up_block
                     dc.w    2,25
-                    dc.l    lbC01F88E
+                    dc.l    change_block_sample
                     dc.w    2,32
                     dc.l    lbC01F3DA
                     dc.w    2,66
                     dc.l    switch_copy_blocks_mode
                     dc.w    2,69
-                    dc.l    lbC01E09E
+                    dc.l    sample_editor
                     dc.w    2,76
                     dc.l    load_sample
                     dc.w    2,83
@@ -20732,15 +20641,15 @@ lbW017AF2:
                     dc.w    2,20
                     dc.l    lbC01F82C
                     dc.w    2,21
-                    dc.l    lbC01F7B2
+                    dc.l    note_down_block_current_sample
                     dc.w    2,22
-                    dc.l    lbC01F788
+                    dc.l    note_up_block_current_sample
                     dc.w    2,23
-                    dc.l    lbC01F802
+                    dc.l    octave_down_block_current_sample
                     dc.w    2,24
-                    dc.l    lbC01F7D6
+                    dc.l    octave_up_block_current_sample
                     dc.w    2,25
-                    dc.l    lbC01F8E8
+                    dc.l    change_block_effect
                     dc.w    2,14
                     dc.l    lbC01F276
                     dc.w    2,15
@@ -20768,7 +20677,7 @@ lbW017B6C:
                     dc.w    0
 lbW017B8E:
                     dc.w    2,25
-                    dc.l    fx_editor
+                    dc.l    effect_editor
                     dc.w    2,31
                     dc.l    display_effects_help
                     dc.w    4,15
@@ -20790,7 +20699,7 @@ lbW017BCE:
                     dc.w    0
 
 ; ===========================================================================
-files_sel_text:
+files_selector_text:
                     dc.b    CMD_SET_SUB_COPPERLIST
                     dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_DRAW_BOX,1,90,38,5
@@ -20809,92 +20718,33 @@ files_sel_text:
                     dc.b    CMD_DRAW_BOX,1,16,38,14
                     dc.b    CMD_TEXT,41,15,'Files',0
                     dc.b    CMD_DRAW_BOX,41,16,38,14
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
                     even
-lbW018706:
-                    dc.l    lbW018718
-                    dc.w    MOUSE_CMD_NO_HILITE|%100000000001
-                    dc.b    1,16,38,14
-                    dc.l    lbC026D32,lbC026DA6
-lbW018718:
-                    dc.l    lbW01872A
-                    dc.w    MOUSE_CMD_NO_HILITE|%100000000001
-                    dc.b    41,16,38,14
-                    dc.l    lbC026D32,lbC026D64
-lbW01872A:
-                    dc.l    lbW01873C
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    2,10,36,1
-                    dc.l    lbC027674,0
-lbW01873C:
-                    dc.l    lbW01874E
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    2,11,36,1
-                    dc.l    lbC027698,0
-lbW01874E:
-                    dc.l    lbW018760
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    2,12,6,1
-                    dc.l    lbC026BBC,0
-lbW018760:
-                    dc.l    lbW018772
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    9,12,6,1
-                    dc.l    lbC026F18,0
-lbW018772:
-                    dc.l    lbW018784
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    16,12,6,1
-                    dc.l    lbC0276BC,0
-lbW018784:
-                    dc.l    lbW018796
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    23,12,6,1
-                    dc.l    lbC0276DC,0
-lbW018796:
-                    dc.l    lbW0187A8
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    30,12,6,1
-                    dc.l    lbC026BAC,0
-lbW0187A8:
-                    dc.l    lbW0187BA
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    64,12,7,1
-                    dc.l    lbC027CF4,0
-lbW0187BA:
-                    dc.l    lbW0187CC
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    72,12,6,1
-                    dc.l    lbC027DDA,0
-lbW0187CC:
-                    dc.l    lbW0187DE
-                    dc.w    %1
-                    dc.b    42,10,11,1
-                    dc.l    inc_trackdisk_unit_number,dec_trackdisk_unit_number
-lbW0187DE:
-                    dc.l    lbW0187F0
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    42,11,11,1
-                    dc.l    switch_verify_mode,0
-lbW0187F0:
-                    dc.l    lbW018802
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    42,12,11,1
-                    dc.l    switch_clear_mode,0
-lbW018802:
-                    dc.l    0
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    54,10,6,3
-                    dc.l    format_disk,0
+files_selector_gadgets:
+                    GADGET  GAD_NEXT,MOUSE_CMD_TRAP_RMB|%1|MOUSE_CMD_NO_HILITE,1,16,38,14,lbC026D32,lbC026DA6
+                    GADGET  GAD_NEXT,MOUSE_CMD_TRAP_RMB|%1|MOUSE_CMD_NO_HILITE,41,16,38,14,lbC026D32,lbC026D64
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,2,10,36,1,file_selector_set_drawer_name,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,2,11,36,1,file_selector_set_file_name,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,2,12,6,1,file_selector_ok,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,9,12,6,1,file_selector_reread_dir,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,16,12,6,1,file_selector_parent_dir,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,23,12,6,1,file_selector_delete_file,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,30,12,6,1,file_selector_cancel,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,64,12,7,1,file_selector_install_ok_dir,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,72,12,6,1,file_selector_delete_ok_dir,0
+                    GADGET  GAD_NEXT,%1,42,10,11,1,inc_trackdisk_unit_number,dec_trackdisk_unit_number
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,42,11,11,1,switch_verify_mode,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,42,12,11,1,switch_clear_mode,0
+                    GADGET  GAD_DONE,%1|MOUSE_CMD_NO_REPEAT,54,10,6,3,format_disk,0
 lbW018814:
                     dc.w    10,0
                     dc.l    lbW01881E
                     dc.w    0
 lbW01881E:
                     dc.w    2,5
-                    dc.l    lbC026BAC
+                    dc.l    file_selector_cancel
                     dc.w    2,4
-                    dc.l    lbC026BBC
+                    dc.l    file_selector_ok
                     dc.w    2,97
                     dc.l    lbC02756A
                     dc.w    2,99
@@ -20902,7 +20752,7 @@ lbW01881E:
                     dc.w    0
 
 ; ===========================================================================
-sample_ed_text:
+sample_editor_text:
                     dc.b    CMD_SET_SUB_COPPERLIST
                     dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,1,8, 'Sample Editor',0
@@ -20916,10 +20766,10 @@ sample_ed_text:
                     dc.l    max_lines
                     dc.b    CMD_TEXT,57,0,'Monitor Rate:',0
                     dc.b    CMD_TEXT,57,1,'Sampler Chan:',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
                     even
 ; shift+help
-sample_ed_help_text:
+sample_editor_help_text:
                     dc.b    CMD_SET_SUB_COPPERLIST
                     dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,2,13,'- Sample Editor Help Page --------------------------------------------------',0
@@ -20930,162 +20780,40 @@ sample_ed_help_text:
                     dc.b    CMD_TEXT,2,20,'SH_X       Swap Samples AL_CURSOR Set    Repeats faster ___F2   Set Oct. 1+2',0
                     dc.b    CMD_TEXT,2,21,'SH_M       Mix  Samples BK_0      Search 0 Left',0
                     dc.b    CMD_TEXT,2,22,'AL_0-9/a-z Set  Sample  BK_.      Search 0 Right',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
                     even
-lbW01892C:
-                    dc.l    lbW01893E
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    26,1,13,1
-                    dc.l    cycle_midi_modes_stop_audio_and_draw,0
-lbW01893E:
-                    dc.l    lbW018962
-                    dc.w    %1
-                    dc.b    40,1,26,1
-                    dc.l    lbC028E0E,lbC028E1C
-;lbW018950:
-;                    dc.l    lbW018962
-;                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-;                    dc.b    40,6,7,1
-;                    dc.l    lbC028E2A,lbC028E38
-lbW018962:
-                    dc.l    lbW018974
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    54,2,4,1
-                    dc.l    lbC028E50,0
-lbW018974:
-                    dc.l    lbW018986
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    54,3,4,1
-                    dc.l    lbC028E58,0
-lbW018986:
-                    dc.l    lbW018998
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    54,5,4,1
-                    dc.l    lbC028E8E,0
-lbW018998:
-                    dc.l    lbW0189AA
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    54,6,4,1
-                    dc.l    lbC028E60,0
-lbW0189AA:
-                    dc.l    lbW0189BC
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    60,2,5,1
-                    dc.l    lbC028E6A,0
-lbW0189BC:
-                    dc.l    lbW0189CE
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    60,3,5,2
-                    dc.l    lbC028E74,0
-lbW0189CE:
-                    dc.l    lbW0189E0
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    60,5,5,1
-                    dc.l    lbC028E7E,0
-lbW0189E0:
-                    dc.l    lbW0189F2
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    60,6,5,1
-                    dc.l    lbC028E88,0
-lbW0189F2:
-                    dc.l    lbW018A04
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    1,10,34,1
-                    dc.l    lbC02852A,0
-lbW018A04:
-                    dc.l    lbW018A16
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    1,0,4,1
-                    dc.l    sample_ed_exit,0
-lbW018A16:
-                    dc.l    lbW018A28
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    1,1,4,1
-                    dc.l    sample_ed_swap,0
-; mark all
-lbW018A28:
-                    dc.l    lbW018A3A
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    6,0,4,2
-                    dc.l    sample_ed_mark_all,sample_ed_clear_mark
-; cut
-lbW018A3A:
-                    dc.l    lbW018A4C
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    11,0,4,1
-                    dc.l    lbC028614,lbC02862C
-; copy
-lbW018A4C:
-                    dc.l    lbW018A5E
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    11,1,4,1
-                    dc.l    sample_ed_copy,0
-; paste
-lbW018A5E:
-                    dc.l    lbW018A70
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    16,0,7,1
-                    dc.l    lbC0286F4,lbC02879C
-lbW018A70:
-                    dc.l    lbW018A82
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    16,1,7,1
-                    dc.l    sample_ed_reverse,0
-lbW018A82:
-                    dc.l    lbW018A94
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    24,0,6,2
-                    dc.l    sample_ed_change_volume_linear,sample_ed_change_volume_curve
-lbW018A94:
-                    dc.l    lbW018AA6
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    31,0,6,2
-                    dc.l    sample_ed_change_period,0
-lbW018AA6:
-                    dc.l    lbL018AB8b
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    38,0,5,1
-                    dc.l    sample_ed_filter,0
-lbL018AB8b:
-                    dc.l    lbL018AB8cb
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    38,1,5,1
-                    dc.l    sample_ed_boost,0
-lbL018AB8cb:
-                    dc.l    lbL018AB8c
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    44,0,5,1
-                    dc.l    sample_ed_xfade,0
-lbL018AB8c:
-                    dc.l    lbL018AB8d
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    44,1,5,1
-                    dc.l    sample_ed_normalize,0
-lbL018AB8d:
-                    dc.l    lbL018AB8
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    50,0,6,2
-                    dc.l    sample_ed_set_repeat,sample_ed_clear_repeat
-lbL018AB8:
-                    dc.l    lbL018ACA
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    57,0,7,1
-                    dc.l    sample_ed_monitor,0
-lbL018ACA:
-                    dc.l    lbL018ADC
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    57,1,7,1
-                    dc.l    sample_ed_sampler,0
-lbL018ADC:
-                    dc.l    lbL018AEE
-                    dc.w    %1
-                    dc.b    65,0,9,1
-                    dc.l    sample_ed_inc_note_rate,sample_ed_dec_note_rate
-lbL018AEE:
-                    dc.l    0
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    65,1,9,1
-                    dc.l    sample_ed_switch_left_right,0
+sample_editor_gadgets:
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,26,1,13,1,cycle_midi_modes_stop_audio_and_draw,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,40,1,26,1,sample_editor_inc_sample_number,sample_editor_dec_sample_number
+;                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,40,6,7,1,sample_editor_inc_sample_type,sample_editor_dec_sample_type
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,54,2,4,1,sample_editor_load_sample,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,54,3,4,1,sample_editor_save_sample,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,54,5,4,1,sample_editor_copy_sample,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,54,6,4,1,sample_editor_swap_samples,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,60,2,5,1,sample_editor_clear_sample,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,60,3,5,2,sample_editor_clear_all_samples,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,60,5,5,1,sample_editor_mix_samples,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,60,6,5,1,sample_editor_free_sample_copy_buffer,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,1,10,34,1,sample_editor_set_sample_name,0
+sample_editor_commands_gadgets:
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,1,0,4,1,sample_editor_exit,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,1,1,4,1,sample_editor_swap,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,6,0,4,2,sample_editor_mark_all,sample_editor_clear_mark
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,11,0,4,1,sample_editor_copy_and_cut,sample_editor_cut
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,11,1,4,1,sample_editor_copy,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,16,0,7,1,sample_editor_paste,sample_editor_replace
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,16,1,7,1,sample_editor_reverse,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,24,0,6,2,sample_editor_change_volume_linear,sample_editor_change_volume_curve
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,31,0,6,2,sample_editor_change_period,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,38,0,5,1,sample_editor_filter,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,38,1,5,1,sample_editor_boost,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,44,0,5,1,sample_editor_xfade,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,44,1,5,1,sample_editor_normalize,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,50,0,6,2,sample_editor_set_repeat,sample_editor_clear_repeat
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,57,0,7,1,sample_editor_monitor,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,57,1,7,1,sample_editor_sampler,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,65,0,9,1,sample_editor_inc_note_rate,sample_editor_dec_note_rate
+                    GADGET  GAD_DONE,%1|MOUSE_CMD_NO_REPEAT,65,1,9,1,sample_editor_switch_left_right,0
 lbW018B00:
                     dc.w    10,0
                     dc.l    lbW018B22
@@ -21098,9 +20826,9 @@ lbW018B00:
                     dc.w    0
 lbW018B22:
                     dc.w    2,5
-                    dc.l    sample_ed_exit
+                    dc.l    sample_editor_exit
                     dc.w    2,6
-                    dc.l    sample_ed_clear_repeat
+                    dc.l    sample_editor_clear_repeat
                     dc.w    4,$F
                     dc.l    lbC028ABC
                     dc.w    4,$E
@@ -21118,17 +20846,17 @@ lbW018B54:
                     dc.w    0
 lbW018B66:
                     dc.w    2,$4C
-                    dc.l    lbC028E50
+                    dc.l    sample_editor_load_sample
                     dc.w    2,$53
-                    dc.l    lbC028E58
+                    dc.l    sample_editor_save_sample
                     dc.w    2,$43
-                    dc.l    lbC028E8E
+                    dc.l    sample_editor_copy_sample
                     dc.w    2,$58
-                    dc.l    lbC028E60
+                    dc.l    sample_editor_swap_samples
                     dc.w    2,$4D
-                    dc.l    lbC028E7E
+                    dc.l    sample_editor_mix_samples
                     dc.w    2,$46
-                    dc.l    lbC028E88
+                    dc.l    sample_editor_free_sample_copy_buffer
                     dc.w    4,$F
                     dc.l    lbC028AC0
                     dc.w    4,$E
@@ -21138,7 +20866,7 @@ lbW018B66:
                     dc.w    4,$D
                     dc.l    lbC028B0C
                     dc.w    2,$1F
-                    dc.l    display_sample_ed_help
+                    dc.l    display_sample_editor_help
                     dc.w    0
 lbW018BC0:
                     dc.w    4,15
@@ -21150,9 +20878,9 @@ lbW018BC0:
                     dc.w    4,13
                     dc.l    lbC028B10
                     dc.w    6,48,57,0
-                    dc.l    lbC028E46
+                    dc.l    sample_editor_set_current_sample_number
                     dc.w    6,97,122,10
-                    dc.l    lbC028E46
+                    dc.l    sample_editor_set_current_sample_number
                     dc.w    0
 
 ; ===========================================================================
@@ -21203,7 +20931,7 @@ prefs_text:
                     dc.b    CMD_TEXT,33,25,'ST Load Modes',0
                     dc.b    CMD_DRAW_BOX,33,26,17,3
                     dc.b    CMD_TEXT,34,27,'Smps:   Trks:',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
                     even
 ; shift+help
 prefs_help_text:
@@ -21213,309 +20941,74 @@ prefs_help_text:
                     dc.b    CMD_TEXT,17,16,'- Chars ------------------ - Misc -----------',0
                     dc.b    CMD_TEXT,17,18,'___CURSOR Move  CharCursor ___ESC  Cancel',0
                     dc.b    CMD_TEXT,17,19,'SH_CURSOR Shift Char       SH_HELP Look here!',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
                     even
-lbW019080:
-                    dc.l    lbW019092
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    14,12,2,1
-                    dc.l    switch_channel_1_type,0
-lbW019092:
-                    dc.l    lbW0190A4
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    17,12,2,1
-                    dc.l    switch_channel_2_type,0
-lbW0190A4:
-                    dc.l    lbW0190B6
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    20,12,2,1
-                    dc.l    switch_channel_3_type,0
-lbW0190B6:
-                    dc.l    lbW0190C8
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    23,12,2,1
-                    dc.l    switch_channel_4_type,0
-lbW0190C8:
+prefs_gadgets:
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,14,12,2,1,switch_channel_1_type,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,17,12,2,1,switch_channel_2_type,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,20,12,2,1,switch_channel_3_type,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,23,12,2,1,switch_channel_4_type,0
                 IFD OKT_AUDIO_VAMPIRE
-                    dc.l    lbW0190DA
+                    GADGET  GAD_NEXT,%1,2,13,23,1,inc_default_pattern_length,dec_default_pattern_length
                 ELSE
-                    dc.l    lbW0190EC
+                    GADGET  GAD_NEXT,%1,2,13,23,1,inc_default_pattern_length,dec_default_pattern_length
                 ENDC
-                    dc.w    %1
-                    dc.b    2,13,23,1
-                    dc.l    inc_default_pattern_length,dec_default_pattern_length
                 IFD OKT_AUDIO_VAMPIRE
-lbW0190DA:
-                    dc.l    lbW0190EC
-                    dc.w    %1
-                    dc.b    2,15,23,1
-                    dc.l    inc_samples_load_mode,dec_samples_load_mode
+                    GADGET  GAD_NEXT,%1,2,15,23,1,inc_samples_load_mode,dec_samples_load_mode
                 ENDC
-lbW0190EC:
-                    dc.l    lbW0190FE
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    2,16,23,1
-                    dc.l    switch_samples_save_format,0
-lbW0190FE:
-                    dc.l    lbW019110
-                    dc.w    %1
-                    dc.b    2,18,23,1
-                    dc.l    inc_mouse_repeat_delay,dec_mouse_repeat_delay
-lbW019110:
-                    dc.l    lbW019122
-                    dc.w    %1
-                    dc.b    2,19,23,1
-                    dc.l    inc_mouse_repeat_speed,dec_mouse_repeat_speed
-lbW019122:
-                    dc.l    lbW019134
-                    dc.w    %1
-                    dc.b    2,21,15,1
-                    dc.l    inc_current_color_set,dec_current_color_set
-lbW019134:
-                    dc.l    lbW019146
-                    dc.w    %1
-                    dc.b    18,21,1,2
-                    dc.l    inc_foreground_color_r,dec_foreground_color_r
-lbW019146:
-                    dc.l    lbW019158
-                    dc.w    %1
-                    dc.b    19,21,1,2
-                    dc.l    inc_foreground_color_g,dec_foreground_color_g
-lbW019158:
-                    dc.l    lbW01916A
-                    dc.w    %1
-                    dc.b    20,21,1,2
-                    dc.l    inc_foreground_color_b,dec_foreground_color_b
-lbW01916A:
-                    dc.l    lbW01917C
-                    dc.w    %1
-                    dc.b    22,21,1,2
-                    dc.l    inc_background_color_r,dec_background_color_r
-lbW01917C:
-                    dc.l    lbW01918E
-                    dc.w    %1
-                    dc.b    23,21,1,2
-                    dc.l    inc_background_color_g,dec_background_color_g
-lbW01918E:
-                    dc.l    lbW0191A0
-                    dc.w    %1
-                    dc.b    24,21,1,2
-                    dc.l    inc_background_color_b,dec_background_color_b
-lbW0191A0:
-                    dc.l    lbW0191B2
-                    dc.w    %1
-                    dc.b    29,12,1,1
-                    dc.l    dec_polyphony_value_1,inc_polyphony_value_1
-lbW0191B2:
-                    dc.l    lbW0191C4
-                    dc.w    %1
-                    dc.b    29,13,1,1
-                    dc.l    dec_polyphony_value_2,inc_polyphony_value_2
-lbW0191C4:
-                    dc.l    lbW0191D6
-                    dc.w    %1
-                    dc.b    29,14,1,1
-                    dc.l    dec_polyphony_value_3,inc_polyphony_value_3
-lbW0191D6:
-                    dc.l    lbW0191E8
-                    dc.w    %1
-                    dc.b    29,15,1,1
-                    dc.l    dec_polyphony_value_4,inc_polyphony_value_4
-lbW0191E8:
-                    dc.l    lbW0191FA
-                    dc.w    %1
-                    dc.b    29,16,1,1
-                    dc.l    dec_polyphony_value_5,inc_polyphony_value_5
-lbW0191FA:
-                    dc.l    lbW01920C
-                    dc.w    %1
-                    dc.b    29,17,1,1
-                    dc.l    dec_polyphony_value_6,inc_polyphony_value_6
-lbW01920C:
-                    dc.l    lbW01921E
-                    dc.w    %1
-                    dc.b    29,18,1,1
-                    dc.l    dec_polyphony_value_7,inc_polyphony_value_7
-lbW01921E:
-                    dc.l    lbW019230
-                    dc.w    %1
-                    dc.b    29,19,1,1
-                    dc.l    dec_polyphony_value_8,inc_polyphony_value_8
-lbW019230:
-                    dc.l    lbW019242
-                    dc.w    %1
-                    dc.b    38,12,1,1
-                    dc.l    inc_polyphony_value_1,dec_polyphony_value_1
-lbW019242:
-                    dc.l    lbW019254
-                    dc.w    %1
-                    dc.b    38,13,1,1
-                    dc.l    inc_polyphony_value_2,dec_polyphony_value_2
-lbW019254:
-                    dc.l    lbW019266
-                    dc.w    %1
-                    dc.b    38,14,1,1
-                    dc.l    inc_polyphony_value_3,dec_polyphony_value_3
-lbW019266:
-                    dc.l    lbW019278
-                    dc.w    %1
-                    dc.b    38,15,1,1
-                    dc.l    inc_polyphony_value_4,dec_polyphony_value_4
-lbW019278:
-                    dc.l    lbW01928A
-                    dc.w    %1
-                    dc.b    38,16,1,1
-                    dc.l    inc_polyphony_value_5,dec_polyphony_value_5
-lbW01928A:
-                    dc.l    lbW01929C
-                    dc.w    %1
-                    dc.b    38,17,1,1
-                    dc.l    inc_polyphony_value_6,dec_polyphony_value_6
-lbW01929C:
-                    dc.l    lbW0192AE
-                    dc.w    %1
-                    dc.b    38,18,1,1
-                    dc.l    inc_polyphony_value_7,dec_polyphony_value_7
-lbW0192AE:
-                    dc.l    lbW0192C0
-                    dc.w    %1
-                    dc.b    38,19,1,1
-                    dc.l    inc_polyphony_value_8,dec_polyphony_value_8
-lbW0192C0:
-                    dc.l    lbW0192D2
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    29,22,10,1
-                    dc.l    reset_polyphony_values,randomize_polyphony_values
-lbW0192D2:
-                    dc.l    lbW0192E4
-                    dc.w    %1
-                    dc.b    43,13,6,1
-                    dc.l    inc_f6_key_row_jump_value,dec_f6_key_row_jump_value
-lbW0192E4:
-                    dc.l    lbW0192F6
-                    dc.w    %1
-                    dc.b    43,15,6,1
-                    dc.l    inc_f7_key_row_jump_value,dec_f7_key_row_jump_value
-lbW0192F6:
-                    dc.l    lbW019308
-                    dc.w    %1
-                    dc.b    43,17,6,1
-                    dc.l    inc_f8_key_row_jump_value,dec_f8_key_row_jump_value
-lbW019308:
-                    dc.l    lbW01931A
-                    dc.w    %1
-                    dc.b    43,19,6,1
-                    dc.l    inc_f9_key_row_jump_value,dec_f9_key_row_jump_value
-lbW01931A:
-                    dc.l    lbW01932C
-                    dc.w    %1
-                    dc.b    43,21,6,1
-                    dc.l    inc_f10_key_row_jump_value,dec_f10_key_row_jump_value
-lbW01932C:
-                    dc.l    lbW01933E
-                    dc.w    MOUSE_CMD_NO_HILITE|%1
-                    dc.b    53,12,8,7
-                    dc.l    set_char_pixel,clear_char_pixel
-lbW01933E:
-                    dc.l    lbW019350
-                    dc.w    %1
-                    dc.b    53,20,8,1
-                    dc.l    inc_selected_char_mouse,dec_selected_char_mouse
-lbW019350:
-                    dc.l    lbW019362
-                    dc.w    %1
-                    dc.b    59,22,1,1
-                    dc.l    rotate_char_up,rotate_char_down
-lbW019362:
-                    dc.l    lbW019374
-                    dc.w    %1
-                    dc.b    58,23,1,1
-                    dc.l    rotate_char_left,rotate_char_right
-lbW019374:
-                    dc.l    lbW019386
-                    dc.w    %1
-                    dc.b    60,23,1,1
-                    dc.l    rotate_char_right,rotate_char_left
-lbW019386:
-                    dc.l    lbW019398
-                    dc.w    %1
-                    dc.b    59,24,1,1
-                    dc.l    rotate_char_down,rotate_char_up
-lbW019398:
-                    dc.l    lbW0193AA
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    53,22,5,1
-                    dc.l    outline_char,0
-lbW0193AA:
-                    dc.l    lbW0193BC
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    53,23,4,1
-                    dc.l    restore_undo_buffer,swap_undo_buffer
-lbW0193BC:
-                    dc.l    lbW0193CE
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    53,24,5,1
-                    dc.l    restore_copy_buffer,swap_copy_buffer
-lbW0193CE:
-                    dc.l    lbW0193E0
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    53,25,3,1
-                    dc.l    copy_to_copy_buffer_and_erase_char,erase_char
-lbW0193E0:
-                    dc.l    lbW0193F2
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    57,25,4,1
-                    dc.l    copy_to_copy_buffer,0
-lbW0193F2:
-                    dc.l    lbW019404
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    53,26,8,1
-                    dc.l    mirror_char_x,0
-lbW019404:
-                    dc.l    lbW019416
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    53,27,8,1
-                    dc.l    mirror_char_y,0
-lbW019416:
-                    dc.l    lbW019428
-                    dc.w    MOUSE_CMD_NO_HILITE|%1
-                    dc.b    62,12,16,16
-                    dc.l    select_current_char,0
-lbW019428:
-                    dc.l    lbW01943A
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    1,26,6,3
-                    dc.l    load_prefs,0
-lbW01943A:
-                    dc.l    lbW01944C
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    7,26,6,3
-                    dc.l    save_prefs,0
-lbW01944C:
-                    dc.l    lbW01945E
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    13,26,5,3
-                    dc.l    use_prefs,0
-lbW01945E:
-                    dc.l    lbW019470
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    18,26,5,3
-                    dc.l    old_prefs,0
-lbW019470:
-                    dc.l    lbW019482
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    23,26,8,3
-                    dc.l    cancel_prefs,0
-lbW019482:
-                    dc.l    lbW019494
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    34,27,7,1
-                    dc.l    switch_st_samples_mode,0
-lbW019494:
-                    dc.l    0
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    42,27,7,1
-                    dc.l    switch_st_tracks_mode,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,2,16,23,1,switch_samples_save_format,0
+                    GADGET  GAD_NEXT,%1,2,18,23,1,inc_mouse_repeat_delay,dec_mouse_repeat_delay
+                    GADGET  GAD_NEXT,%1,2,19,23,1,inc_mouse_repeat_speed,dec_mouse_repeat_speed
+                    GADGET  GAD_NEXT,%1,2,21,15,1,inc_current_color_set,dec_current_color_set
+                    GADGET  GAD_NEXT,%1,18,21,1,2,inc_foreground_color_r,dec_foreground_color_r
+                    GADGET  GAD_NEXT,%1,19,21,1,2,inc_foreground_color_g,dec_foreground_color_g
+                    GADGET  GAD_NEXT,%1,20,21,1,2,inc_foreground_color_b,dec_foreground_color_b
+                    GADGET  GAD_NEXT,%1,22,21,1,2,inc_background_color_r,dec_background_color_r
+                    GADGET  GAD_NEXT,%1,23,21,1,2,inc_background_color_g,dec_background_color_g
+                    GADGET  GAD_NEXT,%1,24,21,1,2,inc_background_color_b,dec_background_color_b
+                    GADGET  GAD_NEXT,%1,29,12,1,1,dec_polyphony_value_1,inc_polyphony_value_1
+                    GADGET  GAD_NEXT,%1,29,13,1,1,dec_polyphony_value_2,inc_polyphony_value_2
+                    GADGET  GAD_NEXT,%1,29,14,1,1,dec_polyphony_value_3,inc_polyphony_value_3
+                    GADGET  GAD_NEXT,%1,29,15,1,1,dec_polyphony_value_4,inc_polyphony_value_4
+                    GADGET  GAD_NEXT,%1,29,16,1,1,dec_polyphony_value_5,inc_polyphony_value_5
+                    GADGET  GAD_NEXT,%1,29,17,1,1,dec_polyphony_value_6,inc_polyphony_value_6
+                    GADGET  GAD_NEXT,%1,29,18,1,1,dec_polyphony_value_7,inc_polyphony_value_7
+                    GADGET  GAD_NEXT,%1,29,19,1,1,dec_polyphony_value_8,inc_polyphony_value_8
+                    GADGET  GAD_NEXT,%1,38,12,1,1,inc_polyphony_value_1,dec_polyphony_value_1
+                    GADGET  GAD_NEXT,%1,38,13,1,1,inc_polyphony_value_2,dec_polyphony_value_2
+                    GADGET  GAD_NEXT,%1,38,14,1,1,inc_polyphony_value_3,dec_polyphony_value_3
+                    GADGET  GAD_NEXT,%1,38,15,1,1,inc_polyphony_value_4,dec_polyphony_value_4
+                    GADGET  GAD_NEXT,%1,38,16,1,1,inc_polyphony_value_5,dec_polyphony_value_5
+                    GADGET  GAD_NEXT,%1,38,17,1,1,inc_polyphony_value_6,dec_polyphony_value_6
+                    GADGET  GAD_NEXT,%1,38,18,1,1,inc_polyphony_value_7,dec_polyphony_value_7
+                    GADGET  GAD_NEXT,%1,38,19,1,1,inc_polyphony_value_8,dec_polyphony_value_8
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,29,22,10,1,reset_polyphony_values,randomize_polyphony_values
+                    GADGET  GAD_NEXT,%1,43,13,6,1,inc_f6_key_row_jump_value,dec_f6_key_row_jump_value
+                    GADGET  GAD_NEXT,%1,43,15,6,1,inc_f7_key_row_jump_value,dec_f7_key_row_jump_value
+                    GADGET  GAD_NEXT,%1,43,17,6,1,inc_f8_key_row_jump_value,dec_f8_key_row_jump_value
+                    GADGET  GAD_NEXT,%1,43,19,6,1,inc_f9_key_row_jump_value,dec_f9_key_row_jump_value
+                    GADGET  GAD_NEXT,%1,43,21,6,1,inc_f10_key_row_jump_value,dec_f10_key_row_jump_value
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_HILITE,53,12,8,7,set_char_pixel,clear_char_pixel
+                    GADGET  GAD_NEXT,%1,53,20,8,1,inc_selected_char_mouse,dec_selected_char_mouse
+                    GADGET  GAD_NEXT,%1,59,22,1,1,rotate_char_up,rotate_char_down
+                    GADGET  GAD_NEXT,%1,58,23,1,1,rotate_char_left,rotate_char_right
+                    GADGET  GAD_NEXT,%1,60,23,1,1,rotate_char_right,rotate_char_left
+                    GADGET  GAD_NEXT,%1,59,24,1,1,rotate_char_down,rotate_char_up
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,53,22,5,1,outline_char,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,53,23,4,1,restore_undo_buffer,swap_undo_buffer
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,53,24,5,1,restore_copy_buffer,swap_copy_buffer
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,53,25,3,1,copy_to_copy_buffer_and_erase_char,erase_char
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,57,25,4,1,copy_to_copy_buffer,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,53,26,8,1,mirror_char_x,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,53,27,8,1,mirror_char_y,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_HILITE,62,12,16,16,select_current_char,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,1,26,6,3,load_prefs,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,7,26,6,3,save_prefs,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,13,26,5,3,use_prefs,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,18,26,5,3,old_prefs,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,23,26,8,3,cancel_prefs,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,34,27,7,1,switch_st_samples_mode,0
+                    GADGET  GAD_DONE,%1|MOUSE_CMD_NO_REPEAT,42,27,7,1,switch_st_tracks_mode,0
 lbW0194A6:
                     dc.w    10,0
                     dc.l    lbW0194C0
@@ -21555,7 +21048,7 @@ lbW019514:
                     dc.w    0
 
 ; ===========================================================================
-effects_ed_text:
+effects_editor_text:
                     dc.b    CMD_SET_SUB_COPPERLIST
                     dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,1,8,'Oktalyzer Effect Editor',0
@@ -21569,9 +21062,9 @@ effects_ed_text:
                     dc.b    CMD_DRAW_BOX,59,9,20,5
                     dc.b    CMD_TEXT,1,15,'Effect Conversion Filter Term Table',0
                     dc.b    CMD_DRAW_BOX,1,16,78,14
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
 ; shift+help
-effects_ed_help_text:
+effects_editor_help_text:
                     dc.b    CMD_SET_SUB_COPPERLIST
                     dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,21,12,'- Effect Editor Help Page ------------',0
@@ -21584,7 +21077,7 @@ effects_ed_help_text:
                     dc.b    CMD_TEXT,21,21,'AM_D   Do',0
                     dc.b    CMD_TEXT,21,22,'AM_Q   Exit  SH_HELP Here you are!',0
                     dc.b    CMD_TEXT,21,23,'___ESC Exit  AL_HELP Compute Help Page',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
 ; alt+help
 compute_help_text:
                     dc.b    CMD_SET_SUB_COPPERLIST
@@ -21608,78 +21101,23 @@ compute_help_text:
                     dc.b    CMD_TEXT,8,27,'>= GREATER EQUAL  1',0
                     dc.b    CMD_TEXT,8,28,'<= LESS EQUAL     1',0
                     dc.b    CMD_TEXT,8,29,'<> UNEQUAL        1',0
-                    dc.b    CMD_END
+                    dc.b    CMD_DONE
                     even
 lbW0195F4:
-                    dc.l    lbW019606
-                    dc.w    %1
-                    dc.b    3,10,5,3
-                    dc.l    lbC02B780,0
-lbW019606:
-                    dc.l    lbW019618
-                    dc.w    %1
-                    dc.b    8,10,5,3
-                    dc.l    lbC02B7A4,0
-lbW019618:
-                    dc.l    lbW01962A
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    13,10,6,3
-                    dc.l    lbC02B8FE,0
-lbW01962A:
-                    dc.l    lbW01963C
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    19,10,5,3
-                    dc.l    lbC02B866,0
-lbW01963C:
-                    dc.l    lbW01964E
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    24,10,7,3
-                    dc.l    lbC02B9BA,0
-lbW01964E:
-                    dc.l    lbW019660
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    31,10,6,3
-                    dc.l    lbC02BB16,0
-lbW019660:
-                    dc.l    lbW019672
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    37,10,6,3
-                    dc.l    lbC02BC20,0
-lbW019672:
-                    dc.l    lbW019684
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    43,10,6,3
-                    dc.l    lbC02C2E4,0
-lbW019684:
-                    dc.l    lbW019696
-                    dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    49,10,6,3
-                    dc.l    lbC02B7DE,0
-lbW019696:
-                    dc.l    lbW0196A8
-                    dc.w    MOUSE_CMD_NO_HILITE|%1
-                    dc.b    2,16,4,14
-                    dc.l    lbC02B7E6,lbC02B7EA
-lbW0196A8:
-                    dc.l    lbW0196BA
-                    dc.w    MOUSE_CMD_NO_HILITE|%1
-                    dc.b    9,16,5,14
-                    dc.l    lbC02BCE6,0
-lbW0196BA:
-                    dc.l    lbW0196CC
-                    dc.w    MOUSE_CMD_NO_HILITE|%1
-                    dc.b    14,16,5,14
-                    dc.l    lbC02BCFE,0
-lbW0196CC:
-                    dc.l    lbW0196DE
-                    dc.w    MOUSE_CMD_NO_HILITE|%1
-                    dc.b    20,16,25,14
-                    dc.l    lbC02BD16,0
-lbW0196DE:
-                    dc.l    0
-                    dc.w    MOUSE_CMD_NO_HILITE|%1
-                    dc.b    52,16,25,14
-                    dc.l    lbC02BD2E,0
+                    GADGET  GAD_NEXT,%1,3,10,5,3,lbC02B780,0
+                    GADGET  GAD_NEXT,%1,8,10,5,3,lbC02B7A4,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,13,10,6,3,lbC02B8FE,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,19,10,5,3,lbC02B866,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,24,10,7,3,lbC02B9BA,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,31,10,6,3,lbC02BB16,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,37,10,6,3,lbC02BC20,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,43,10,6,3,lbC02BC20,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_REPEAT,49,10,6,3,lbC02B7DE,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_HILITE,2,16,4,14,lbC02B7E6,lbC02B7EA
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_HILITE,9,16,5,14,lbC02BCE6,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_HILITE,14,16,5,14,lbC02BCFE,0
+                    GADGET  GAD_NEXT,%1|MOUSE_CMD_NO_HILITE,20,16,25,14,lbC02BD16,0
+                    GADGET  GAD_DONE,%1|MOUSE_CMD_NO_HILITE,52,16,25,14,lbC02BD2E,0
 lbW0196F0:
                     dc.w    10,0
                     dc.l    lbW019712
@@ -21704,7 +21142,7 @@ lbW01972C:
                     dc.w    2,13
                     dc.l    lbC02C2D8
                     dc.w    2,31
-                    dc.l    display_effects_ed_help
+                    dc.l    display_effects_editor_help
                     dc.w    0
 lbW019746:
                     dc.w    4,12
@@ -21910,6 +21348,7 @@ lbL01DA2C:
 
 ; ===========================================================================
                     section chip_data,data_c
+
                 IFD SHOW_RASTERS
 BACK_COLOR          equ     COLOR31
                 ELSE

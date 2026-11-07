@@ -53,7 +53,7 @@ MIDI_OFF            equ     0
 MIDI_IN             equ     1
 MIDI_OUT            equ     2
 
-CMD_END             equ     0
+CMD_DONE            equ     0
 CMD_TEXT            equ     2
 CMD_CLEAR_MAIN_MENU equ     3
 CMD_PREPARE_SUB_SCREEN equ  4
@@ -125,8 +125,10 @@ EVT_KEY_RELEASED    equ     14
 RESP_EVT_ROUT_1     equ     10
 RESP_EVT_ROUT_2     equ     14
 
+MOUSE_CMD_TRAP_RMB_BIT equ 11
 MOUSE_CMD_NO_REPEAT_BIT equ 12
 MOUSE_CMD_NO_HILITE_BIT equ 13
+MOUSE_CMD_TRAP_RMB  equ     (1<<MOUSE_CMD_TRAP_RMB_BIT)
 MOUSE_CMD_NO_REPEAT equ     (1<<MOUSE_CMD_NO_REPEAT_BIT)
 MOUSE_CMD_NO_HILITE equ     (1<<MOUSE_CMD_NO_HILITE_BIT)
 
@@ -201,6 +203,25 @@ OKT_AUDIO_VOL       equ     8
 OKT_AUDIO_SIZE      equ     $10
 OKT_AUDIO_HW_CHANS  equ     4
                 ENDC
+
+; ===========================================================================
+GAD_DONE            equ     0
+GAD_NEXT            equ     1
+                    ; next gadget.l
+                    ; flags.w
+                    ; x.b,y.b,w.b,h.b
+                    ; left mouse button action.l,right mouse button action.l
+GADGET              MACRO
+                IF \1==GAD_NEXT
+                    dc.l    next\@
+                ELSE
+                    dc.l    0
+                ENDC
+                    dc.w    \2
+                    dc.b    \3,\4,\5,\6
+                    dc.l    \7,\8
+next\@:
+                    ENDM
 
 ; ===========================================================================
 OKT_SET_AUDIO_ADR   MACRO
