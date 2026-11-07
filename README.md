@@ -51,6 +51,8 @@ Done:
 - Fixed the random crashes.
 - Sample editor mouse coordinates were shifted in NTSC mode.
 - Right mouse button on 'Mark All' will remove sample marking.
-- Added a Boost function in Sample Editor (lifted from ProTracker).
+- Added a boost function in sample editor (lifted from ProTracker).
+- Added a cross fading function in sample editor (lifted from ProTracker).
+- Added a normalization function in sample editor.
 
 A work in progress...
