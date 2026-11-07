@@ -8,13 +8,13 @@ To do:
 - Make samples start from 1 instead of 0 and mimic Protracker replay behaviours.
 - Increase the number of samples to 71.
 - 16 bit samples support in the Vampire version (keep the sample type word in infos).
-- Possibility to load riff samples (8 bit but also 16 bit for Vampire).
+- RIFF samples loading (8 bit but also 16 bit for Vampire).
 - Remove the 15 samples/8 tracks modules loading and check for 4 tracks to 8 tracks modules signatures<br>
   (and load them).
 - Decode the rest of the source.
 - Add new pattern effects.
 - Select pattern blocks with the mouse.
-- Using (Shift)TAB key to navigate among the tracks.
+- Using (Shift)TAB key to navigate among the tracks (change edit mode toggle to spacebar).
 - Add scrollbars in files requesters.
 - Create an option to display rows numbers in decimal or hexadecimal.
 - And maybe more...
@@ -50,6 +50,6 @@ Done:
 - Fixed the random crashes.
 - Sample editor mouse coordinates were shifted in NTSC mode.
 - Right mouse button on 'Mark All' will remove sample marking.
-- Added a Boost function in Sample Editor (lifted from Protracker).
+- Added a Boost function in Sample Editor (lifted from ProTracker).
 
 A work in progress...
