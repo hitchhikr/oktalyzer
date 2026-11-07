@@ -131,7 +131,7 @@ MOUSE_CMD_NO_REPEAT equ     (1<<MOUSE_CMD_NO_REPEAT_BIT)
 MOUSE_CMD_NO_HILITE equ     (1<<MOUSE_CMD_NO_HILITE_BIT)
 
 VIS_DRAW_VUMETERS   equ     0
-VIS_DRAW_PATT_SCROLL equ    1
+VIS_PATT_SCROLL     equ     1
 VIS_DRAW_POS        equ     2
 VIS_TRIG_VUMETERS   equ     3
 VIS_DRAW_SPEED      equ     4
@@ -154,7 +154,7 @@ SMP_TYPE:           rs.w    1           ; 30
 SMP_INFOS_LEN:      rs.b    0           ; 32
 		            rsreset
 CHAN_TYPE:          rs.b    1           ; 0
-                    rs.b    1           ; 1 (pad)
+                    rs.b    1           ; 1 (padding)
 CHAN_SMP_REP_START: rs.l    1           ; 2
 CHAN_SMP_REP_LEN_S: rs.w    1           ; 6
 CHAN_NOTE_S:        rs.w    1           ; 8
@@ -174,6 +174,9 @@ OKT_CODE_LENGTH:    rs.b    0
 
 OKT_SCALING_LINES   equ     19552
 OKT_BUFFERS_LENGTH  equ     312
+
+OKT_SAMPLE_BOOST    equ     0
+OKT_SAMPLE_FILTER   equ     2
 
 ; ===========================================================================
                 IFD OKT_AUDIO_VAMPIRE
