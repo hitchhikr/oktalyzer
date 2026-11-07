@@ -13533,7 +13533,9 @@ lbC0281D2:
 lbC0281F2:
                     moveq   #ERROR,d0
                     rts
-lbC0281FE:
+
+; ===========================================================================
+sample_ed_exit:
                     tst.b   (lbB028218)
                     beq     .approved
                     jsr     (ask_are_you_sure_requester)
@@ -13816,7 +13818,9 @@ lbC02852A:
                     moveq   #0,d4
                     jsr     (lbC0264DC)
                     jmp     (display_main_menu)
-lbC02855C:
+
+; ===========================================================================
+sample_ed_swap:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
                     tst.l   (lbL029EDC)
@@ -13890,7 +13894,9 @@ lbC028676:
                     bsr     lbC028324
                     bsr     lbC02837A
                     bra     sample_ed_draw_sample_infos
-lbC028692:
+
+; ===========================================================================
+sample_ed_copy:
                     move.w  #-1,(lbW029EE4)
 lbC02869A:
                     tst.l   (work_sample_address_ptr)
@@ -14387,7 +14393,7 @@ sample_ed_draw_sample_infos:
                     lea     (lbL028DD8,pc),a0
                     move.l  (a1,d0.w),(a0)
                     sf      (3,a0)
-                    moveq   #74,d0
+                    moveq   #71,d0
                     move.w  (max_lines,pc),d1
                     jsr     (draw_text)
                     lea     (L_MSG,pc),a0
@@ -14395,7 +14401,7 @@ sample_ed_draw_sample_infos:
                     add.w   d0,d0
                     add.w   d0,d0
                     add.w   d0,a0
-                    moveq   #74,d0
+                    moveq   #71,d0
                     move.w  (max_lines,pc),d1
                     addq.w  #1,d1
                     jsr     (draw_text)
@@ -15500,14 +15506,24 @@ lbC029966:
                     rts
 
 ; ===========================================================================
-sample_ed_boost:
-                    move.W  #OKT_SAMPLE_BOOST,(sample_work_op)
-                    bra     go_boost
+sample_ed_normalize:
+                    move.W  #OKT_SAMPLE_NORM,(sample_work_op)
+                    bra     go_work
 
 ; ===========================================================================
-sample_ed_delta_filter:
+sample_ed_xfade:
+                    move.W  #OKT_SAMPLE_XFADE,(sample_work_op)
+                    bra     go_work
+
+; ===========================================================================
+sample_ed_boost:
+                    move.W  #OKT_SAMPLE_BOOST,(sample_work_op)
+                    bra     go_work
+
+; ===========================================================================
+sample_ed_filter:
                     move.W  #OKT_SAMPLE_FILTER,(sample_work_op)
-go_boost:
+go_work:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
                     tst.b   (sample_ed_mode_flag)
@@ -15608,7 +15624,9 @@ lbC029AB8:
 sample_work_table:
                     dc.w    sample_boost_op-sample_work_table
                     dc.w    sample_filter_op-sample_work_table
-                    
+                    dc.w    sample_xfade_op-sample_work_table
+                    dc.w    sample_normalize_op-sample_work_table
+
 ; ===========================================================================
 sample_boost_op:
                     moveq   #0,d1
@@ -15621,7 +15639,7 @@ sample_boost_op:
                     sub.w   d1,d2
                     move.w  d3,d1
                     tst.w   d2
-                    bmi.b   .neg
+                    bmi     .neg
                     asr.w   #2,d2
                     add.w   d2,d3
                     bra     .l1
@@ -15631,9 +15649,9 @@ sample_boost_op:
                     sub.w   d2,d3
 .l1:
                     cmp.w   #127,d3
-                    bgt.b   .hi
+                    bgt     .hi
                     cmp.w   #-128,d3
-                    blt.b   .lo
+                    blt     .lo
 .set:
                     move.b  d3,(a0)+
                     bra     .loop
@@ -15641,10 +15659,10 @@ sample_boost_op:
                     rts
 .hi:
                     moveq   #127,d3
-                    bra.b   .set
+                    bra     .set
 .lo:
                     moveq   #-128,d3
-                    bra.b   .set
+                    bra    .set
 
 ; ===========================================================================
 sample_filter_op:
@@ -15667,6 +15685,82 @@ sample_filter_op:
                     bra     .loop
 .done:
                     rts
+
+; ===========================================================================
+sample_xfade_op:
+                    lea     (a0,d0.l),a1
+                    moveq   #127,d2
+                    moveq   #-127,d3
+.loop:
+                    move.b  (a0),d0
+                    ext.w   d0
+                    move.b  -(a1),d1
+                    ext.w   d1
+                    add.w   d1,d0
+                    cmp.w   d2,d0
+                    bgt.b   .hi
+                    cmp.w   d3,d0
+                    blt.b   .lo
+.set:
+                    move.b  d0,(a0)+
+                    move.b  d0,(a1)
+                    cmp.l   a1,a0
+                    blo     .loop
+                    rts
+.hi:
+                    move.l  d2,d0
+                    bra     .set
+.lo:
+                    move.l  d3,d0
+                    bra     .set
+
+; ===========================================================================
+sample_normalize_op:
+                    move.l  d0,d1
+                    lea     (a0),a1
+                    moveq   #0,d4
+.loop_level:
+                    subq.l  #1,d1
+                    bmi     .done_level
+                    move.b  (a1)+,d2
+                    ext.w   d2
+                    bpl     .neg
+                    neg.w   d2
+.neg:
+                    cmp.w   d2,d4
+                    bgt     .scale
+                    move.w  d2,d4
+.scale:
+                    bra     .loop_level
+.done_level:
+                    moveq   #-127,d3
+                    moveq   #127,d2
+                    tst.w   d4
+                    bne     .loop_norm
+                    move.w  d2,d4
+.loop_norm:
+                    subq.l  #1,d0
+                    bmi     .done_norm
+                    moveq   #0,d1
+                    move.b  (a0),d1
+                    ext.w   d1
+                    muls.w  d2,d1
+                    divs.w  d4,d1
+                    cmp.w   d2,d1
+                    bgt     .hi
+                    cmp.w   d3,d1
+                    blt     .lo
+.set:
+                    move.b  d1,(a0)+
+                    bra     .loop_norm
+.done_norm:
+                    rts
+.hi:
+                    move.l  d2,d1
+                    bra     .set
+.lo:
+                    move.l  d3,d1
+                    bra     .set
 
 ; ===========================================================================
 sample_ed_set_repeat:
@@ -20752,12 +20846,12 @@ sample_ed_text:
                     dc.b    CMD_TEXT,38,9,'Length RepStr RepLen  Mode  BStart  BEnd',0
                     dc.b    CMD_DRAW_FILLED_BOX_FROM_POINTER,0,94,13,0
                     dc.l    max_lines
-                    dc.b    CMD_TEXT,1,0,'Exit  Mark  Cut    Paste   Change  Change  Delta  Set',0
-                    dc.b    CMD_TEXT,1,1,'Swap  All   Copy  Reverse  Volume  Period  Boost  Repeat',0
+                    dc.b    CMD_TEXT,1,0,'Exit Mark Cut   Paste  Change Change Delta XFade Set',0
+                    dc.b    CMD_TEXT,1,1,'Swap All  Copy Reverse Volume Period Boost Norm  Repeat',0
                     dc.b    CMD_MOVE_TO_LINE
                     dc.l    max_lines
-                    dc.b    CMD_TEXT,59,0,'Monitor  Rate:',0
-                    dc.b    CMD_TEXT,59,1,'Sampler  Chan:',0
+                    dc.b    CMD_TEXT,57,0,'Monitor Rate:',0
+                    dc.b    CMD_TEXT,57,1,'Sampler Chan:',0
                     dc.b    CMD_END
                     even
 ; shift+help
@@ -20838,85 +20932,95 @@ lbW018A04:
                     dc.l    lbW018A16
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    1,0,4,1
-                    dc.l    lbC0281FE,0
+                    dc.l    sample_ed_exit,0
 lbW018A16:
                     dc.l    lbW018A28
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
                     dc.b    1,1,4,1
-                    dc.l    lbC02855C,0
+                    dc.l    sample_ed_swap,0
 ; mark all
 lbW018A28:
                     dc.l    lbW018A3A
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    7,0,4,2
+                    dc.b    6,0,4,2
                     dc.l    sample_ed_mark_all,sample_ed_clear_mark
 ; cut
 lbW018A3A:
                     dc.l    lbW018A4C
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    13,0,4,1
+                    dc.b    11,0,4,1
                     dc.l    lbC028614,lbC02862C
 ; copy
 lbW018A4C:
                     dc.l    lbW018A5E
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    13,1,4,1
-                    dc.l    lbC028692,0
+                    dc.b    11,1,4,1
+                    dc.l    sample_ed_copy,0
 ; paste
 lbW018A5E:
                     dc.l    lbW018A70
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    19,0,7,1
+                    dc.b    16,0,7,1
                     dc.l    lbC0286F4,lbC02879C
 lbW018A70:
                     dc.l    lbW018A82
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    19,1,7,1
+                    dc.b    16,1,7,1
                     dc.l    sample_ed_reverse,0
 lbW018A82:
                     dc.l    lbW018A94
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    28,0,6,2
+                    dc.b    24,0,6,2
                     dc.l    sample_ed_change_volume_linear,sample_ed_change_volume_curve
 lbW018A94:
                     dc.l    lbW018AA6
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    36,0,6,2
+                    dc.b    31,0,6,2
                     dc.l    sample_ed_change_period,0
 lbW018AA6:
                     dc.l    lbL018AB8b
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    44,0,5,1
-                    dc.l    sample_ed_delta_filter,0
+                    dc.b    38,0,5,1
+                    dc.l    sample_ed_filter,0
 lbL018AB8b:
+                    dc.l    lbL018AB8cb
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
+                    dc.b    38,1,5,1
+                    dc.l    sample_ed_boost,0
+lbL018AB8cb:
                     dc.l    lbL018AB8c
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    44,1,5,1
-                    dc.l    sample_ed_boost,0
+                    dc.b    44,0,5,1
+                    dc.l    sample_ed_xfade,0
 lbL018AB8c:
+                    dc.l    lbL018AB8d
+                    dc.w    %1|MOUSE_CMD_NO_REPEAT
+                    dc.b    44,1,5,1
+                    dc.l    sample_ed_normalize,0
+lbL018AB8d:
                     dc.l    lbL018AB8
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    51,0,6,2
+                    dc.b    50,0,6,2
                     dc.l    sample_ed_set_repeat,sample_ed_clear_repeat
 lbL018AB8:
                     dc.l    lbL018ACA
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    59,0,7,1
+                    dc.b    57,0,7,1
                     dc.l    sample_ed_monitor,0
 lbL018ACA:
                     dc.l    lbL018ADC
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    59,1,7,1
+                    dc.b    57,1,7,1
                     dc.l    sample_ed_sampler,0
 lbL018ADC:
                     dc.l    lbL018AEE
                     dc.w    %1
-                    dc.b    68,0,9,1
+                    dc.b    65,0,9,1
                     dc.l    sample_ed_inc_note_rate,sample_ed_dec_note_rate
 lbL018AEE:
                     dc.l    0
                     dc.w    %1|MOUSE_CMD_NO_REPEAT
-                    dc.b    68,1,9,1
+                    dc.b    65,1,9,1
                     dc.l    sample_ed_switch_left_right,0
 lbW018B00:
                     dc.w    10,0
@@ -20930,7 +21034,7 @@ lbW018B00:
                     dc.w    0
 lbW018B22:
                     dc.w    2,5
-                    dc.l    lbC0281FE
+                    dc.l    sample_ed_exit
                     dc.w    2,6
                     dc.l    sample_ed_clear_repeat
                     dc.w    4,$F

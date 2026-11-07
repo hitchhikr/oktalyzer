@@ -176,7 +176,9 @@ OKT_SCALING_LINES   equ     19552
 OKT_BUFFERS_LENGTH  equ     312
 
 OKT_SAMPLE_BOOST    equ     0
-OKT_SAMPLE_FILTER   equ     2
+OKT_SAMPLE_FILTER   equ     1*2
+OKT_SAMPLE_XFADE    equ     2*2
+OKT_SAMPLE_NORM     equ     3*2
 
 ; ===========================================================================
                 IFD OKT_AUDIO_VAMPIRE
