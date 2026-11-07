@@ -21699,7 +21699,7 @@ lbL01DA2C:
 ; ===========================================================================
                     section chip_data,data_c
                 IFD SHOW_RASTERS
-BACK_COLOR          equ     COLOR10
+BACK_COLOR          equ     COLOR31
                 ELSE
 BACK_COLOR          equ     COLOR00
                 ENDC
