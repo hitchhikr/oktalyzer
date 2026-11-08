@@ -15,7 +15,6 @@ To do:
 - Add new pattern effects.
 - Select pattern blocks with the mouse.
 - Add scrollbars in files requesters.
-- Create an option to display rows numbers in decimal or hexadecimal.
 - Better handling of line editing when quantization is turned off.
 - And maybe more...
 
@@ -59,5 +58,7 @@ Done:
 - Row numbers are now only displayed once per line.
 - Range blocks aren't displayed or can't be selected if sample is empty.
 - Right mouse button on sample waveform to remove current block mark.
+- Available memory and song metrics are now displayed with 8 digits.
+- Patterns rows can now be displayed in either decimal or hexadecimal (default).
 
 A work in progress...

@@ -2672,11 +2672,33 @@ display_main_menu:
                     moveq   #12,d0
                     moveq   #6,d1
                     jsr     (draw_2_digits_decimal_number_leading_zeroes)
+                    ; clear any extra char
+                    moveq   #' ',d2
+                    moveq   #21,d0
+                    moveq   #6,d1
+                    jsr     (draw_one_char)
                     bsr     get_current_pattern_address_and_rows
+                    ; current pattern length
+                    tst.b   (show_decimal_rows)
+                    bne     .draw_in_hex
+                    lea     (decimal_table_ascii),a0
+                IFD OKT_AUDIO_VAMPIRE
+                    lea     (a0,d0.w*4),a0
+                ELSE
+                    add.w   d0,d0
+                    add.w   d0,d0
+                    lea     (a0,d0.w),a0
+                ENDC
+                    moveq   #21,d0
+                    moveq   #6,d1
+                    jsr     (draw_text)
+                    bra     .done
+.draw_in_hex:
                     move.w  d0,d2
                     moveq   #22,d0
                     moveq   #6,d1
                     jsr     (draw_2_digits_hex_number)
+.done:
                     bsr     draw_edit_mode_status
                     bsr     draw_polyphony_status
                     bsr     draw_quantize_amount
@@ -2855,12 +2877,12 @@ largest_mem_avail:
 available_memory_text_ptr:
                     dc.l    Chip_MSG
 Chip_MSG:
-                    dc.b    CMD_TEXT,67,1,'Chip:',0
-                    dc.b    CMD_TEXT,67,2,'Fast:',0
+                    dc.b    CMD_TEXT,66,1,'Chip:',0
+                    dc.b    CMD_TEXT,66,2,'Fast:',0
                     dc.b    CMD_DONE
 CMax_MSG:
-                    dc.b    CMD_TEXT,67,1,'CMax:',0
-                    dc.b    CMD_TEXT,67,2,'FMax:',0
+                    dc.b    CMD_TEXT,66,1,'CMax:',0
+                    dc.b    CMD_TEXT,66,2,'FMax:',0
                     dc.b    CMD_DONE
                     even
 
@@ -2889,13 +2911,13 @@ current_song_metrics_index:
 song_metrics_text_ptr:
                     dc.l    Song_MSG
 Song_MSG:
-                    dc.b    CMD_TEXT,67,3,'Song:',0
+                    dc.b    CMD_TEXT,66,3,'Song:',0
                     dc.b    CMD_DONE
 Ptts_MSG:
-                    dc.b    CMD_TEXT,67,3,'Ptts:',0
+                    dc.b    CMD_TEXT,66,3,'Ptts:',0
                     dc.b    CMD_DONE
 Smps_MSG:
-                    dc.b    CMD_TEXT,67,3,'Smps:',0
+                    dc.b    CMD_TEXT,66,3,'Smps:',0
                     dc.b    CMD_DONE
 
 ; ===========================================================================
@@ -2904,35 +2926,35 @@ do_draw_available_memory_and_song_metrics:
                     or.l    (largest_mem_avail,pc),d1
                     EXEC    AvailMem
                     ; too much memory to display
-                    cmp.l   #9999999,d0
+                    cmp.l   #99999999,d0
                     blt     .enough_chip
                     lea     (plenty_text,pc),a0
-                    move.w  #73,d0
+                    move.w  #72,d0
                     move.w  #1,d1
                     jsr     (draw_text)
                     bra     .too_much_chip
 .enough_chip:
                     move.l  d0,d2
-                    moveq   #73,d0
+                    moveq   #72,d0
                     moveq   #1,d1
-                    jsr     (draw_7_digits_decimal_number_leading_zeroes)
+                    jsr     (draw_8_digits_decimal_number_leading_zeroes)
 .too_much_chip:
                     moveq   #MEMF_FAST,d1
                     or.l    (largest_mem_avail,pc),d1
                     EXEC    AvailMem
                     ; too much memory to display
-                    cmp.l   #9999999,d0
+                    cmp.l   #99999999,d0
                     blt     .enough_fast
                     lea     (plenty_text,pc),a0
-                    move.w  #73,d0
+                    move.w  #72,d0
                     move.w  #2,d1
                     jsr     (draw_text)
                     bra     .too_much_fast
 .enough_fast:
                     move.l  d0,d2
-                    moveq   #73,d0
+                    moveq   #72,d0
                     moveq   #2,d1
-                    jsr     (draw_7_digits_decimal_number_leading_zeroes)
+                    jsr     (draw_8_digits_decimal_number_leading_zeroes)
 .too_much_fast:
                     move.w  (current_song_metrics_index,pc),d0
                     bne     .patterns
@@ -2950,9 +2972,9 @@ do_draw_available_memory_and_song_metrics:
                     bsr     get_samples_metrics
 .draw_it:
                     move.l  d0,d2
-                    moveq   #73,d0
+                    moveq   #72,d0
                     moveq   #3,d1
-                    jmp     (draw_7_digits_decimal_number_leading_zeroes)
+                    jmp     (draw_8_digits_decimal_number_leading_zeroes)
 get_patterns_metrics:
                     move.l  d2,-(a7)
                     lea     (OKT_patterns_list),a0
@@ -2983,7 +3005,8 @@ get_samples_metrics:
                     dbra    d1,.loop
                     rts
 plenty_text:
-                    dc.b    'Plenty!',0
+                    dc.b    ' Plenty!',0
+                    even
 
 ; ===========================================================================
 free_work_sample:
@@ -3236,7 +3259,9 @@ free_last_pattern:
 
 ; ===========================================================================
 draw_pattern:
+                IFND OKT_AUDIO_VAMPIRE
                     move.w  #$200,(main_bplcon0+2)
+                ENDC
                     or.w    #(1<<VIS_DRAW_PATT),refresh_visual
                     bsr     get_current_pattern_address_and_rows
                     move.w  d0,(pattern_rows_to_display)
@@ -3244,11 +3269,11 @@ draw_pattern:
                     jsr     (clear_1_line_blitter)
                     moveq   #0,d7
                     bsr     get_current_pattern_ascii_number
-                    ; pattern number
+                    ; pattern number written on top-right
                     lea     (row_data_buffer),a0
                     move.w  d4,(a0)
                     sf.b    2(a0)
-                    moveq   #67,d0
+                    moveq   #66,d0
                     moveq   #6,d1
                     jsr     (draw_text)
 .loop:
@@ -3259,7 +3284,9 @@ draw_pattern:
                     bsr     set_caret_to_max_row
                     bsr     set_pattern_row
                     bsr     draw_selection_marquee
+                IFND OKT_AUDIO_VAMPIRE
                     move.w  #$9200,(main_bplcon0+2)
+                ENDC
                     bra     display_main_menu
 
 ; ===========================================================================
@@ -3282,15 +3309,31 @@ get_current_pattern_ascii_number:
 
 ; ===========================================================================
 draw_row_data:
-                    lea     (alpha_numeric_table),a2
                     lea     (full_note_table),a3
                     lea     (row_data_buffer),a5
                     lea     (OKT_channels_modes),a0
                     moveq   #2-1,d5
-                    move.b  #' ',(a5)+
                     move.w  d7,d0
-                    lsr.w   #4,d0
                     ; row number
+                    lea     (alpha_numeric_table),a2
+                    tst.b   (show_decimal_rows)
+                    bne     .draw_in_hex
+                    lea     (decimal_table_ascii),a1
+                IFD OKT_AUDIO_VAMPIRE
+                    move.b  (a1,d0.w*4),(a5)+
+                    move.b  1(a1,d0.w*4),(a5)+
+                    move.b  2(a1,d0.w*4),(a5)+
+                ELSE
+                    add.w   d0,d0
+                    add.w   d0,d0
+                    move.b  (a1,d0.w),(a5)+
+                    move.b  1(a1,d0.w),(a5)+
+                    move.b  2(a1,d0.w),(a5)+
+                ENDC
+                    bra     .draw_channels_groups
+.draw_in_hex:
+                    move.b  #' ',(a5)+
+                    lsr.w   #4,d0
                     move.b  (a2,d0.w),(a5)+
                     moveq   #$F,d0
                     and.w   d7,d0
@@ -4468,9 +4511,9 @@ lbC020F2C:
                     jsr     (move_in_file)
                     bmi     lbC02102A
                     lea     (OKT_samples_infos+SMP_INFOS_LEN),a5
-                    moveq   #15-1,d7
-                    tst.b   (st_load_samples_mode)
-                    beq     .loop
+;                    moveq   #15-1,d7
+;                    tst.b   (st_load_samples_mode)
+;                    beq     .loop
                     moveq   #31-1,d7
 .loop:
                     move.l  a5,a0
@@ -4544,8 +4587,8 @@ lbC021002:
                     dbra    d0,lbC020FFA
                     addq.w  #1,d1
                     move.w  d1,(lbW01B730)
-                    tst.b   (st_load_samples_mode)
-                    beq     lbC021020
+;                    tst.b   (st_load_samples_mode)
+;                    beq     lbC021020
                     moveq   #4,d0
                     jsr     (move_in_file)
                     bmi     lbC02102A
@@ -6246,30 +6289,30 @@ change_current_pattern_rows:
                     bsr     renew_current_pattern
                     ; no flags change
                     movem.w (a7)+,d0
-                    bmi     lbC0221DA
+                    bmi     .error
                     move.w  d0,d1
                     move.w  (lbW0221DC,pc),d0
-lbC0221A4:
+.loop:
                     cmp.w   d0,d1
-                    beq     lbC0221CA
-                    blt     lbC0221BA
+                    beq     .done
+                    blt     .subtract_row
                     movem.w d0/d1,-(a7)
                     bsr     draw_one_pattern_row
                     movem.w (a7)+,d0/d1
                     addq.w  #1,d0
-                    bra     lbC0221A4
-lbC0221BA:
+                    bra     .loop
+.subtract_row:
                     subq.w  #1,d0
                     movem.w d0/d1,-(a7)
                     bsr     erase_one_pattern_row
                     movem.w (a7)+,d0/d1
-                    bra     lbC0221A4
-lbC0221CA:
+                    bra     .loop
+.done:
                     bsr     set_caret_to_max_row
                     bsr     set_pattern_row
                     or.w    #(1<<VIS_DRAW_PATT),refresh_visual
                     bra     display_main_menu
-lbC0221DA:
+.error:
                     rts
 lbW0221DC:
                     dc.w    0
@@ -9941,6 +9984,39 @@ note_table_2:
                     dc.b    '--- '
 alpha_numeric_table:
                     dc.b    '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',0
+decimal_table_ascii:
+                    dc.b    '  0',0,'  1',0,'  2',0,'  3',0,'  4',0,'  5',0,'  6',0,'  7',0
+                    dc.b    '  8',0,'  9',0,' 10',0,' 11',0,' 12',0,' 13',0,' 14',0,' 15',0
+                    dc.b    ' 16',0,' 17',0,' 18',0,' 19',0,' 20',0,' 21',0,' 22',0,' 23',0
+                    dc.b    ' 24',0,' 25',0,' 26',0,' 27',0,' 28',0,' 29',0,' 30',0,' 31',0
+                    dc.b    ' 32',0,' 33',0,' 34',0,' 35',0,' 36',0,' 37',0,' 38',0,' 39',0
+                    dc.b    ' 40',0,' 41',0,' 42',0,' 43',0,' 44',0,' 45',0,' 46',0,' 47',0
+                    dc.b    ' 48',0,' 49',0,' 50',0,' 51',0,' 52',0,' 53',0,' 54',0,' 55',0
+                    dc.b    ' 56',0,' 57',0,' 58',0,' 59',0,' 60',0,' 61',0,' 62',0,' 63',0
+                    dc.b    ' 64',0,' 65',0,' 66',0,' 67',0,' 68',0,' 69',0,' 70',0,' 71',0
+                    dc.b    ' 72',0,' 73',0,' 74',0,' 75',0,' 76',0,' 77',0,' 78',0,' 79',0
+                    dc.b    ' 80',0,' 81',0,' 82',0,' 83',0,' 84',0,' 85',0,' 86',0,' 87',0
+                    dc.b    ' 88',0,' 89',0,' 90',0,' 91',0,' 92',0,' 93',0,' 94',0,' 95',0
+                    dc.b    ' 96',0,' 97',0,' 98',0,' 99',0,'100',0,'101',0,'102',0,'103',0
+                    dc.b    '104',0,'105',0,'106',0,'107',0,'108',0,'109',0,'110',0,'111',0
+                    dc.b    '112',0,'113',0,'114',0,'115',0,'116',0,'117',0,'118',0,'119',0
+                    dc.b    '120',0,'121',0,'122',0,'123',0,'124',0,'125',0,'126',0,'127',0
+                    dc.b    '128',0,'129',0,'130',0,'131',0,'132',0,'133',0,'134',0,'135',0
+                    dc.b    '136',0,'137',0,'138',0,'139',0,'140',0,'141',0,'142',0,'143',0
+                    dc.b    '144',0,'145',0,'146',0,'147',0,'148',0,'149',0,'150',0,'151',0
+                    dc.b    '152',0,'153',0,'154',0,'155',0,'156',0,'157',0,'158',0,'159',0
+                    dc.b    '160',0,'161',0,'162',0,'163',0,'164',0,'165',0,'166',0,'167',0
+                    dc.b    '168',0,'169',0,'170',0,'171',0,'172',0,'173',0,'174',0,'175',0
+                    dc.b    '176',0,'177',0,'178',0,'179',0,'180',0,'181',0,'182',0,'183',0
+                    dc.b    '184',0,'185',0,'186',0,'187',0,'188',0,'189',0,'190',0,'191',0
+                    dc.b    '192',0,'193',0,'194',0,'195',0,'196',0,'197',0,'198',0,'199',0
+                    dc.b    '200',0,'201',0,'202',0,'203',0,'204',0,'205',0,'206',0,'207',0
+                    dc.b    '208',0,'209',0,'210',0,'211',0,'212',0,'213',0,'214',0,'215',0
+                    dc.b    '216',0,'217',0,'218',0,'219',0,'220',0,'221',0,'222',0,'223',0
+                    dc.b    '224',0,'225',0,'226',0,'227',0,'228',0,'229',0,'230',0,'231',0
+                    dc.b    '232',0,'233',0,'234',0,'235',0,'236',0,'237',0,'238',0,'239',0
+                    dc.b    '240',0,'241',0,'242',0,'243',0,'244',0,'245',0,'246',0,'247',0
+                    dc.b    '248',0,'249',0,'250',0,'251',0,'252',0,'253',0,'254',0,'255',0
                     even
 OKT_default_speed:
                     dc.w    6
@@ -10646,14 +10722,21 @@ lbC025DD2:
                     rts
 
 ; ===========================================================================
+draw_8_digits_decimal_number_leading_zeroes:
+                    lea     (decimal_number_leading_zeroes_table_8,pc),a0
+                    lea     (decimal_number_leading_zeroes_text,pc),a1
+                    move.l  #'0000',(2,a1)
+                    move.l  #'0000',(6,a1)
+                    sf      (10,a1)
+                    bra     draw_decimal_number_leading_zeroes
 draw_7_digits_decimal_number_leading_zeroes:
-                    lea     (decimal_number_leading_zeroes_table,pc),a0
+                    lea     (decimal_number_leading_zeroes_table_7,pc),a0
                     lea     (decimal_number_leading_zeroes_text,pc),a1
                     move.l  #'0000',(2,a1)
                     move.l  #('000'<<8),(6,a1)
                     bra     draw_decimal_number_leading_zeroes
 draw_6_digits_decimal_number_leading_zeroes:
-                    lea     (decimal_number_leading_zeroes_table+4,pc),a0
+                    lea     (decimal_number_leading_zeroes_table_6,pc),a0
                     lea     (decimal_number_leading_zeroes_text,pc),a1
                     move.l  #'0000',(2,a1)
                     move.w  #'00',(6,a1)
@@ -10661,13 +10744,13 @@ draw_6_digits_decimal_number_leading_zeroes:
                     bra     draw_decimal_number_leading_zeroes
 draw_3_digits_decimal_number_leading_zeroes:
                     ext.l   d2
-                    lea     (decimal_number_leading_zeroes_table+16,pc),a0
+                    lea     (decimal_number_leading_zeroes_table_3,pc),a0
                     lea     (decimal_number_leading_zeroes_text,pc),a1
                     move.l  #('000'<<8),(2,a1)
                     bra     draw_decimal_number_leading_zeroes
 draw_2_digits_decimal_number_leading_zeroes:
                     ext.l   d2
-                    lea     (decimal_number_leading_zeroes_table+20,pc),a0
+                    lea     (decimal_number_leading_zeroes_table_2,pc),a0
                     lea     (decimal_number_leading_zeroes_text,pc),a1
                     move.w  #'00',(2,a1)
                     sf      (4,a1)
@@ -10690,16 +10773,22 @@ draw_decimal_number_leading_zeroes:
 .done:
                     lea     (decimal_number_leading_zeroes_text,pc),a0
                     bra     draw_text_with_coords_struct
-decimal_number_leading_zeroes_table:
+decimal_number_leading_zeroes_table_8:
+                    dc.l    10000000
+decimal_number_leading_zeroes_table_7:
                     dc.l    1000000
+decimal_number_leading_zeroes_table_6:
                     dc.l    100000
                     dc.l    10000
                     dc.l    1000
+decimal_number_leading_zeroes_table_3:
                     dc.l    100
+decimal_number_leading_zeroes_table_2:
                     dc.l    10
                     dc.l    1
                     dc.l    0
 decimal_number_leading_zeroes_text:
+                    dc.b    0,0
                     dcb.b   12,0
 
 ; ===========================================================================
@@ -16458,7 +16547,7 @@ f10_key_row_jump_value:
 text_font:
                     incbin  "font_2048x8.lo1"
 etext_font:
-st_load_samples_mode:
+show_decimal_rows:
                     dc.b    -1
 st_load_default_samples_type:
                     dc.b    0
@@ -16641,21 +16730,38 @@ display_prefs_screen:
                     bsr     update_f_keys_row_jump_values
                     bsr     draw_font
                     bsr     draw_selected_char_grid
-                    bra     display_st_load_modes
+                    bsr     display_patterns_rows_mode
+                    bra     display_st_load_mode
 
 ; ===========================================================================
-switch_st_samples_mode:
-                    not.b   (st_load_samples_mode)
-                    bra     display_st_load_modes
-switch_st_tracks_mode:
+switch_patterns_rows_mode:
+                    not.b   (show_decimal_rows)
+
+; ===========================================================================
+display_patterns_rows_mode:
+                    lea     (.raw_as_decimal,pc),a0
+                    tst.b   (show_decimal_rows)
+                    beq     .decimal_rows
+                    lea     (.raw_as_hexadecimal,pc),a0
+.decimal_rows:
+                    jmp     (draw_text_with_coords_struct)
+.raw_as_decimal:
+                    dc.b    22,24,'Dec',0
+.raw_as_hexadecimal:
+                    dc.b    22,24,'Hex',0
+
+; ===========================================================================
+switch_st_load_mode:
                     not.b   (st_load_default_samples_type)
-display_st_load_modes:
-                    lea     (.samples_15_text,pc),a0
-                    tst.b   (st_load_samples_mode)
-                    beq     .load_15_samples
-                    lea     (.samples_31_text,pc),a0
-.load_15_samples:
-                    jsr     (draw_text_with_coords_struct)
+
+; ===========================================================================
+display_st_load_mode:
+;                    lea     (.samples_15_text,pc),a0
+;                    tst.b   (st_load_samples_mode)
+;                    beq     .load_15_samples
+;                    lea     (.samples_31_text,pc),a0
+;.load_15_samples:
+;                    jsr     (draw_text_with_coords_struct)
                     lea     (.channels_4_text,pc),a0
                     tst.b   (st_load_default_samples_type)
                     beq     .load_4_channels
@@ -20443,7 +20549,7 @@ main_menu_layout:
                     dc.b    CMD_TEXT,53,4,'Edit   All',0
                     dc.b    CMD_TEXT,53,5,'Copy   Mix',0
                     dc.b    CMD_TEXT,53,6,'Swap  ClrCB',0
-                    dc.b    CMD_TEXT,67,0,'Memory:',0
+                    dc.b    CMD_TEXT,66,0,'Memory:',0
                     dc.b    CMD_SUB_COMMAND,0
                     dc.l    available_memory_text_ptr
                     dc.b    CMD_SUB_COMMAND,0
@@ -20605,8 +20711,8 @@ change_channel_7_gadget:
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,78,5,1,2,switch_channel_7_on_off,set_channel_7_solo
 change_channel_8_gadget:
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,79,5,1,2,switch_channel_8_on_off,set_channel_8_solo
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,67,1,13,2,draw_available_memory,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,67,3,13,1,draw_song_metrics,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,66,1,14,2,draw_available_memory,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,66,3,14,1,draw_song_metrics,0
                     GADGET  GAD_DONE,MOUSE_CMD_NO_HILITE,0,7,80,24,click_on_pattern,0
 main_screen_keys_list:
                     KL_HEAD KEY_MOD_NONE,main_screen_keys
@@ -20852,7 +20958,7 @@ prefs_layout:
                     dc.b    CMD_PREPARE_SUB_SCREEN
                     dc.b    CMD_TEXT,29,8,'Oktalyzer Preferences',0
                     dc.b    CMD_TEXT,1,10,'Misc',0
-                    dc.b    CMD_DRAW_BOX,1,11,25,13
+                    dc.b    CMD_DRAW_BOX,1,11,25,15
                     dc.b    CMD_TEXT,2,12,'PattFormat:',0
                     dc.b    CMD_TEXT,2,13,'Default PatternLen:',0
                     dc.b    CMD_TEXT,2,15,'Sample Load Mode..:',0
@@ -20861,6 +20967,7 @@ prefs_layout:
                     dc.b    CMD_TEXT,2,19,'MouseRepeat Speed.:',0
                     dc.b    CMD_TEXT,2,21,'Color Set...:',0
                     dc.b    CMD_TEXT,18,22,'RGB RGB',0
+                    dc.b    CMD_TEXT,2,24,'Patterns rows:',0
                     dc.b    CMD_TEXT,28,10,'Polyphony',0
                     dc.b    CMD_DRAW_BOX,28,11,12,13
                     dc.b    CMD_TEXT,29,12,'<        >',0
@@ -20965,13 +21072,13 @@ prefs_gadgets:
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,26,8,1,mirror_char_x,0
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,27,8,1,mirror_char_y,0
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_HILITE,62,12,16,16,select_current_char,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,1,26,6,3,load_prefs,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,7,26,6,3,save_prefs,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,13,26,5,3,use_prefs,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,18,26,5,3,old_prefs,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,23,26,8,3,cancel_prefs,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,34,27,7,1,switch_st_samples_mode,0
-                    GADGET  GAD_DONE,MOUSE_CMD_NO_REPEAT,42,27,7,1,switch_st_tracks_mode,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,1,27,6,1,load_prefs,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,7,27,6,1,save_prefs,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,13,27,5,1,use_prefs,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,18,27,5,1,old_prefs,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,23,27,8,1,cancel_prefs,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,2,24,23,1,switch_patterns_rows_mode,0
+                    GADGET  GAD_DONE,MOUSE_CMD_NO_REPEAT,42,27,7,1,switch_st_load_mode,0
 prefs_keys_list:
                     KL_HEAD KEY_MOD_NONE,prefs_keys
                     KL_HEAD KEY_MOD_SHIFT,prefs_keys_shift
