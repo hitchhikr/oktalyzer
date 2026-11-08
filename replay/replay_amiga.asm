@@ -217,7 +217,7 @@ OKT_custom_init:
                     move.w  d0,($B6-$A0,a1)
                     move.w  d0,($C6-$A0,a1)
                     move.w  d0,($D6-$A0,a1)
-                    bset    #1,$bfe001
+                    bset    #1,$BFE001
                     move.l  (OKT_vbr-OKT_vars,a6),a0
                     ; we use a level 6 interrupt if there are
                     ; no doubled channels in song
@@ -302,6 +302,7 @@ OKT_get_vbr:
                     move.b  297(a6),d0
                     btst    #0,d0
                     beq.b   .OKT_no_processor
+                    ; movec vbr,d0
                     dc.w    $4E7A,$0801
                     rte
 .OKT_no_processor:

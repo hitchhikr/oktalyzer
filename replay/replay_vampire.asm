@@ -13,7 +13,7 @@
 ; ===========================================================================
 		            rsreset
 _CUSTOM             equ     $DFF000
-OKT_AUDIO_BASE      equ     $400
+OKT_AUDIO_BASE      equ     $440
 OKT_AUDIO_DMA       equ     $296
 OKT_AUDIO_ADR       equ     0
 OKT_AUDIO_LEN       equ     4
@@ -31,15 +31,8 @@ OKT_SET_AUDIO_LEN   MACRO
                     move.l  \1,(OKT_AUDIO_LEN,\2)
                     ENDM
 
-OKT_SET_AUDIO_PAN   MACRO
-                    ; set panning
-                    move.w  d0,d1
-                    mulu    (a4,d3.w*4),d0
-                    lsr.w   #7,d0
-                    lsl.w   #8,d0
-                    mulu    2(a4,d3.w*4),d1
-                    lsr.w   #7,d1
-                    or.w    d1,d0
+OKT_SET_AUDIO_CTRL  MACRO
+                    move.w  \1,(OKT_AUDIO_CTRL,\2)
                     ENDM
 
 ; ===========================================================================
@@ -51,7 +44,8 @@ OKT_custom_init:
                     move.w  #%1111,($DFF096)
                     move.w  #%111111111111,(_CUSTOM|OKT_AUDIO_DMA)
                     move.w  #$FF,($DFF09E)
-                    move.l  (OKT_vbr-OKT_vars,a6),a0
+                    bset    #1,$BFE001
+                    move.l  d0,a0
                     move.l  (a0),(OKT_old_irq-OKT_vars,a6)
                     lea     (OKT_cia_int-OKT_vars,a6),a2
                     move.l	a2,(a0)
@@ -86,10 +80,10 @@ OKT_stop:
                     move.w  #%1111,($DFF096)
                     move.w  #%111111111111,(_CUSTOM|OKT_AUDIO_DMA)
                     moveq   #0,d0
-                    moveq   #16-1,d1
+                    moveq   #OKT_AUDIO_HW_CHANS-1,d1
 .OKT_clear_all_vols:
-                    move.w  d0,(8,a2)
-                    lea     (16,a2),a2
+                    move.w  d0,(OKT_AUDIO_VOL,a2)
+                    lea     (OKT_AUDIO_SIZE,a2),a2
                     dbf     d1,.OKT_clear_all_vols
                     lea     $BFD000+CIATBLO,a0
                     lea     (OKT_old_cia_timer-OKT_vars,a6),a1
@@ -120,6 +114,7 @@ OKT_get_vbr:
                     or.w    #$800,d0
                     move    d0,sr
                     move.w  #%10000,$DFF1FC
+                    ; movec vbr,d0
                     dc.w    $4E7A,$0801
                     rte
 .OKT_no_processor:

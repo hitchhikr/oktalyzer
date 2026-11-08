@@ -158,7 +158,7 @@ current_dir_lock:
 ; ===========================================================================
 set_pal_ntsc_context:
                     move.l  (4).w,a0
-                    cmpi.b  #60,(VBlankFrequency,a0)
+                    cmp.b   #60,(VBlankFrequency,a0)
                     bne     .pal_machine
                     lea     (copper_extra_lines_1),a0
                     lea     (ecopper_extra_lines_1),a1
@@ -492,13 +492,13 @@ input_device_handler:
                     tst.w   (main_spinlock)
                     bne     .spinning
                     move.b  (ie_Class,a0),d0
-                    cmpi.b  #IECLASS_RAWKEY,d0
+                    cmp.b   #IECLASS_RAWKEY,d0
                     beq     input_event_raw_key
-                    cmpi.b  #IECLASS_RAWMOUSE,d0
+                    cmp.b   #IECLASS_RAWMOUSE,d0
                     beq     input_event_raw_mouse
-                    cmpi.b  #IECLASS_DISKREMOVED,d0
+                    cmp.b   #IECLASS_DISKREMOVED,d0
                     beq     input_event_disk_changed
-                    cmpi.b  #IECLASS_DISKINSERTED,d0
+                    cmp.b   #IECLASS_DISKINSERTED,d0
                     beq     input_event_disk_changed
                     moveq   #0,d0
                     rts
@@ -546,7 +546,7 @@ get_mouse_buttons:
                     move.w  d1,d3
                     movem.w (mouse_pointer_coords),d1/d2
                     lsr.w   #1,d2
-                    cmpi.w  #IECODE_LBUTTON,d0
+                    cmp.w   #IECODE_LBUTTON,d0
                     bne     .left_button_pressed
                     st      (mouse_buttons_status+1)
                     moveq   #EVT_LEFT_PRESSED,d0
@@ -554,7 +554,7 @@ get_mouse_buttons:
                     move.w  (mouse_repeat_delay),(mouse_repeat_delay_left)
                     bra     .done
 .left_button_pressed:
-                    cmpi.w  #IECODE_LBUTTON|IECODE_UP_PREFIX,d0
+                    cmp.w   #IECODE_LBUTTON|IECODE_UP_PREFIX,d0
                     bne     .left_button_released
                     clr.w   (mouse_repeat_delay_left)
                     sf      (mouse_buttons_status+1)
@@ -562,7 +562,7 @@ get_mouse_buttons:
                     bsr     store_event
                     bra     .done
 .left_button_released:
-                    cmpi.w  #IECODE_RBUTTON,d0
+                    cmp.w   #IECODE_RBUTTON,d0
                     bne     .right_button_pressed
                     st      (mouse_buttons_status)
                     moveq   #EVT_RIGHT_PRESSED,d0
@@ -570,7 +570,7 @@ get_mouse_buttons:
                     move.w  (mouse_repeat_delay),(mouse_repeat_delay_right)
                     bra     .done
 .right_button_pressed:
-                    cmpi.w  #IECODE_RBUTTON|IECODE_UP_PREFIX,d0
+                    cmp.w   #IECODE_RBUTTON|IECODE_UP_PREFIX,d0
                     bne     .right_button_released
                     clr.w   (mouse_repeat_delay_right)
                     sf      (mouse_buttons_status)
@@ -607,7 +607,7 @@ patch_sys_requesters_function:
 .decrease:
                     move.l  (IntBase),a1
                     move.w  #_LVOAutoRequest,a0
-                    cmpi.w  #36,(LIB_VERSION,a1)
+                    cmp.w   #36,(LIB_VERSION,a1)
                     bcs     .old_intuition
                     move.w  #_LVOEasyRequestArgs,a0
 .old_intuition:
@@ -624,7 +624,7 @@ restore_sys_requesters_function:
                     addq.w  #1,(main_spinlock)
                     move.l  (IntBase),a1
                     move.w  #_LVOAutoRequest,a0
-                    cmpi.w  #36,(LIB_VERSION,a1)
+                    cmp.w   #36,(LIB_VERSION,a1)
                     bcs     .old_intuition
                     move.w  #_LVOEasyRequestArgs,a0
 .old_intuition:
@@ -646,7 +646,7 @@ our_sys_requesters_function:
                     EXEC    Disable
                     lea     (main_spinlock,pc),a0
                     addq.w  #1,(a0)
-                    cmpi.w  #1,(a0)
+                    cmp.w   #1,(a0)
                     bne     .already_done
                     jsr     (remove_midi_ints)
                     jsr     (restore_screen)
@@ -963,12 +963,12 @@ lbC01EA32:
                     moveq   #ERROR,d0
                     rts
 lbC01EA3E:
-                    cmpi.b  #MIDI_IN,(midi_mode)
+                    cmp.b   #MIDI_IN,(midi_mode)
                     bne     lbC01EA6C
                     move.w  d1,d0
                     subi.w  #$30,d0
                     bmi     lbC01EA56
-                    cmpi.w  #$24,d0
+                    cmp.w   #$24,d0
                     blt     lbC01EA58
 lbC01EA56:
                     moveq   #-1,d0
@@ -1008,7 +1008,7 @@ lbC01EA70:
                     moveq   #0,d5
                     move.b  (a0),d5
                     move.w  d5,d2
-                    cmpi.w  #45,d2
+                    cmp.w   #45,d2
                     blt     lbC01EACE
                     subq.w  #3,d2
 lbC01EACE:
@@ -1043,19 +1043,19 @@ lbC01EB10:
                     bne     lbC01EB50
                     move.w  d0,d2
                     bclr    #15,d2
-                    cmpi.w  #1,d2
+                    cmp.w   #1,d2
                     beq     patt_del_note_up
-                    cmpi.w  #4,d2
+                    cmp.w   #4,d2
                     beq     patt_ins_note_down
-                    cmpi.w  #6,d2
+                    cmp.w   #6,d2
                     beq     patt_del_note
-                    cmpi.w  #$106,d2
+                    cmp.w   #$106,d2
                     beq     patt_ins_note
-                    cmpi.w  #$206,d2
+                    cmp.w   #$206,d2
                     beq     patt_del_note_inst_fx
-                    cmpi.w  #$406,d2
+                    cmp.w   #$406,d2
                     beq     patt_del_fx
-                    cmpi.w  #$1006,d2
+                    cmp.w   #$1006,d2
                     beq     patt_del_note_and_quantize
 lbC01EB50:
                     move.w  d0,d2
@@ -1063,18 +1063,24 @@ lbC01EB50:
                     bne     lbC01EBEA
                     jsr     (a0)
                     bra     lbC01EBEA
+
+; ===========================================================================
 patt_del_note_up:
                     ; delete note+up (BS)
                     tst.b   (edit_mode_flag)
                     beq     lbC01EBEA
                     bsr     lbC01EEB0
                     bra     lbC01EBEA
+
+; ===========================================================================
 patt_ins_note:
                     ; insert note (SH_DEL)
                     tst.b   (edit_mode_flag)
                     beq     lbC01EBEA
                     bsr     lbC01EE44
                     bra     lbC01EBEA
+
+; ===========================================================================
 patt_ins_note_down:
                     ; insert note+down (RET)
                     tst.b   (edit_mode_flag)
@@ -1082,6 +1088,8 @@ patt_ins_note_down:
                     bsr     lbC01EE44
                     bsr     next_pattern_row
                     bra     lbC01EBEA
+
+; ===========================================================================
 patt_del_note_inst_fx:
                     ; clear note+inst+effect (AL_DEL)
                     tst.b   (edit_mode_flag)
@@ -1097,6 +1105,8 @@ patt_del_note_inst_fx:
 ascii_MSG1:
                     dc.b    '--- 0000',0
                     even
+
+; ===========================================================================
 patt_del_fx:
                     ; delete effect (AM_DEL)
                     tst.b   (edit_mode_flag)
@@ -1112,6 +1122,8 @@ patt_del_fx:
                     bra     lbC01EBEA
 ascii_MSG2:
                     dc.b    '000',0
+
+; ===========================================================================
 patt_del_note:
                     ; delete note (DEL)
                     tst.b   (edit_mode_flag)
@@ -1124,6 +1136,8 @@ patt_del_note:
                     jsr     (draw_text)
                     bsr     next_pattern_row
                     bra     lbC01EBEA
+
+; ===========================================================================
 patt_del_note_and_quantize:
                     ; DEL+quantpolymove (CT_DEL)
                     tst.b   (edit_mode_flag)
@@ -1400,7 +1414,7 @@ ascii_MSG55:
                     dc.b    '--- 0000',0
                     even
 lbC01EF1E:
-                    cmpi.b  #MIDI_OUT,(midi_mode)
+                    cmp.b   #MIDI_OUT,(midi_mode)
                     bne     lbC01EF5A
                     movem.l d2/a2,-(a7)
                     lea     (OKT_samples_infos),a0
@@ -1645,6 +1659,8 @@ go_to_f9_row_jump:
 ; ===========================================================================
 go_to_f10_row_jump:
                     move.w  (f10_key_row_jump_value),(viewed_pattern_row)
+
+; ===========================================================================
 jump_to_row:
                     bsr     set_caret_to_max_row
 
@@ -2089,6 +2105,8 @@ lbC01F674:
                     bra     draw_pattern
 lbW01F692:
                     dc.w    0
+
+; ===========================================================================
 perform_block_operation:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
@@ -2196,7 +2214,7 @@ cb_note_up_block_current_sample:
 cb_note_up_block:
                     move.b  (a0),d0
                     beq     lbC01F7B0
-                    cmpi.b  #$24,d0
+                    cmp.b   #SMPS_NUMBER,d0
                     beq     lbC01F7B0
                     addq.b  #1,d0
                     move.b  d0,(a0)
@@ -2244,9 +2262,9 @@ cb_octave_up_block_current_sample:
 cb_octave_up_block:
                     move.b  (a0),d0
                     beq     lbC01F800
-                    cmpi.b  #24,d0
+                    cmp.b   #24,d0
                     bgt     lbC01F800
-                    addi.b  #12,d0
+                    add.b   #12,d0
                     move.b  d0,(a0)
 lbC01F800:
                     rts
@@ -2266,9 +2284,9 @@ cb_octave_down_block_current_sample:
                     bne     lbC01F82A
 cb_octave_down_block:
                     move.b  (a0),d0
-                    cmpi.b  #12,d0
+                    cmp.b   #12,d0
                     ble     lbC01F82A
-                    subi.b  #12,d0
+                    sub.b   #12,d0
                     move.b  d0,(a0)
 lbC01F82A:
                     rts
@@ -2471,15 +2489,19 @@ draw_polyphony_status:
 inc_polyphony_channels_count:
                     moveq   #1,d0
                     bra     set_polyphony_channels_count
+
+; ===========================================================================
 dec_polyphony_channels_count:
                     moveq   #-1,d0
+
+; ===========================================================================
 set_polyphony_channels_count:
                     move.w  (polyphony_channels_count),d1
                     add.w   d0,d1
                     bpl     .min
                     moveq   #0,d1
 .min:
-                    cmpi.w  #7,d1
+                    cmp.w   #7,d1
                     ble     .max
                     moveq   #7,d1
 .max:
@@ -2499,6 +2521,8 @@ lbC01FA6C:
 lbC01FA8E:
                     move.w  d0,(caret_pos_x)
                     bra     draw_pattern_caret
+
+; ===========================================================================
 lbC01FA98:
                     move.w  (polyphony_channels_count),d1
                     beq     lbC01FAFC
@@ -2592,15 +2616,19 @@ draw_quantize_amount:
 dec_quantize_amount:
                     moveq   #-1,d0
                     bra     set_quantize_amount
+
+; ===========================================================================
 inc_quantize_amount:
                     moveq   #1,d0
+
+; ===========================================================================
 set_quantize_amount:
                     move.w  (quantize_amount),d1
                     add.w   d0,d1
                     bpl     .min
                     moveq   #0,d1
 .min:
-                    cmpi.w  #32,d1
+                    cmp.w   #32,d1
                     ble     .max
                     moveq   #32,d1
 .max:
@@ -2797,9 +2825,11 @@ draw_current_sample_infos:
                     dc.b    CMD_TEXT,0,2,'        ',0
                     dc.b    CMD_DONE
                     even
+                IFD OKT_AUDIO_VAMPIRE
 .sample_mode_text:
                     dc.b    '8B ',0
                     dc.b    '16B',0
+                ENDC
 
 ; ===========================================================================
 draw_available_memory:
@@ -2836,19 +2866,19 @@ CMax_MSG:
 draw_song_metrics:
                     lea     (current_song_metrics_index,pc),a0
                     addq.w  #1,(a0)
-                    cmpi.w  #3,(a0)
+                    cmp.w   #3,(a0)
                     bcs     .reset
                     clr.w   (a0)
 .reset:
                     move.w  (a0),d0
                     lsl.w   #2,d0
-                    move.l  (song_metrics_text_table,pc,d0.w),a0
+                    move.l  (.song_metrics_text_table,pc,d0.w),a0
                     move.l  a0,(song_metrics_text_ptr)
                     moveq   #0,d0
                     moveq   #0,d1
                     jsr     (process_commands)
                     bra     do_draw_available_memory_and_song_metrics
-song_metrics_text_table:
+.song_metrics_text_table:
                     dc.l    Song_MSG
                     dc.l    Ptts_MSG
                     dc.l    Smps_MSG
@@ -2910,7 +2940,7 @@ do_draw_available_memory_and_song_metrics:
                     add.l   d2,d0
                     bra     .draw_it
 .patterns:
-                    cmpi.w  #1,d0
+                    cmp.w   #1,d0
                     bne     .samples
                     bsr     get_patterns_metrics
                     bra     .draw_it
@@ -3022,6 +3052,8 @@ change_work_sample_size:
 ; ===========================================================================
 set_pattern_bitplane:
                     move.w  (viewed_pattern_row,pc),d0
+
+; ===========================================================================
 set_pattern_bitplane_from_given_pos:
                     move.w  (pattern_bitplane_top_pos),d1
                     add.w   (row_pixels_size,pc),d1
@@ -3068,6 +3100,8 @@ number_of_rows_on_screen:
 ; ===========================================================================
 get_current_pattern_address_and_rows:
                     move.w  (current_viewed_pattern),d0
+
+; ===========================================================================
 get_given_pattern_address_and_rows:
                     lea     (OKT_patterns_list),a0
                     add.w   d0,d0
@@ -3078,7 +3112,7 @@ get_given_pattern_address_and_rows:
 
 ; ===========================================================================
 create_new_empty_pattern:
-                    cmpi.w  #64,(number_of_patterns)
+                    cmp.w   #64,(number_of_patterns)
                     beq     error_no_more_patterns
                     move.l  (current_default_patterns_size),d0
                     ; +2 to store the rows number
@@ -3229,11 +3263,11 @@ get_current_pattern_ascii_number:
                     move.w  (current_viewed_pattern),d0
                     ext.l   d0
                     divu.w  #10,d0
-                    addi.b  #'0',d0
+                    add.b   #'0',d0
                     move.b  d0,d4
                     lsl.w   #8,d4
                     swap    d0
-                    addi.b  #'0',d0
+                    add.b   #'0',d0
                     move.b  d0,d4
                     rts
 
@@ -3325,7 +3359,7 @@ draw_one_pattern_row:
                     bra     draw_selection_marquee
 
 ; ===========================================================================
-lbC0203DC:
+erase_one_pattern_row:
                     move.w  d0,-(a7)
                     bsr     erase_pattern_caret
                     bsr     lbC01F508
@@ -3361,6 +3395,8 @@ draw_pattern_caret:
                     movem.l (a7)+,d0/d1
                     movem.w d0/d1,(old_caret_pos)
                     jmp     (invert_one_char)
+
+; ===========================================================================
 erase_pattern_caret:
                     tst.l   (old_caret_pos)
                     bmi     .no_erase
@@ -3424,7 +3460,7 @@ decode_input_raw_key:
                     beq     .key_control
                     ori.w   #KEY_MOD_CTRL,d0
 .key_control:
-                    cmpi.b  #$40,d0
+                    cmp.b   #$40,d0
                     bhi     .not_printable
                     lea     (keys_lower_case_table,pc),a0
                     btst    #KEY_MOD_SHIFT_BIT,d0
@@ -3438,10 +3474,10 @@ decode_input_raw_key:
                     bra     .printable
 .not_printable:
                     ; between $40 and $5f
-                    cmpi.b  #$5F,d0
+                    cmp.b   #$5F,d0
                     bhi     .nothing_to_do
                     ; $00 to $1f
-                    subi.b  #$40,d0
+                    sub.b   #$40,d0
 .printable:
                     move.w  d0,d1
                     moveq   #EVT_KEY_PRESSED,d0
@@ -3493,6 +3529,8 @@ store_event:
 ; ===========================================================================
 stop_audio_and_process_event:
                     bsr     stop_audio_channels
+
+; ===========================================================================
 process_event:
                     movem.l d2-d4/a1/a2,-(a7)
                     move.l  a0,a2
@@ -3517,7 +3555,7 @@ process_event:
 .loop:
                     move.w  (a0)+,d4
                     beq     .reset
-                    cmpi.w  #EVT_MORE_EVENTS,d4
+                    cmp.w   #EVT_MORE_EVENTS,d4
                     beq     .execute_event_response
                     ; check against retrieved event code
                     cmp.w   d0,d4
@@ -3575,7 +3613,7 @@ get_mouse_coords:
                     bpl     .min_y
                     moveq   #0,d1
 .min_y:
-                    cmpi.w  #SCREEN_WIDTH-1,d0
+                    cmp.w   #SCREEN_WIDTH-1,d0
                     blt     .max_x
                     move.w  #SCREEN_WIDTH-1,d0
 .max_x:
@@ -3694,11 +3732,11 @@ process_commands_sequence:
 .loop:
                     move.w  (a0)+,d0
                     beq     .done
-                    cmpi.w  #1,d0
+                    cmp.w   #1,d0
                     beq     .sequence_layout
-                    cmpi.w  #2,d0
+                    cmp.w   #2,d0
                     beq     .sequence_keys
-                    cmpi.w  #3,d0
+                    cmp.w   #3,d0
                     beq     .sequence_gadgets
                     ; wrong sequence index
                     move.w  #$F00,(_CUSTOM|COLOR00)
@@ -3756,19 +3794,19 @@ fix_gadgets_coords:
 process_events:
                     tst.l   (current_sequence_ptr)
                     beq     error_no_sequence
-                    cmpi.w  #EVT_KEY_PRESSED,d0
+                    cmp.w   #EVT_KEY_PRESSED,d0
                     beq     process_keys_pressed_event
                     tst.b   (pointer_visible_flag)
                     bne     lbC0209FC
-                    cmpi.w  #EVT_MOUSE_MOVED,d0
+                    cmp.w   #EVT_MOUSE_MOVED,d0
                     beq     process_mouse_moved_event
-                    cmpi.w  #EVT_LEFT_PRESSED,d0
+                    cmp.w   #EVT_LEFT_PRESSED,d0
                     beq     process_left_mouse_pressed_event
-                    cmpi.w  #EVT_MOUSE_DELAY_L,d0
+                    cmp.w   #EVT_MOUSE_DELAY_L,d0
                     beq     lbC02098E
-                    cmpi.w  #EVT_RIGHT_PRESSED,d0
+                    cmp.w   #EVT_RIGHT_PRESSED,d0
                     beq     process_right_mouse_pressed_event
-                    cmpi.w  #EVT_MOUSE_DELAY_R,d0
+                    cmp.w   #EVT_MOUSE_DELAY_R,d0
                     beq     lbC0209E2
                     bra     process_done
 
@@ -3853,9 +3891,9 @@ lbC0209E2:
 
 ; ===========================================================================
 lbC0209FC:
-                    cmpi.w  #EVT_RIGHT_PRESSED,d0
+                    cmp.w   #EVT_RIGHT_PRESSED,d0
                     beq     lbC020A10
-                    cmpi.w  #EVT_MOUSE_MOVED_HID,d0
+                    cmp.w   #EVT_MOUSE_MOVED_HID,d0
                     beq     lbC020A0A
                     bra     process_done
 lbC020A0A:
@@ -3973,7 +4011,7 @@ check_gadget_mouse_coords:
                     bls     .no_hit
                     add.b   (9,a0),d1
                     cmp.b   d3,d1
-                    bhi     .got_hit
+                    bhi     .got_a_hit
 .no_hit:
                     ; next coords struct
                     move.l  (a0),d0
@@ -3983,7 +4021,7 @@ check_gadget_mouse_coords:
                     move.w  #$F00,(_CUSTOM|COLOR00)
 .no_match:
                     sub.l   a0,a0
-.got_hit:
+.got_a_hit:
                     movem.l (a7)+,d2/d3
                     rts
 
@@ -4205,7 +4243,7 @@ lbC020D42:
                     movem.l d0-a6,-(a7)
                     tst.w   d2
                     bmi     lbC020D7E
-                    cmpi.w  #1080-1,d2
+                    cmp.w   #1080-1,d2
                     bgt     lbC020D7E
                     cmp.w   d0,d1
                     bgt     lbC020D56
@@ -4213,13 +4251,13 @@ lbC020D42:
 lbC020D56:
                     tst.w   d1
                     bmi     lbC020D7E
-                    cmpi.w  #SCREEN_WIDTH-1,d0
+                    cmp.w   #SCREEN_WIDTH-1,d0
                     bgt     lbC020D7E
                     tst.w   d0
                     bpl     lbC020D66
                     moveq   #0,d0
 lbC020D66:
-                    cmpi.w  #SCREEN_WIDTH-1,d1
+                    cmp.w   #SCREEN_WIDTH-1,d1
                     ble     lbC020D70
                     move.w  #SCREEN_WIDTH-1,d1
 lbC020D70:
@@ -4235,7 +4273,7 @@ lbC020D84:
                     movem.l d0-a6,-(a7)
                     tst.w   d0
                     bmi     lbC020DC0
-                    cmpi.w  #SCREEN_WIDTH-1,d0
+                    cmp.w   #SCREEN_WIDTH-1,d0
                     bgt     lbC020DC0
                     cmp.w   d1,d2
                     bgt     lbC020D98
@@ -4243,13 +4281,13 @@ lbC020D84:
 lbC020D98:
                     tst.w   d2
                     bmi     lbC020DC0
-                    cmpi.w  #1080-1,d1
+                    cmp.w   #1080-1,d1
                     bgt     lbC020DC0
                     tst.w   d1
                     bpl     lbC020DA8
                     moveq   #0,d1
 lbC020DA8:
-                    cmpi.w  #1080-1,d2
+                    cmp.w   #1080-1,d2
                     ble     lbC020DB2
                     move.w  #1080-1,d2
 lbC020DB2:
@@ -4297,12 +4335,14 @@ do_load_song:
                     jsr     (read_from_file)
                     bmi     .error
                     lea     (song_chunk_header_loaded_data),a0
+                    ; patterns patching on
                     st      (pattern_patch_flag)
                     cmpi.l  #'OKTA',(a0)+
                     bne     load_st_mod
                     ; Original
                     cmpi.l  #'SONG',(a0)+
                     beq     .load_okta_mod
+                    ; patterns patching off
                     sf      (pattern_patch_flag)
                     ; Newer Amiga
                     subq.l  #4,a0
@@ -4444,7 +4484,7 @@ lbC020F2C:
                     clr.w   d1
 .no_repeat:
                     move.w  (24,a5),(SMP_VOL,a5)
-                    cmpi.w  #64,(SMP_VOL,a5)
+                    cmp.w   #64,(SMP_VOL,a5)
                     bhi     lbC021024
                     move.w  d1,(SMP_REP_START,a5)
                     move.w  d0,(SMP_REP_LEN,a5)
@@ -4575,7 +4615,7 @@ lbC0210D6:
                     jsr     (read_from_file)
                     bmi     lbC021138
                     ; sample mode
-;                    cmpi.w  #1,(SMP_TYPE,a5)
+;                    cmp.w   #1,(SMP_TYPE,a5)
 ;                    beq     lbC02111E
 ;                    move.l  (address_of_sample_to_load,pc),a0
 ;                    move.l  (length_of_sample_to_load),d0
@@ -4583,7 +4623,7 @@ lbC0210D6:
 lbC02111E:
                     lea     (SMP_INFOS_LEN,a5),a5
                     addq.w  #1,d7
-                    cmpi.w  #SMPS_NUMBER,d7
+                    cmp.w   #SMPS_NUMBER,d7
                     bne     lbC0210D6
                     clr.w   (current_sample_index)
                     bsr     display_main_menu
@@ -4831,7 +4871,7 @@ read_samples_from_okta_song_file:
 .no_patch:
                     lea     (SMP_INFOS_LEN,a5),a5
                     addq.w  #1,d7
-                    cmpi.w  #SMPS_NUMBER,d7
+                    cmp.w   #SMPS_NUMBER,d7
                     bne     .loop
                     clr.w   (current_sample_index)
                     bsr     display_main_menu
@@ -5020,26 +5060,20 @@ read_chunks_content_from_struct:
                     bra     .next_struct_entry
 
 ; ===========================================================================
-; chunk ID.l
+; chunk ID.l (0 ends the list)
 ; chunk size.l
 ; dest.l
 ; default value.w
 CMOD_MSG:
-                    dc.b    'CMOD'
-                    dc.l    8,OKT_channels_modes,1
-                    dc.l    0
+                    CHUNK   'CMOD',8,OKT_channels_modes,1
+                    CHUNK   0
 SAMP_MSG:
-                    dc.b    'SAMP'
-                    dc.l    1152,OKT_samples_infos,0
-                    dc.b    'SPEE'
-                    dc.l    2,OKT_default_speed,6
-                    dc.b    'SLEN'
-                    dc.l    2,lbW01B730,1
-                    dc.b    'PLEN'
-                    dc.l    2,OKT_song_length,1
-                    dc.b    'PATT'
-                    dc.l    128,OKT_patterns,0
-                    dc.l    0
+                    CHUNK   'SAMP',1152,OKT_samples_infos,0
+                    CHUNK   'SPEE',2,OKT_default_speed,6
+                    CHUNK   'SLEN',2,lbW01B730,1
+                    CHUNK   'PLEN',2,OKT_song_length,1
+                    CHUNK   'PATT',128,OKT_patterns,0
+                    CHUNK   0
 
 ; ===========================================================================
 save_song:
@@ -5101,26 +5135,19 @@ lbC0214F0:
 lbC0214F8:
                     moveq   #OK,d0
                     rts
+; chunk ID.l
+; chunk size.l
+; source.l
 CMOD_MSG0:
-                    dc.b    'CMOD'
-                    dc.l    8
-                    dc.l    OKT_channels_modes
-                    dc.b    'SAMP'
-                    dc.l    1152
-                    dc.l    OKT_samples_infos
-                    dc.b    'SPEE'
-                    dc.l    2
-                    dc.l    OKT_default_speed
-                    dc.b    'SLEN'
-                    dc.l    2
-                    dc.l    number_of_patterns
-                    dc.b    'PLEN'
-                    dc.l    2
-                    dc.l    OKT_song_length
-                    dc.b    'PATT'
-                    dc.l    128
-                    dc.l    OKT_patterns
-                    dc.l    0
+                    CHUNK   'CMOD',8,OKT_channels_modes
+                    CHUNK   'SAMP',1152,OKT_samples_infos
+                    CHUNK   'SPEE',2,OKT_default_speed
+                    CHUNK   'SLEN',2,number_of_patterns
+                    CHUNK   'PLEN',2,OKT_song_length
+                    CHUNK   'PATT',128,OKT_patterns
+                    CHUNK   0
+
+; ===========================================================================
 lbC021548:
                     moveq   #0,d7
 lbC02154A:
@@ -5233,7 +5260,7 @@ do_free_all_samples_and_song:
 .loop:
                     bsr     do_free_sample_and_infos
                     addq.w  #1,(current_sample_index)
-                    cmpi.w  #SMPS_NUMBER,(current_sample_index)
+                    cmp.w   #SMPS_NUMBER,(current_sample_index)
                     bne     .loop
                     clr.w   (current_sample_index)
                     bra     display_main_menu
@@ -5474,7 +5501,7 @@ do_load_sample:
                     rts
 lbC02193C:
                     clr.w   (lbW0219F8)
-                    cmpi.w  #1,d0
+                    cmp.w   #1,d0
                     seq     (lbB021A1E)
                     move.w  d0,(lbW0219FA)
                     move.w  (current_sample_index,pc),(lbW0219F6)
@@ -5507,7 +5534,7 @@ lbC02197E:
 lbC0219B0:
                     st      (lbB021A1E)
 lbC0219B6:
-                    bsr     lbC021A20
+                    bsr     load_iff_or_raw_sample
                     bmi     lbC0219E0
                     addq.w  #1,(lbW0219F8)
                     move.w  (lbW0219FA,pc),d0
@@ -5543,7 +5570,9 @@ Overwrite_MSG:
 lbB021A1E:
                     dc.b    0
                     even
-lbC021A20:
+
+; ===========================================================================
+load_iff_or_raw_sample:
                     move.l  a0,(sample_filename_to_load)
                     move.l  a1,(lbL021C1A)
                     sf      (iff_body_sample_load_flag)
@@ -5572,7 +5601,7 @@ lbC021A20:
                     bmi     .done
                     lea     (iff_chunk_load_data,pc),a0
                     ; octave
-                    cmpi.b  #1,(14,a0)
+                    cmp.b   #1,(14,a0)
                     bne     .iff_error
                     ; compression
                     tst.b   (15,a0)
@@ -5662,7 +5691,7 @@ lbC021A20:
                     bmi     .dos_error
 
 ; ===========================================================================
-;                    cmpi.w  #1,(samples_load_mode)
+;                    cmp.w   #1,(samples_load_mode)
 ;                    beq     .done
 ;                    move.l  (iff_sample_address_to_load_ptr,pc),a0
 ;                    move.l  (iff_sample_size_to_load,pc),d0
@@ -5687,9 +5716,8 @@ lbC021BCE:
                     bsr     change_work_sample_size
                     bra     display_main_menu
 VHDR_MSG:
-                    dc.b    'VHDR'
-                    dc.l    20,iff_chunk_load_data,0
-                    dc.l    0
+                    CHUNK   'VHDR',20,iff_chunk_load_data,0
+                    CHUNK   0
 iff_chunk_load_data:
                     dcb.b   20,0
 iff_body_sample_load_flag:
@@ -5773,7 +5801,7 @@ do_save_sample:
 ;                    move.w  (current_sample_index,pc),d0
 ;                    lsl.w   #5,d0
                     ; sample type
-;                    cmpi.w  #1,(a0,d0.w)
+;                    cmp.w   #1,(a0,d0.w)
 ;                    beq     lbC021CDA
 ;                    move.l  (work_sample_address_ptr),a0
 ;                    move.l  (work_sample_size),d0
@@ -5874,8 +5902,8 @@ iff_sample_name:
                     dcb.b   20,0
                     dc.b    'ANNO'
                     dc.l    20
-                    dc.b    'Oktalyzer'
-                    dcb.b   11,0
+                    dc.b    'Oktalyzer v2.0'
+                    dcb.b   20-14,0
                     dc.b    'BODY'
 iff_sample_size:
                     dc.l    0
@@ -5892,7 +5920,7 @@ set_current_sample_number:
 ; ===========================================================================
 inc_sample_number:
                     lea     (current_sample_index,pc),a0
-                    cmpi.w  #SMPS_NUMBER-1,(a0)
+                    cmp.w   #SMPS_NUMBER-1,(a0)
                     beq     error_no_more_samples
                     addq.w  #1,(a0)
                     bsr     change_work_sample_size
@@ -5919,7 +5947,7 @@ inc_sample_volume:
                     move.w  (current_sample_index,pc),d0
                     lsl.w   #5,d0
                     add.w   d0,a0
-                    cmpi.w  #64,(a0)
+                    cmp.w   #64,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     display_main_menu
@@ -6060,7 +6088,7 @@ create_new_empty_sample:
 
 ; ===========================================================================
 inc_replay_speed:
-                    cmpi.w  #$3F,(OKT_default_speed)
+                    cmp.w   #$3F,(OKT_default_speed)
                     beq     .max
                     addq.w  #1,(OKT_default_speed)
 .max:
@@ -6068,7 +6096,7 @@ inc_replay_speed:
 
 ; ===========================================================================
 dec_replay_speed:
-                    cmpi.w  #1,(OKT_default_speed)
+                    cmp.w   #1,(OKT_default_speed)
                     beq     .min
                     subq.w  #1,(OKT_default_speed)
 .min:
@@ -6112,7 +6140,7 @@ dec_pattern:
 
 ; ===========================================================================
 dec_song_length:
-                    cmpi.w  #1,(OKT_song_length)
+                    cmp.w   #1,(OKT_song_length)
                     beq     error_no_more_positions
                     subq.w  #1,(OKT_song_length)
                     move.w  (OKT_song_length),d0
@@ -6125,40 +6153,40 @@ dec_song_length:
 
 ; ===========================================================================
 inc_song_length:
-                    cmpi.w  #128,(OKT_song_length)
+                    cmp.w   #128,(OKT_song_length)
                     beq     error_no_more_positions
                     addq.w  #1,(OKT_song_length)
                     bra     display_main_menu
 
 ; ===========================================================================
 insert_song_position:
-                    cmpi.w  #128,(OKT_song_length)
+                    cmp.w   #128,(OKT_song_length)
                     beq     error_no_more_positions
                     lea     (OKT_patterns,pc),a0
                     add.w   (current_song_position),a0
                     lea     (OKT_patterns+127,pc),a1
-lbC0220FE:
+.shift_loop:
                     cmpa.l  a0,a1
-                    beq     lbC022108
+                    beq     .done_shift
                     move.b  -(a1),(1,a1)
-                    bra     lbC0220FE
-lbC022108:
+                    bra     .shift_loop
+.done_shift:
                     sf      (a0)
                     bra     inc_song_length
 
 ; ===========================================================================
 delete_song_position:
-                    cmpi.w  #1,(OKT_song_length)
+                    cmp.w   #1,(OKT_song_length)
                     beq     error_no_more_positions
                     lea     (OKT_patterns,pc),a0
                     add.w   (current_song_position),a0
                     lea     (OKT_patterns+127,pc),a1
-lbC022126:
+.shift_loop:
                     cmpa.l  a1,a0
-                    beq     lbC022130
+                    beq     .done_shift
                     move.b  (1,a0),(a0)+
-                    bra     lbC022126
-lbC022130:
+                    bra     .shift_loop
+.done_shift:
                     sf      (a0)
                     bra     dec_song_length
 
@@ -6168,15 +6196,15 @@ dec_patterns:
                     subq.w  #1,d0
                     lea     (OKT_patterns,pc),a0
                     moveq   #128-1,d1
-lbC022144:
+.search_pattern:
                     cmp.b   (a0)+,d0
-                    dbeq    d1,lbC022144
+                    dbeq    d1,.search_pattern
                     beq     error_pattern_in_use
                     cmp.w   (current_viewed_pattern),d0
-                    bne     lbC022160
+                    bne     .refresh_current
                     subq.w  #1,(current_viewed_pattern)
                     bsr     draw_pattern
-lbC022160:
+.refresh_current:
                     bsr     free_last_pattern
                     bra     display_main_menu
 
@@ -6192,21 +6220,24 @@ dec_current_pattern_rows:
 ; ===========================================================================
 inc_current_pattern_rows:
                     moveq   #1,d0
+
+; ===========================================================================
 change_current_pattern_rows:
                     move.w  d0,d1
                     bsr     get_current_pattern_address_and_rows
                     move.w  d0,(lbW0221DC)
                     add.w   d1,d0
-                    cmpi.w  #1,d0
+                    cmp.w   #1,d0
                     bpl     .min
                     moveq   #1,d0
 .min:
-                    cmpi.w  #128,d0
+                    cmp.w   #128,d0
                     ble     .max
                     move.w  #128,d0
 .max:
                     move.w  d0,-(a7)
                     bsr     renew_current_pattern
+                    ; no flags change
                     movem.w (a7)+,d0
                     bmi     lbC0221DA
                     move.w  d0,d1
@@ -6223,7 +6254,7 @@ lbC0221A4:
 lbC0221BA:
                     subq.w  #1,d0
                     movem.w d0/d1,-(a7)
-                    bsr     lbC0203DC
+                    bsr     erase_one_pattern_row
                     movem.w (a7)+,d0/d1
                     bra     lbC0221A4
 lbC0221CA:
@@ -6341,9 +6372,13 @@ play_song:
                     st      (pattern_play_flag)
                     move.w  (current_song_position),(OKT_song_pos)
                     bra     go_play
+
+; ===========================================================================
 play_pattern:
                     sf      (pattern_play_flag)
                     move.w  (current_viewed_pattern),(OKT_song_pos)
+
+; ===========================================================================
 go_play:
                     bsr     free_work_sample
                     bsr     clear_vumeters
@@ -6363,7 +6398,7 @@ go_play:
                     move.w  (OKT_song_pos),(current_song_position)
                     bra     lbC02230C
 lbC0222E4:
-                    cmpi.b  #2,(lbB01BC6B)
+                    cmp.b   #2,(lbB01BC6B)
                     bne     lbC02230C
                     move.w  (lbW01B2B6),d0
                     bmi     lbC02230C
@@ -6389,9 +6424,9 @@ lbW022318:
 lbC0225F6:
                     btst    #15,d1
                     bne     lbC022608
-                    cmpi.w  #96,d1
+                    cmp.w   #96,d1
                     beq     lbC02261E
-                    cmpi.w  #5,d1
+                    cmp.w   #5,d1
                     beq     lbC022612
 lbC022608:
                     move.w  d1,(lbW022638)
@@ -6515,13 +6550,13 @@ midi_out_name:
 receive_bytes_from_ser:
                     move.w  (_CUSTOM|SERDATR),d0
                     move.w  d1,(_CUSTOM|INTREQ)
-                    cmpi.b  #MIDI_IN,(midi_mode)
+                    cmp.b   #MIDI_IN,(midi_mode)
                     bne     lbC0228DC
                     movem.l d0-d3/a0,-(a7)
                     move.w  (_CUSTOM|SERDATR),d0
                     btst    #7,d0
                     bne     lbC02289E
-                    cmpi.b  #$90,(lbW0228E2)
+                    cmp.b   #$90,(lbW0228E2)
                     bne     lbC02286E
                     lea     (lbB0228DE,pc),a0
                     add.w   (lbB0228E0,pc),a0
@@ -6537,7 +6572,7 @@ receive_bytes_from_ser:
                     bsr     store_event
                     bra     lbC0228D8
 lbC02286E:
-                    cmpi.b  #$80,(lbW0228E2)
+                    cmp.b   #$80,(lbW0228E2)
                     bne     lbC0228D8
                     lea     (lbB0228DE,pc),a0
                     add.w   (lbB0228E0,pc),a0
@@ -6552,7 +6587,7 @@ lbC02286E:
                     bsr     store_event
                     bra     lbC0228D8
 lbC02289E:
-                    cmpi.b  #$90,d0
+                    cmp.b   #$90,d0
                     bne     lbC0228B2
                     move.b  d0,(lbW0228E2)
                     clr.w   (lbB0228E0)
@@ -6564,9 +6599,9 @@ lbC0228B2:
                     clr.w   (lbB0228E0)
                     bra     lbC0228D8
 lbC0228C6:
-                    cmpi.b  #$F8,d0
+                    cmp.b   #$F8,d0
                     beq     lbC0228D8
-                    cmpi.b  #$FE,d0
+                    cmp.b   #$FE,d0
                     beq     lbC0228D8
                     sf      (lbW0228E2)
 lbC0228D8:
@@ -6734,15 +6769,15 @@ lbC022AF0:
 lbC022AFE:
                     rts
 lbC022B00:
-                    cmpi.b  #MIDI_IN,(midi_mode)
+                    cmp.b   #MIDI_IN,(midi_mode)
                     bne     lbC022B5E
                     lea     (lbW02263A,pc),a0
                     move.b  (a0),d0
                     beq     lbC022B5E
                     sf      (a0)
-                    subi.b  #$30,d0
+                    sub.b   #$30,d0
                     bmi     lbC022B24
-                    cmpi.b  #$24,d0
+                    cmp.b   #$24,d0
                     bge     lbC022B24
                     addq.w  #1,d0
                     bra     lbC022B26
@@ -6764,7 +6799,10 @@ lbC022B46:
                     ext.w   d0
                     bsr     lbC022D06
                     bsr     lbC01FB24
+                    ; ????
+                IFND OKT_AUDIO_VAMPIRE
                     bsr     OKT_fill_double_channels
+                ENDC
                     bsr     lbC0231DC
                     bra     lbC022C6A
 lbC022B5E:
@@ -6776,42 +6814,42 @@ lbC022B60:
                     clr.w   (a0)
                     btst    #11,d0
                     beq     lbC022B92
-                    cmpi.b  #$31,d0
+                    cmp.b   #$31,d0
                     beq     dec_quantize_amount
-                    cmpi.b  #$32,d0
+                    cmp.b   #$32,d0
                     beq     inc_quantize_amount
-                    cmpi.b  #$34,d0
+                    cmp.b   #$34,d0
                     beq     dec_polyphony_channels_count
-                    cmpi.b  #$35,d0
+                    cmp.b   #$35,d0
                     beq     inc_polyphony_channels_count
 lbC022B92:
-                    cmpi.b  #$C,d0
+                    cmp.b   #$C,d0
                     beq     dec_current_sample_number
-                    cmpi.b  #$D,d0
+                    cmp.b   #$D,d0
                     beq     inc_current_sample_number
                     btst    #$F,d0
                     bne     lbC022C3A
                     btst    #$B,d0
                     beq     lbC022BB8
-                    cmpi.b  #$37,d0
+                    cmp.b   #$37,d0
                     beq     cycle_midi_modes_and_draw
 lbC022BB8:
-                    cmpi.b  #$F,d0
+                    cmp.b   #$F,d0
                     beq     lbC022CD6
-                    cmpi.b  #$E,d0
+                    cmp.b   #$E,d0
                     beq     lbC022CEE
-                    cmpi.b  #2,d0
+                    cmp.b   #2,d0
                     beq     switch_edit_mode
-                    cmpi.b  #$10,d0
+                    cmp.b   #$10,d0
                     beq     lbC01F29C
-                    cmpi.b  #$11,d0
+                    cmp.b   #$11,d0
                     beq     lbC01F2B6
-                    cmpi.b  #$12,d0
+                    cmp.b   #$12,d0
                     blt     lbC022BEE
-                    cmpi.b  #$19,d0
+                    cmp.b   #$19,d0
                     ble     lbC022CAA
 lbC022BEE:
-                    cmpi.b  #$1F,d0
+                    cmp.b   #$1F,d0
                     beq     lbC01FAFE
                     bsr     lbC01F06E
                     bmi     lbC022C3A
@@ -6834,7 +6872,10 @@ lbC022C24:
 lbC022C28:
                     bsr     lbC022D06
                     bsr     lbC01FB24
+                    ; ????
+                IFND OKT_AUDIO_VAMPIRE
                     bsr     OKT_fill_double_channels
+                ENDC
                     bsr     lbC0231DC
                     bra     lbC022C6A
 lbC022C3A:
@@ -6869,7 +6910,7 @@ dec_current_sample_number:
 ; ===========================================================================
 inc_current_sample_number:
                     lea     (current_sample_index,pc),a0
-                    cmpi.w  #SMPS_NUMBER-1,(a0)
+                    cmp.w   #SMPS_NUMBER-1,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     draw_current_sample_infos
@@ -6878,7 +6919,7 @@ inc_current_sample_number:
 
 ; ===========================================================================
 lbC022CAA:
-                    subi.b  #18,d0
+                    sub.b   #18,d0
                     ext.w   d0
                     lea     (lbL02A76A),a0
                     move.b  (a0,d0.w),d0
@@ -7038,9 +7079,10 @@ blue_on_m:
 clear_rows_palette:
                     lea     main_back_palette+2,a0
                     moveq   #12,d6
-                    move.w  max_copper_lines,d7
+                    move.w  (max_copper_lines),d7
+                    move.w  (main_back_color),d0
 .clear:
-                    move.w  (main_back_color),(a0)
+                    move.w  d0,(a0)
                     add.w   d6,a0
                     dbf     d7,.clear
                     rts
@@ -7077,7 +7119,7 @@ current_song_position:
                     dc.w    0
 
 ; ===========================================================================
-; ===========================================================================
+; Replay
 ; ===========================================================================
 OKT_init_variables:
                     lea     (OKT_channels_data),a0
@@ -7087,24 +7129,22 @@ OKT_init_variables:
                     dbra    d0,.OKT_clear_channels_data
                     lea     (OKT_channels_modes),a0
                     lea     (OKT_channels_data),a1
-                    moveq   #4-1,d0
                     moveq   #0,d1
+                    moveq   #4-1,d0
                 IFND OKT_AUDIO_VAMPIRE
                     move.w  #%10000000,d2
                     moveq   #%1,d3
                     clr.w   (OKT_audio_int_bit)
                     clr.w   (OKT_audio_int_single_bit)
                     clr.w   (OKT_double_channels)
+                ELSE
+                    move.w  #-1,(OKT_channels)
                 ENDC
 .OKT_get_channels_size:
-                    move.l  #OKT_empty_waveform,(CHAN_SMP_REP_START,a1)
-                    move.l  #OKT_empty_waveform,(CHAN_SMP_REP_START+CHAN_LEN,a1)
-                    move.w  #2/2,(CHAN_SMP_REP_LEN_S,a1)
-                    move.w  #2/2,(CHAN_SMP_REP_LEN_S+CHAN_LEN,a1)
+                IFND OKT_AUDIO_VAMPIRE
                     tst.w   (a0)
                     sne     (CHAN_TYPE,a1)
                     sne     (CHAN_TYPE+CHAN_LEN,a1)
-                IFND OKT_AUDIO_VAMPIRE
                     beq     .OKT_not_doubled
                     or.w    d3,(OKT_double_channels)
                     tst.w   (OKT_audio_int_single_bit)
@@ -7115,9 +7155,15 @@ OKT_init_variables:
 .OKT_not_doubled:
                     add.w   d2,d2
                     add.w   d3,d3
+                    lea     (CHAN_LEN*2,a1),a1
+                ELSE
+                    addq.w  #1,(OKT_channels)
+                    tst.w   (a0)
+                    beq     .OKT_not_doubled
+                    addq.w  #1,(OKT_channels)
+.OKT_not_doubled:
                 ENDC
                     add.w   (a0)+,d1
-                    lea     (CHAN_LEN*2,a1),a1
                     dbra    d0,.OKT_get_channels_size
                     addq.w  #4,d1
                     add.w   d1,d1
@@ -7134,6 +7180,7 @@ OKT_init_variables:
                     move.l  #$03020100,(a0)+
                     ; volumes at max
                     move.l  #$40404040,d0
+                    ; OKT_channels_volumes
                     move.l  d0,(a0)+
                     move.l  d0,(a0)
                     bsr     OKT_set_current_pattern
@@ -7144,6 +7191,7 @@ OKT_init_variables:
                     move.w  (caret_pos_x),d0
                     divu.w  #5,d0
                     move.w  d0,(lbW01B2BA)
+                    ; something to do with midi...
                     move.w  (lbW01B2BA),(lbW01B2B6)
                     move.w  #-1,(OKT_next_song_pos)
                     move.w  (OKT_default_speed),(OKT_current_speed)
@@ -7265,17 +7313,22 @@ OKT_set_hw_regs:
                     move.w  (OKT_action_cycle,pc),d0
                     bne     OKT_no_new_row
 lbC0231DC:
+                    ; final DMA value
                     moveq   #0,d4
+                    ; first DMA bit
                     moveq   #1,d5
+                IFND OKT_AUDIO_VAMPIRE
                     bsr     OKT_fill_double_channels
+                ENDC
                     bsr     OKT_fill_single_channels
                     or.w    d4,(OKT_dmacon)
 OKT_no_new_row:
-                    cmpi.b  #MIDI_OUT,(midi_mode)
+                IFND OKT_AUDIO_VAMPIRE
+                    cmp.b   #MIDI_OUT,(midi_mode)
                     beq     .OKT_midi_out
                     bsr     OKT_handle_effects_double_channels
+                ENDC
                     bsr     OKT_handle_effects_single_channels
-                IFND OKT_AUDIO_VAMPIRE
                     move.b  (OKT_filter_status,pc),d0
                     beq     .OKT_blink
                     bclr    #1,(CIAB)
@@ -7283,32 +7336,40 @@ OKT_no_new_row:
 .OKT_blink:
                     bset    #1,(CIAB)
 .OKT_set_hw_volumes:
-                ENDC
                     ; set hw volumes
                     lea     (OKT_channels_volumes,pc),a0
                     lea     (_CUSTOM|OKT_AUDIO_BASE),a1
                     lea     (OKT_channels_data),a3
+                    moveq   #0,d3
                 IFD OKT_AUDIO_VAMPIRE
                     lea     (OKT_panning_table,pc),a4
-                ENDC
-                    moveq   #0,d3
+                    move.w  (OKT_channels,pc),d7
+                ELSE
                     moveq   #8-1,d7
+                ENDC
 .OKT_loop:
+                IFND OKT_AUDIO_VAMPIRE
                     tst.b   (CHAN_TYPE,a3)
                     bne     .OKT_skip_double_channel
+                ENDC
                     moveq   #0,d0
                     move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d3
                     move.b  (a0,d3.w),d0
                     OKT_SET_AUDIO_VOL d0,a1
-                    lea     (CHAN_LEN*2,a3),a3
                     lea     (OKT_AUDIO_SIZE,a1),a1
+                IFND OKT_AUDIO_VAMPIRE
+                    lea     (CHAN_LEN*2,a3),a3
                     subq.w  #1,d7
+                ELSE
+                    lea     (CHAN_LEN,a3),a3
+                ENDC
                     dbra    d7,.OKT_loop
 .OKT_midi_out:
                     rts
-.OKT_skip_double_channel:
                 IFND OKT_AUDIO_VAMPIRE
-                    ; software channels are hw vol. max
+.OKT_skip_double_channel:
+                    ; software channels are all hw vol. max
+                    ; on double channels
                     moveq   #64,d0
                     OKT_SET_AUDIO_VOL d0,a1
                     lea     (CHAN_LEN*2,a3),a3
@@ -7316,30 +7377,14 @@ OKT_no_new_row:
                     subq.w  #1,d7
                     dbra    d7,.OKT_loop
                     rts
-                ELSE
-                    moveq   #0,d0
-                    move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d3
-                    move.b  (a0,d3.w),d0
-                    OKT_SET_AUDIO_PAN
-                    OKT_SET_AUDIO_VOL d0,a1
-                    lea     (CHAN_LEN,a3),a3
-                    lea     (OKT_AUDIO_SIZE,a1),a1
-                    subq.w  #1,d7
-                    moveq   #0,d0
-                    move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d3
-                    move.b  (a0,d3.w),d0
-                    OKT_SET_AUDIO_PAN
-                    OKT_SET_AUDIO_VOL d0,a1
-                    lea     (CHAN_LEN,a3),a3
-                    lea     (OKT_AUDIO_SIZE,a1),a1
-                    dbra    d7,.OKT_loop
-                    rts
                 ENDC
 
 ; ===========================================================================
 OKT_turn_dma_on:
-                    cmpi.b  #MIDI_OUT,(midi_mode)
+                IFND OKT_AUDIO_VAMPIRE
+                    cmp.b   #MIDI_OUT,(midi_mode)
                     beq     .OKT_no_channels
+                ENDC
                     lea     (OKT_dmacon,pc),a0
                     move.w  (a0),d0
                     beq     .OKT_no_channels
@@ -7364,10 +7409,12 @@ OKT_turn_dma_on:
                     btst    d1,d0
                     beq     .OKT_set_channel
                     OKT_SET_AUDIO_ADR CHAN_SMP_REP_START-CHAN_SMP_REP_START(a1),a4
-                    OKT_SET_AUDIO_LEN CHAN_SMP_REP_LEN_S-CHAN_SMP_REP_START(a1),a4
+                    moveq   #0,d2
+                    move.w  CHAN_SMP_REP_LEN_S-CHAN_SMP_REP_START(a1),d2
+                    OKT_SET_AUDIO_LEN d2,a4
 .OKT_set_channel:
                 IFND OKT_AUDIO_VAMPIRE
-                    lea     ((CHAN_LEN*2),a1),a1
+                    lea     (CHAN_LEN*2,a1),a1
                 ELSE
                     lea     (CHAN_LEN,a1),a1
                 ENDC
@@ -7378,13 +7425,11 @@ OKT_turn_dma_on:
                     rts
 
 ; ===========================================================================
+                IFND OKT_AUDIO_VAMPIRE
 OKT_fill_double_channels:
                     lea     (OKT_samples_table),a0
                     lea     (OKT_pattern_line_buffer),a2
                     lea     (OKT_channels_data),a3
-                IFD OKT_AUDIO_VAMPIRE
-                    lea     (_CUSTOM|OKT_AUDIO_BASE),a4
-                ENDC
                     move.b  (channels_mute_flags),d6
                     moveq   #8-1,d7
 .OKT_loop:
@@ -7392,35 +7437,17 @@ OKT_fill_double_channels:
                     bne     .OKT_fill_data
                     addq.w  #4,a2
                     lea     (CHAN_LEN*2,a3),a3
-                IFD OKT_AUDIO_VAMPIRE
-                    lea     (OKT_AUDIO_SIZE,a4),a4
-                ENDC
                     subq.w  #1,d7
                     dbra    d7,.OKT_loop
                     rts
 .OKT_fill_data:
-                IFND OKT_AUDIO_VAMPIRE
                     bsr     OKT_fill_double_channel_data
                     subq.w  #1,d7
                     bsr     OKT_fill_double_channel_data
-                ELSE
-                    bsr     OKT_fill_single_channel_data
-                    add.w   d5,d5
-                    addq.w  #4,a2
-                    lea     (CHAN_LEN,a3),a3
-                    lea     (OKT_AUDIO_SIZE,a4),a4
-                    subq.w  #1,d7
-                    bsr     OKT_fill_single_channel_data
-                    add.w   d5,d5
-                    addq.w  #4,a2
-                    lea     (CHAN_LEN,a3),a3
-                    lea     (OKT_AUDIO_SIZE,a4),a4
-                ENDC
                     dbra    d7,.OKT_loop
                     rts
 
 ; ===========================================================================
-                IFND OKT_AUDIO_VAMPIRE
 OKT_fill_double_channel_data:
                     btst    d7,d6
                     beq     .OKT_no_data
@@ -7430,7 +7457,7 @@ OKT_fill_double_channel_data:
                     beq     .OKT_no_data
                     subq.w  #1,d3
                     ; === MIDI
-                    cmpi.b  #MIDI_OUT,(midi_mode)
+                    cmp.b   #MIDI_OUT,(midi_mode)
                     bne     .OKT_no_midi_out
                     movem.l d0-d4/a0/a1,-(a7)
                     move.b  d7,d4
@@ -7443,9 +7470,9 @@ OKT_fill_double_channel_data:
                     move.b  d3,d1
                     addq.b  #1,d1
                     move.b  #64,d2
-                    cmpi.b  #31,(2,a2)
+                    cmp.b   #31,(2,a2)
                     bne     .OKT_max
-                    cmpi.b  #64,(3,a2)
+                    cmp.b   #64,(3,a2)
                     bhi     .OKT_max
                     move.b  (3,a2),d2
 .OKT_max:
@@ -7471,7 +7498,7 @@ OKT_fill_double_channel_data:
                     add.w   d0,a1
                     ; starting length
                     move.l  (SMP_LEN,a1),d0
-                     ; that was a bug
+                    ; that was a bug
                     bclr    #0,d0
                     ; repeat at start by default
                     move.l  d0,(CHAN_SMP_PROC_LEN_D,a3)
@@ -7517,18 +7544,30 @@ OKT_fill_single_channels:
                     lea     (_CUSTOM|OKT_AUDIO_BASE),a4
                     lea     (OKT_periods_table,pc),a5
                     move.b  (channels_mute_flags),d6
+                IFD OKT_AUDIO_VAMPIRE
+                    move.w  (OKT_channels,pc),d7
+                ELSE
                     moveq   #8-1,d7
+                ENDC
 .OKT_loop:
+                IFND OKT_AUDIO_VAMPIRE
                     tst.b   (CHAN_TYPE,a3)
                     bne     .OKT_skip_double_channel
+                ENDC
                     bsr     OKT_fill_single_channel_data
                     addq.w  #4,a2
+                IFND OKT_AUDIO_VAMPIRE
                     lea     (CHAN_LEN*2,a3),a3
-                    lea     (OKT_AUDIO_SIZE,a4),a4
-                    add.w   d5,d5
                     subq.w  #1,d7
+                ELSE
+                    lea     (CHAN_LEN,a3),a3
+                ENDC
+                    lea     (OKT_AUDIO_SIZE,a4),a4
+                    ; dma channel bit
+                    add.w   d5,d5
                     dbra    d7,.OKT_loop
                     rts
+                IFND OKT_AUDIO_VAMPIRE
 .OKT_skip_double_channel:
                     addq.w  #8,a2
                     lea     (CHAN_LEN*2,a3),a3
@@ -7537,6 +7576,7 @@ OKT_fill_single_channels:
                     subq.w  #1,d7
                     dbra    d7,.OKT_loop
                     rts
+                ENDC
 
 ; ===========================================================================
 OKT_fill_single_channel_data:
@@ -7546,7 +7586,8 @@ OKT_fill_single_channel_data:
                     move.b  (a2),d3
                     beq     .OKT_no_data
                     subq.w  #1,d3
-                    cmpi.b  #MIDI_OUT,(midi_mode)
+                IFND OKT_AUDIO_VAMPIRE
+                    cmp.b   #MIDI_OUT,(midi_mode)
                     bne     .OKT_no_midi_out
                     movem.l d0-d4/a0/a1,-(a7)
                     move.b  d7,d4
@@ -7562,10 +7603,10 @@ OKT_fill_single_channel_data:
                     addq.b  #1,d1
                     ; volume
                     move.b  (SMP_VOL+1,a1),d2
-                    ; volume effect1
-                    cmpi.b  #31,(2,a2)
+                    ; volume effect
+                    cmp.b   #31,(2,a2)
                     bne     .OKT_max
-                    cmpi.b  #64,(3,a2)
+                    cmp.b   #64,(3,a2)
                     bhi     .OKT_max
                     ; use volume effect data
                     move.b  (3,a2),d2
@@ -7577,6 +7618,7 @@ OKT_fill_single_channel_data:
                     movem.l (a7)+,d0-d4/a0/a1
                     bra     .OKT_done_midi_out
 .OKT_no_midi_out:
+                ENDC
                     moveq   #0,d0
                     move.b  (1,a2),d0
                     lsl.w   #3,d0
@@ -7589,7 +7631,6 @@ OKT_fill_single_channel_data:
                     ; length
                     move.l  (SMP_LEN,a1),d1
                     lsr.l   #1,d1
-                    tst.w   d1
                     beq     .OKT_no_data
                     OKT_SET_AUDIO_DMA d5
                     or.w    d5,d4
@@ -7597,7 +7638,9 @@ OKT_fill_single_channel_data:
                     OKT_SET_AUDIO_ADR d2,a4
                     ; 8/16 bit
                 IFD OKT_AUDIO_VAMPIRE
-                    OKT_SET_AUDIO_CTRL SMP_TYPE(a1),a4
+;                    OKT_SET_AUDIO_CTRL SMP_TYPE(a1),a4
+                    ; TODO: temporary
+                    OKT_SET_AUDIO_CTRL #0,a4
                 ENDC
                     ; note index
                     move.w  d3,(CHAN_NOTE_S,a3)
@@ -7610,15 +7653,18 @@ OKT_fill_single_channel_data:
                     lea     (OKT_channels_volumes,pc),a0
                     moveq   #0,d0
                     move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d0
+                    ; default sample volume
                     move.b  (SMP_VOL+1,a1),(a0,d0.w)
                     move.l  (a7)+,a0
 .OKT_done_midi_out:
                     or.w    #(1<<VIS_TRIG_VUMETERS),(refresh_visual)
                     bset    d7,(trigger_vumeters_bits)
-                    cmpi.b  #MIDI_OUT,(midi_mode)
+                IFND OKT_AUDIO_VAMPIRE
+                    cmp.b   #MIDI_OUT,(midi_mode)
                     beq     .OKT_no_data
-                    moveq   #0,d0
+                ENDC
                     ; repeat length
+                    moveq   #0,d0
                     move.w  (SMP_REP_LEN,a1),d0
                     bne     .OKT_real_repeat
                     ; length before repeat
@@ -7632,7 +7678,7 @@ OKT_fill_single_channel_data:
                     moveq   #0,d1
                     move.w  (SMP_REP_START,a1),d1
                     ; length + length before
-                    add.w   d1,d0
+                    add.l   d1,d0
                     ; length
                     OKT_SET_AUDIO_LEN d0,a4
                     add.l   d1,d1
@@ -7641,34 +7687,24 @@ OKT_fill_single_channel_data:
                     rts
 
 ; ===========================================================================
+                IFND OKT_AUDIO_VAMPIRE
 OKT_handle_effects_double_channels:
                     lea     (OKT_pattern_line_buffer+2),a2
                     lea     (OKT_channels_data),a3
-                IFD OKT_AUDIO_VAMPIRE
-                    lea     (_CUSTOM|OKT_AUDIO_BASE),a4
-                    lea     (OKT_periods_table,pc),a5
-                ENDC
                     move.b  (channels_mute_flags),d6
                     moveq   #8-1,d7
-.OKT_PLoop:
+.OKT_loop:
                     tst.b   (CHAN_TYPE,a3)
                     bne     .OKT_process_effect
                     addq.w  #4,a2
                     lea     (CHAN_LEN*2,a3),a3
-                IFD OKT_AUDIO_VAMPIRE
-                    lea     (OKT_AUDIO_SIZE,a4),a4
-                ENDC
                     subq.w  #1,d7
-                    dbra    d7,.OKT_PLoop
+                    dbra    d7,.OKT_loop
                     rts
 
 ; ===========================================================================
 .OKT_process_effect:
-                IFND OKT_AUDIO_VAMPIRE
                     lea     (OKT_effects_table_d,pc),a1
-                ELSE
-                    lea     (OKT_effects_table_s,pc),a1
-                ENDC
                     btst    d7,d6
                     beq     .OKT_no_effect_l
                     moveq   #0,d0
@@ -7682,9 +7718,6 @@ OKT_handle_effects_double_channels:
 .OKT_no_effect_l:
                     addq.w  #4,a2
                     lea     (CHAN_LEN,a3),a3
-                IFD OKT_AUDIO_VAMPIRE
-                    lea     (OKT_AUDIO_SIZE,a4),a4
-                ENDC
                     subq.w  #1,d7
                     btst    d7,d6
                     beq     .OKT_no_effect_r
@@ -7699,12 +7732,8 @@ OKT_handle_effects_double_channels:
 .OKT_no_effect_r:
                     addq.w  #4,a2
                     lea     (CHAN_LEN,a3),a3
-                IFD OKT_AUDIO_VAMPIRE
-                    lea     (OKT_AUDIO_SIZE,a4),a4
-                ENDC
-                    dbra    d7,.OKT_PLoop
+                    dbra    d7,.OKT_loop
                     rts
-                IFND OKT_AUDIO_VAMPIRE
 OKT_effects_table_d:
                     ;  0  1  2
                     dc.w    0,                                      0,                                  0
@@ -7735,24 +7764,33 @@ OKT_effects_table_d:
 ; ===========================================================================
 OKT_handle_effects_single_channels:
                     ; no effects in midi out mode
-                    cmpi.b  #MIDI_OUT,(midi_mode)
+                IFND OKT_AUDIO_VAMPIRE
+                    cmp.b   #MIDI_OUT,(midi_mode)
                     beq     .OKT_midi_out
+                ENDC
                     lea     (OKT_pattern_line_buffer+2),a2
                     lea     (OKT_channels_data),a3
                     lea     (_CUSTOM|OKT_AUDIO_BASE),a4
                     lea     (OKT_periods_table,pc),a5
                     move.b  (channels_mute_flags),d6
+                IFD OKT_AUDIO_VAMPIRE
+                    move.w  (OKT_channels,pc),d7
+                ELSE
                     moveq   #8-1,d7
+                ENDC
 .OKT_loop:
+                IFND OKT_AUDIO_VAMPIRE
                     tst.b   (CHAN_TYPE,a3)
                     beq     .OKT_process_effect
+                    ; skip double ones
                     addq.w  #8,a2
-                    lea     (CHAN_LEN*2,a3),a3
                     lea     (OKT_AUDIO_SIZE,a4),a4
+                    lea     (CHAN_LEN*2,a3),a3
                     subq.w  #1,d7
                     dbra    d7,.OKT_loop
 .OKT_midi_out:
                     rts
+                ENDC
 
 ; ===========================================================================
 .OKT_process_effect:
@@ -7770,9 +7808,13 @@ OKT_handle_effects_single_channels:
                     jsr     (OKT_effects_table_s,pc,d0.w)
 .OKT_no_effect:
                     addq.w  #4,a2
-                    lea     (CHAN_LEN*2,a3),a3
                     lea     (OKT_AUDIO_SIZE,a4),a4
+                IFND OKT_AUDIO_VAMPIRE
+                    lea     (CHAN_LEN*2,a3),a3
                     subq.w  #1,d7
+                ELSE
+                    lea     (CHAN_LEN,a3),a3
+                ENDC
                     dbra    d7,.OKT_loop
                     rts
 OKT_effects_table_s:
@@ -7804,7 +7846,7 @@ OKT_effects_table_s:
 ; ===========================================================================
 OKT_port_u:
                     sub.w   d1,(CHAN_PERIOD_S,a3)
-                    cmpi.w  #$71,(CHAN_PERIOD_S,a3)
+                    cmp.w   #$71,(CHAN_PERIOD_S,a3)
                     bge     .OKT_min
                     move.w  #$71,(CHAN_PERIOD_S,a3)
 .OKT_min:
@@ -7814,7 +7856,7 @@ OKT_port_u:
 ; ===========================================================================
 OKT_port_d:
                     add.w   d1,(CHAN_PERIOD_S,a3)
-                    cmpi.w  #$358,(CHAN_PERIOD_S,a3)
+                    cmp.w   #$358,(CHAN_PERIOD_S,a3)
                     ble     .OKT_max
                     move.w  #$358,(CHAN_PERIOD_S,a3)
 .OKT_max:
@@ -7953,7 +7995,7 @@ OKT_set_arp_s:
                     bpl     .OKT_min
                     moveq   #0,d2
 .OKT_min:
-                    cmpi.w  #36-1,d2
+                    cmp.w   #36-1,d2
                     ble     .OKT_max
                     moveq   #36-1,d2
 .OKT_max:
@@ -8128,27 +8170,27 @@ OKT_set_volume:
                     lea     (OKT_channels_volumes,pc),a0
                     move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d0
                     add.w   d0,a0
-                    cmpi.w  #$40,d1
+                    cmp.w   #$40,d1
                     bgt     OKT_volume_fade
                     move.b  d1,(a0)
 OKT_volume_fade_done:
                     rts
 OKT_volume_fade:
-                    subi.b  #$40,d1
+                    sub.b   #$40,d1
                     ;$41 >= $4f
-                    cmpi.b  #$10,d1
+                    cmp.b   #$10,d1
                     blt     .OKT_fade_volume_down
                     ;$51 >= $5f
-                    subi.b  #$10,d1
-                    cmpi.b  #$10,d1
+                    sub.b   #$10,d1
+                    cmp.b   #$10,d1
                     blt     .OKT_fade_volume_up
                     ;$61 >= $6f
-                    subi.b  #$10,d1
-                    cmpi.b  #$10,d1
+                    sub.b   #$10,d1
+                    cmp.b   #$10,d1
                     blt     .OKT_fade_volume_down_once
                     ;$71 >= $7f
-                    subi.b  #$10,d1
-                    cmpi.b  #$10,d1
+                    sub.b   #$10,d1
+                    cmp.b   #$10,d1
                     blt     .OKT_fade_volume_up_once
                     rts
 .OKT_fade_volume_down_once:
@@ -8164,7 +8206,7 @@ OKT_volume_fade:
                     bne     OKT_volume_fade_done
 .OKT_fade_volume_up:
                     add.b   d1,(a0)
-                    cmpi.b  #64,(a0)
+                    cmp.b   #64,(a0)
                     bls     OKT_volume_fade_done
                     move.b  #64,(a0)
                     rts
@@ -8408,6 +8450,7 @@ OKT_init:
                     moveq   #1,d0
                     rts
 .OKT_no_double_channels:
+                    ; $70
                     move.l  (a0),(OKT_old_irq)
                     lea     (OKT_audio_int,pc),a2
                     move.l	a2,(a0)
@@ -8425,7 +8468,7 @@ OKT_init:
                     move.w  #$FF,(ADKCON,a1)
                     move.w  #$7FFF,(INTREQ,a1)
                     move.w  #%11111111,(_CUSTOM|OKT_AUDIO_DMA)
-                    move.l  d0,a0
+                    move.l  (OKT_vbr,pc),a0
                     move.l  (a0),(OKT_old_irq)
                     lea     (OKT_cia_int,pc),a2
                     move.l	a2,(a0)
@@ -8460,14 +8503,15 @@ OKT_stop:
                     move.w  #$6000,(_CUSTOM|INTENA)
                     move.w  #%11111111,(a2)
                     moveq   #0,d0
-                    move.w  d0,($408-OKT_AUDIO_DMA,a2)
-                    move.w  d0,($418-OKT_AUDIO_DMA,a2)
-                    move.w  d0,($428-OKT_AUDIO_DMA,a2)
-                    move.w  d0,($438-OKT_AUDIO_DMA,a2)
-                    move.w  d0,($448-OKT_AUDIO_DMA,a2)
-                    move.w  d0,($458-OKT_AUDIO_DMA,a2)
-                    move.w  d0,($468-OKT_AUDIO_DMA,a2)
-                    move.w  d0,($478-OKT_AUDIO_DMA,a2)
+                    lea     (OKT_AUDIO_BASE-OKT_AUDIO_DMA,a2),a2
+                    move.w  d0,(V_AUD0VOL-OKT_AUDIO_BASE,a2)
+                    move.w  d0,(V_AUD1VOL-OKT_AUDIO_BASE,a2)
+                    move.w  d0,(V_AUD2VOL-OKT_AUDIO_BASE,a2)
+                    move.w  d0,(V_AUD3VOL-OKT_AUDIO_BASE,a2)
+                    move.w  d0,(V_AUD4VOL-OKT_AUDIO_BASE,a2)
+                    move.w  d0,(V_AUD5VOL-OKT_AUDIO_BASE,a2)
+                    move.w  d0,(V_AUD6VOL-OKT_AUDIO_BASE,a2)
+                    move.w  d0,(V_AUD7VOL-OKT_AUDIO_BASE,a2)
                 ELSE
                     move.w  #$6780,(_CUSTOM|INTENA)
                     move.w  #%1111,(a2)
@@ -8477,7 +8521,7 @@ OKT_stop:
                     move.w  d0,(AUD2VOL-OKT_AUDIO_DMA,a2)
                     move.w  d0,(AUD3VOL-OKT_AUDIO_DMA,a2)
                     tst.w   (OKT_audio_int_single_bit)
-                    bne     .OKT_no_double_channels
+                    bne     .OKT_double_channels
                     ; was a CIA interrupt
                     addq.l  #8,a3
                 ENDC
@@ -8487,7 +8531,7 @@ OKT_stop:
                     move.b  (a1)+,CIACRB-CIATBLO(a0)
                     move.b  (a1)+,CIATBLO-CIATBLO(a0)
                     move.b  (a1),CIATBHI-CIATBLO(a0)
-.OKT_no_double_channels:
+.OKT_double_channels:
                     move.l  (OKT_old_irq,pc),(a3)
                     move.w	#$C000,(_CUSTOM|INTENA)
                     movem.l (a7)+,d0/a0/a1/a2/a3/a6
@@ -8526,9 +8570,9 @@ OKT_audio_int:
                     lea	    _CUSTOM|INTENAR,a1
                     move.w	(a1)+,d0
                     and.w	(a1),d0
+                    move.w  d0,-(a7)
                     and.w   (OKT_audio_int_single_bit,pc),d0
                     beq     .OKT_no_int
-                    move.w	d0,INTREQ-INTREQR(a1)
                 IFD SHOW_RASTERS
                     move.w  #$77,(_CUSTOM|COLOR00)
                 ENDC
@@ -8562,6 +8606,7 @@ OKT_audio_int:
                 IFD SHOW_RASTERS
                     move.w  #0,(_CUSTOM|COLOR00)
                 ENDC
+                    move.w	(a7)+,_CUSTOM|INTREQ
                     movem.l	(a7)+,d0-a6
                     rte
                 ENDC
@@ -8587,7 +8632,7 @@ OKT_cia_int:
             IFND OKT_AUDIO_VAMPIRE
 OKT_main:
                     bsr     OKT_replay_handler
-                    cmpi.b  #MIDI_OUT,(midi_mode)
+                    cmp.b   #MIDI_OUT,(midi_mode)
                     beq     .OKT_midi_out
                     move.l  (OKT_final_mixing_buffers,pc),a5
                     lea     (512,a5),a5
@@ -8679,7 +8724,7 @@ OKT_create_channel_waveform_data:
                     bpl     .OKT_min
                     clr.w   (CHAN_NOTE_D,a3)
 .OKT_min:
-                    cmpi.w  #36-1,(CHAN_NOTE_D,a3)
+                    cmp.w   #36-1,(CHAN_NOTE_D,a3)
                     ble     .OKT_max
                     move.w  #36-1,(CHAN_NOTE_D,a3)
 .OKT_max:
@@ -8939,7 +8984,6 @@ OKT_mix_020_empty:
 ; generate the scaling frequencies code
 OKT_generate_scaling_code:
                     move.l  (OKT_code_ptr,pc),a2
-                    move.l  a2,$7000c
                     move.l  (OKT_scaling_code_buffer,pc),a0
                     lea     (OKT_scaling_freqs_table,pc),a5
                     move.l  (OKT_lengths_ptr,pc),a3
@@ -8968,9 +9012,9 @@ OKT_generate_scaling_code:
                     beq.w   .OKT_wait_freq_nibble
                     move.w  d3,d0
                     sub.w   d4,d0
-                    cmpi.w  #1,d0
+                    cmp.w   #1,d0
                     beq     .OKT_no_load_store_skip
-                    cmpi.w  #2,d0
+                    cmp.w   #2,d0
                     beq     .OKT_no_skip_load_store
                     move.l  a0,d0
                     sub.l   (-4,a2),d0
@@ -9191,6 +9235,9 @@ OKT_volumes_scaling_table:
                     dc.l    0
 OKT_final_mixing_buffers:
                     dc.l    0
+                ELSE
+OKT_channels:
+                    dc.w    0
                 ENDC
 
 ; ===========================================================================
@@ -9446,10 +9493,10 @@ ask_yes_no_requester:
                     dc.w    EVT_LIST_END
 .key_pressed:
                     moveq   #OK,d0
-                    cmpi.b  #'y',d1
+                    cmp.b   #'y',d1
                     beq     .y_z_key_pressed
                     ; german keyboard
-                    cmpi.b  #'z',d1
+                    cmp.b   #'z',d1
                     beq     .y_z_key_pressed
 .mouse_pressed:
                     moveq   #ERROR,d0
@@ -10217,11 +10264,11 @@ lbC0257AE:
                     moveq   #0,d1
                     move.b  (a0)+,d1
                     beq     lbC0257D0
-                    cmpi.b  #' ',d1
+                    cmp.b   #' ',d1
                     beq     lbC0257AE
-                    subi.b  #'0',d1
+                    sub.b   #'0',d1
                     bmi     lbC0257D8
-                    cmpi.b  #9,d1
+                    cmp.b   #9,d1
                     bgt     lbC0257D8
                     st      d2
                     mulu.w  #10,d0
@@ -10726,7 +10773,7 @@ prepare_ascii_decimal_number:
                     dbcs    d2,.search
                     add.l   d1,d0
                     neg.b   d2
-                    addi.b  #'0'-1,d2
+                    add.b   #'0'-1,d2
                     move.b  d2,(a1)+
                     st      d3
                     bra     .loop
@@ -10739,7 +10786,7 @@ prepare_ascii_decimal_number:
                     move.b  #' ',(a1)+
                     bra     .loop
 .done:
-                    addi.b  #'0',d0
+                    add.b   #'0',d0
                     move.b  d0,(a1)+
                     movem.l (a7)+,d0-d3/a0
                     sf      (a1)+
@@ -10767,29 +10814,29 @@ process_commands:
 next_command:
                     move.b  (a2)+,d0
                     beq     done_commands
-                    cmpi.b  #CMD_TEXT,d0
+                    cmp.b   #CMD_TEXT,d0
                     beq     cmd_draw_text
-                    cmpi.b  #CMD_CLEAR_MAIN_MENU,d0
+                    cmp.b   #CMD_CLEAR_MAIN_MENU,d0
                     beq     cmd_clear_main_menu
-                    cmpi.b  #CMD_PREPARE_SUB_SCREEN,d0
+                    cmp.b   #CMD_PREPARE_SUB_SCREEN,d0
                     beq     cmd_prepare_sub_screen
-                    cmpi.b  #CMD_DRAW_BOX,d0
+                    cmp.b   #CMD_DRAW_BOX,d0
                     beq     cmd_draw_box
-                    cmpi.b  #CMD_SUB_COMMAND,d0
+                    cmp.b   #CMD_SUB_COMMAND,d0
                     beq     cmd_process_sub_commands_from_pointer
-                    cmpi.b  #CMD_DRAW_BOX_OUTER,d0
+                    cmp.b   #CMD_DRAW_BOX_OUTER,d0
                     beq     cmd_draw_box_outer
-                    cmpi.b  #CMD_TEXT_PTR,d0
+                    cmp.b   #CMD_TEXT_PTR,d0
                     beq     cmd_draw_text_from_pointer
-                    cmpi.b  #CMD_DRAW_FILLED_BOX_FROM_POINTER,d0
+                    cmp.b   #CMD_DRAW_FILLED_BOX_FROM_POINTER,d0
                     beq     cmd_draw_filled_box_from_pointer
-                    cmpi.b  #CMD_CLEAR_CHARS,d0
+                    cmp.b   #CMD_CLEAR_CHARS,d0
                     beq     cmd_clear_chars
-                    cmpi.b  #CMD_SET_SUB_COPPERLIST,d0
+                    cmp.b   #CMD_SET_SUB_COPPERLIST,d0
                     beq     cmd_set_full_screen_copperlist_ntsc
-                    cmpi.b  #CMD_SET_MAIN_COPPERLIST,d0
+                    cmp.b   #CMD_SET_MAIN_COPPERLIST,d0
                     beq     cmd_restore_full_screen_copperlist_ntsc
-                    cmpi.b  #CMD_MOVE_TO_LINE,d0
+                    cmp.b   #CMD_MOVE_TO_LINE,d0
                     beq     cmd_move_to_line
                     move.w  #$F00,(_CUSTOM|COLOR00)
                     bra     done_commands
@@ -11338,19 +11385,19 @@ lbW02654A:
                     dc.w    EVT_LIST_END
 lbC02655E:
                     move.w  d1,d0
-                    cmpi.w  #5,d0
+                    cmp.w   #5,d0
                     beq     lbC0265AA
                     move.w  d0,-(a7)
                     bsr     lbC026802
                     move.w  (a7)+,d0
                     btst    #10,d0
                     beq     lbC026582
-                    cmpi.b  #120,d0
+                    cmp.b   #120,d0
                     bne     lbC026582
                     bsr     lbC0267D8
                     bra     lbC026590
 lbC026582:
-                    cmpi.b  #32,d0
+                    cmp.b   #32,d0
                     bcc     lbC02658E
                     bsr     lbC026630
                     bra     lbC026590
@@ -11410,30 +11457,30 @@ lbC026618:
 lbC026630:
                     btst    #8,d0
                     beq     lbC026652
-                    cmpi.b  #15,d0
+                    cmp.b   #15,d0
                     beq     lbC0266DC
-                    cmpi.b  #14,d0
+                    cmp.b   #14,d0
                     beq     lbC0266EC
-                    cmpi.b  #1,d0
+                    cmp.b   #1,d0
                     beq     lbC0266A2
-                    cmpi.b  #6,d0
+                    cmp.b   #6,d0
                     beq     lbC0266A8
 lbC026652:
-                    cmpi.b  #4,d0
+                    cmp.b   #4,d0
                     beq     lbC02669A
-                    cmpi.b  #3,d0
+                    cmp.b   #3,d0
                     beq     lbC02669A
-                    cmpi.b  #1,d0
+                    cmp.b   #1,d0
                     beq     lbC02668C
-                    cmpi.b  #6,d0
+                    cmp.b   #6,d0
                     beq     lbC0266B0
-                    cmpi.b  #15,d0
+                    cmp.b   #15,d0
                     beq     lbC0266F4
-                    cmpi.b  #14,d0
+                    cmp.b   #14,d0
                     beq     lbC02673E
-                    cmpi.b  #12,d0
+                    cmp.b   #12,d0
                     beq     lbC026792
-                    cmpi.b  #13,d0
+                    cmp.b   #13,d0
                     beq     lbC026798
                     rts
 lbC02668C:
@@ -11737,7 +11784,7 @@ lbC0269EC:
                     rts
 lbC0269F2:
                     movem.l d3,-(a7)
-                    cmpi.w  #1,d2
+                    cmp.w   #1,d2
                     ble     lbC026A54
                     lea     (main_screen+((55*SCREEN_BYTES)+8)),a1
                     moveq   #4,d3
@@ -12001,20 +12048,20 @@ lbC026D24:
                     moveq   #ERROR,d0
                     rts
 lbC026D32:
-                    cmpi.w  #232,d1
+                    cmp.w   #232,d1
                     bge     lbC026D62
-                    cmpi.w  #136,d1
+                    cmp.w   #136,d1
                     blt     lbC026D62
-                    cmpi.w  #16,d0
+                    cmp.w   #16,d0
                     blt     lbC026D62
-                    cmpi.w  #624,d0
+                    cmp.w   #624,d0
                     bge     lbC026D62
                     exg     d0,d1
                     subi.w  #136,d0
                     lsr.w   #3,d0
-                    cmpi.w  #336,d1
+                    cmp.w   #336,d1
                     bge     lbC02748C
-                    cmpi.w  #304,d1
+                    cmp.w   #304,d1
                     blt     lbC0275E0
 lbC026D62:
                     rts
@@ -12328,7 +12375,7 @@ lbC02712E:
                     move.l  d0,a1
                     moveq   #0,d0
                     move.b  (a1)+,d0
-                    cmpi.w  #30,d0
+                    cmp.w   #30,d0
                     bls     lbC027156
                     moveq   #30,d0
 lbC027156:
@@ -12549,7 +12596,7 @@ lbC027366:
                     lsl.l   #2,d0
                     adda.l  d0,a5
                     moveq   #17,d6
-                    cmpi.w  #12,d7
+                    cmp.w   #12,d7
                     ble     lbC027406
                     moveq   #12,d7
                     bra     lbC027406
@@ -12571,7 +12618,7 @@ lbC02739A:
                     jsr     (prepare_ascii_decimal_number)
                     lea     (lbB027427,pc),a2
 lbC0273BE:
-                    cmpi.b  #' ',(a2)+
+                    cmp.b   #' ',(a2)+
                     beq     lbC0273BE
                     subq.l  #2,a2
                     lea     (10,a4),a0
@@ -12662,7 +12709,7 @@ lbC0274B8:
                     move.w  (lbW028004,pc),d0
                     bsr     lbC0275AC
                     move.l  (a7)+,a0
-                    cmpi.w  #1,d0
+                    cmp.w   #1,d0
                     bhi     lbC0274D4
                     tst.b   (5,a0)
                     bne     lbC02750E
@@ -12783,9 +12830,9 @@ lbC0275E0:
                     st      (5,a0)
                     bra     lbC02733A
 lbC02761C:
-                    cmpi.b  #2,(4,a0)
+                    cmp.b   #2,(4,a0)
                     beq     lbC027652
-                    cmpi.b  #0,(4,a0)
+                    cmp.b   #0,(4,a0)
                     beq     lbC02763E
                     move.w  #$F00,(_CUSTOM|COLOR00)
                     bra     lbC027672
@@ -12929,7 +12976,7 @@ display_disk_size:
 
 ; ===========================================================================
 inc_trackdisk_unit_number:
-                    cmpi.w  #3,(trackdisk_unit_number)
+                    cmp.w   #3,(trackdisk_unit_number)
                     beq     .max
                     addq.w  #1,(trackdisk_unit_number)
                     bra     lbC026B42
@@ -13027,14 +13074,14 @@ format_disk:
                     tst.b   (clear_mode_flag)
                     beq     .next_track
                     ; stop at track 40 if fast formatting is selected
-                    cmpi.w  #40,(current_formatted_track)
+                    cmp.w   #40,(current_formatted_track)
                     beq     .done
                     ; go to track 40 after bootblock if fast formatting is selected
                     move.w  #40,(current_formatted_track)
                     bra     .loop
 .next_track:
                     addq.w  #1,(current_formatted_track)
-                    cmpi.w  #80,(current_formatted_track)
+                    cmp.w   #80,(current_formatted_track)
                     bne     .loop
 .done:
                     move.l  (track_buffer,pc),a1
@@ -13094,7 +13141,7 @@ prepare_track_buffer:
                     move.w  (current_formatted_track,pc),d0
                     beq     copy_bootblock_to_track_buffer
                     ; reached rootblock track (at 22*512*40=450560 bytes)
-                    cmpi.w  #40,d0
+                    cmp.w   #40,d0
                     beq     copy_rootblock_to_track_buffer
                     rts
 
@@ -13246,7 +13293,7 @@ lbC027B86:
                     lea     (lbW027FD0,pc),a0
                     cmpi.l  #'.okd',(a0)+
                     bne     lbC027C84
-                    cmpi.w  #'ir',(a0)+
+                    cmp.w   #'ir',(a0)+
                     bne     lbC027C84
                     move.l  (lbL027C9E,pc),d0
                     subi.l  #10,d0
@@ -13460,9 +13507,9 @@ lbC027E62:
                     tst.w   d1
                     beq     lbC027E84
                     move.b  (-2,a0),d0
-                    cmpi.b  #':',d0
+                    cmp.b   #':',d0
                     beq     lbC027E84
-                    cmpi.b  #'/',d0
+                    cmp.b   #'/',d0
                     beq     lbC027E84
                     move.b  #'/',(a2,d1.w)
                     addq.w  #1,d1
@@ -13507,13 +13554,13 @@ lbC027EC6:
 lbC027ED0:
                     move.b  (a0)+,d0
                     beq     lbC027EFA
-                    cmpi.b  #'/',d0
+                    cmp.b   #'/',d0
                     bne     lbC027EE0
                     tst.b   (a0)
                     beq     lbC027EE0
                     move.w  d1,d3
 lbC027EE0:
-                    cmpi.b  #':',d0
+                    cmp.b   #':',d0
                     bne     lbC027EEE
                     tst.b   (a0)
                     beq     lbC027EEE
@@ -13701,12 +13748,12 @@ lbC02814E:
                     move.w  d1,d0
                     and.w   #$FF00,d0
                     bne     lbC0281A8
-                    cmpi.b  #16,d1
+                    cmp.b   #16,d1
                     bne     lbC028164
                     jsr     (lbC01F298)
                     bra     lbC0281A8
 lbC028164:
-                    cmpi.b  #17,d1
+                    cmp.b   #17,d1
                     bne     lbC028172
                     jsr     (lbC01F2B2)
                     bra     lbC0281A8
@@ -13733,12 +13780,12 @@ lbC0281A8:
 lbW0281AC:
                     dc.w    0
 lbC0281AE:
-                    cmpi.b  #MIDI_IN,(midi_mode)
+                    cmp.b   #MIDI_IN,(midi_mode)
                     bne     lbC0281F2
                     move.w  d1,d0
                     subi.w  #$30,d0
                     bmi     lbC0281F2
-                    cmpi.w  #$24,d0
+                    cmp.w   #$24,d0
                     bge     lbC0281F2
                     addq.w  #1,d0
                     tst.w   d2
@@ -13821,9 +13868,9 @@ lbW0282A8:
                     even
 lbC0282B8:
                     move.l  d4,-(a7)
-                    cmpi.w  #EVT_LEFT_PRESSED,d0
+                    cmp.w   #EVT_LEFT_PRESSED,d0
                     beq     lbC0282CE
-                    cmpi.w  #EVT_MOUSE_MOVED,d0
+                    cmp.w   #EVT_MOUSE_MOVED,d0
                     bne     lbC028306
                     tst.b   d3
                     beq     lbC028306
@@ -13835,15 +13882,15 @@ lbC0282D0:
                     move.w  d2,d0
                     tst.b   (ntsc_flag)
                     beq     lbC0282E8
-                    cmpi.w  #96-56,d0
+                    cmp.w   #96-56,d0
                     blt     lbC028306
-                    cmpi.w  #160-56-32,d0
+                    cmp.w   #160-56-32,d0
                     bge     lbC028306
                     bra     lbC0282EE
 lbC0282E8:
-                    cmpi.w  #96,d0
+                    cmp.w   #96,d0
                     blt     lbC028306
-                    cmpi.w  #160,d0
+                    cmp.w   #160,d0
                     bge     lbC028306
 lbC0282EE:
                     tst.b   d4
@@ -13896,7 +13943,7 @@ sample_editor_display_sample:
                     lsl.w   #5,d0
                     ; sample mode
                     ; set in 8 bit mode
-                    ;cmpi.w  #1,(SMP_TYPE,a0,d0.w)
+                    ;cmp.w   #1,(SMP_TYPE,a0,d0.w)
                     ;seq     (lbB029EE6)
                     bsr     lbC0284F6
                     cmpi.l  #SCREEN_WIDTH,(work_sample_size)
@@ -14576,7 +14623,7 @@ sample_editor_loop_bar_end:
 
 ; ===========================================================================
 sample_editor_draw_repeat_bar:
-                    cmpi.w  #SCREEN_WIDTH-1,d0
+                    cmp.w   #SCREEN_WIDTH-1,d0
                     ble     .max_screen
                     move.w  #SCREEN_WIDTH-1,d0
 .max_screen:
@@ -14689,7 +14736,7 @@ lbC028C8C:
 lbC028D38:
                     tst.w   d6
                     bmi     .bstart_empty
-                    cmpi.w  #SCREEN_WIDTH-1,d6
+                    cmp.w   #SCREEN_WIDTH-1,d6
                     beq     .bstart_screen_max
                     move.w  d6,d2
                     mulu.w  (lbW029ED2),d2
@@ -14713,7 +14760,7 @@ lbC028D38:
 lbC028D82:
                     tst.b   (sample_editor_mode_flag)
                     beq     .bend_empty
-                    cmpi.w  #SCREEN_WIDTH-1,d7
+                    cmp.w   #SCREEN_WIDTH-1,d7
                     beq     .bend_screen_max
                     move.w  d7,d2
                     mulu.w  (lbW029ED2),d2
@@ -14940,7 +14987,7 @@ lbC029026:
                     jmp     (draw_3_digits_decimal_number_leading_zeroes)
 lbC02903A:
                     lea     (lbW029F0E,pc),a0
-                    cmpi.w  #395,(a0)
+                    cmp.w   #395,(a0)
                     blt     lbC029048
                     move.w  #395,(a0)
 lbC029048:
@@ -14948,7 +14995,7 @@ lbC029048:
                     bra     lbC029026
 lbC02904C:
                     lea     (lbW029F0E,pc),a0
-                    cmpi.w  #5,(a0)
+                    cmp.w   #5,(a0)
                     bgt     lbC02905A
                     move.w  #5,(a0)
 lbC02905A:
@@ -15101,7 +15148,7 @@ lbC02925C:
                     move.w  d2,d1
                     bra     lbC02925C
 lbC029272:
-                    cmpi.w  #SCREEN_WIDTH-1,(lbW029F1E)
+                    cmp.w   #SCREEN_WIDTH-1,(lbW029F1E)
                     bne     lbC02929A
 lbC02927C:
                     cmpa.l  a4,a3
@@ -15267,7 +15314,7 @@ lbC029488:
                     bra     lbC02951A
 lbC029492:
                     lea     (lbW0294E6,pc),a0
-                    cmpi.w  #SMPS_NUMBER,(a0)
+                    cmp.w   #SMPS_NUMBER,(a0)
                     beq     lbC0294A8
                     addq.w  #1,(a0)
                     st      (lbW029F12)
@@ -15276,7 +15323,7 @@ lbC0294A8:
                     rts
 lbC0294AA:
                     lea     (lbW0294E6,pc),a0
-                    cmpi.w  #1,(a0)
+                    cmp.w   #1,(a0)
                     beq     lbC0294C0
                     subq.w  #1,(a0)
                     st      (lbW029F12)
@@ -15300,7 +15347,7 @@ lbW0294E8:
                     dc.w    0
 lbC0294EA:
                     lea     (lbW02953E,pc),a0
-                    cmpi.w  #SMPS_NUMBER,(a0)
+                    cmp.w   #SMPS_NUMBER,(a0)
                     beq     lbC029500
                     addq.w  #1,(a0)
                     st      (lbW029F12)
@@ -15309,7 +15356,7 @@ lbC029500:
                     rts
 lbC029502:
                     lea     (lbW02953E,pc),a0
-                    cmpi.w  #1,(a0)
+                    cmp.w   #1,(a0)
                     beq     lbC029518
                     subq.w  #1,(a0)
                     st      (lbW029F12)
@@ -15534,9 +15581,9 @@ lbC029788:
 lbC0297A8:
                     bra     lbC029892
 lbC0297AC:
-                    cmpi.w  #EVT_LEFT_PRESSED,d0
+                    cmp.w   #EVT_LEFT_PRESSED,d0
                     beq     lbC0297C0
-                    cmpi.w  #EVT_MOUSE_MOVED,d0
+                    cmp.w   #EVT_MOUSE_MOVED,d0
                     beq     lbC0297C4
                     bra     lbC02988E
 lbC0297C0:
@@ -15556,13 +15603,13 @@ lbC0297CC:
 lbC0297E0:
                     sub.w   d5,d1
                     bmi     lbC02988E
-                    cmpi.w  #48,d1
+                    cmp.w   #48,d1
                     bgt     lbC02988E
                     subq.w  #8,d1
                     bpl     lbC0297F4
                     moveq   #0,d1
 lbC0297F4:
-                    cmpi.w  #32,d1
+                    cmp.w   #32,d1
                     ble     lbC0297FE
                     move.w  #32,d1
 lbC0297FE:
@@ -15660,13 +15707,13 @@ lbC029912:
                     move.w  (a0)+,d5
                     bpl     lbC029920
                     addq.w  #1,d7
-                    cmpi.w  #SCREEN_WIDTH,d7
+                    cmp.w   #SCREEN_WIDTH,d7
                     bne     lbC029912
                     bra     lbC02993A
 lbC029920:
                     move.w  d7,d4
                     addq.w  #1,d7
-                    cmpi.w  #SCREEN_WIDTH,d7
+                    cmp.w   #SCREEN_WIDTH,d7
                     beq     lbC02993A
 lbC02992A:
                     move.w  (a0)+,d6
@@ -15674,7 +15721,7 @@ lbC02992A:
                     bsr     lbC029942
 lbC029932:
                     addq.w  #1,d7
-                    cmpi.w  #SCREEN_WIDTH,d7
+                    cmp.w   #SCREEN_WIDTH,d7
                     bne     lbC02992A
 lbC02993A:
                     jmp     (release_after_line_drawing)
@@ -16184,7 +16231,7 @@ lbC029DBA:
 ; ===========================================================================
 sample_editor_dec_note_rate:
                     lea     (lbW029E10,pc),a0
-                    cmpi.w  #1,(a0)
+                    cmp.w   #1,(a0)
                     beq     .min
                     subq.w  #1,(a0)
                     bra     sample_editor_draw_sample_infos
@@ -16194,7 +16241,7 @@ sample_editor_dec_note_rate:
 ; ===========================================================================
 sample_editor_inc_note_rate:
                     lea     (lbW029E10,pc),a0
-                    cmpi.w  #SMPS_NUMBER,(a0)
+                    cmp.w   #SMPS_NUMBER,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     sample_editor_draw_sample_infos
@@ -16235,7 +16282,7 @@ lbC029E48:
                 ENDC
                     rts
 lbC029E50:
-                    cmpi.b  #MIDI_OUT,(midi_mode)
+                    cmp.b   #MIDI_OUT,(midi_mode)
                     bne     lbC029E6A
                     move.b  d0,d1
                     move.w  (current_sample_index),d0
@@ -16625,7 +16672,7 @@ doubled_channel_text:
 ; ===========================================================================
 inc_default_pattern_length:
                     lea     (default_pattern_length,pc),a0
-                    cmpi.w  #$80,(a0)
+                    cmp.w   #$80,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     display_default_pattern_length
@@ -16633,7 +16680,7 @@ inc_default_pattern_length:
                     rts
 dec_default_pattern_length:
                     lea     (default_pattern_length,pc),a0
-                    cmpi.w  #1,(a0)
+                    cmp.w   #1,(a0)
                     beq     .min
                     subq.w  #1,(a0)
                     bra     display_default_pattern_length
@@ -16649,7 +16696,7 @@ display_default_pattern_length:
                 IFD OKT_AUDIO_VAMPIRE
 inc_samples_load_mode:
                     lea     (samples_load_mode,pc),a0
-                    cmpi.w  #1,(a0)
+                    cmp.w   #1,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     display_samples_load_mode
@@ -16697,7 +16744,7 @@ display_samples_save_format:
 ; ===========================================================================
 inc_mouse_repeat_delay:
                     lea     (mouse_repeat_delay,pc),a0
-                    cmpi.w  #50,(a0)
+                    cmp.w   #50,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     display_mouse_repeat_delay
@@ -16705,7 +16752,7 @@ inc_mouse_repeat_delay:
                     rts
 dec_mouse_repeat_delay:
                     lea     (mouse_repeat_delay,pc),a0
-                    cmpi.w  #1,(a0)
+                    cmp.w   #1,(a0)
                     beq     .min
                     subq.w  #1,(a0)
                     bra     display_mouse_repeat_delay
@@ -16720,7 +16767,7 @@ display_mouse_repeat_delay:
 ; ===========================================================================
 inc_mouse_repeat_speed:
                     lea     (mouse_repeat_speed,pc),a0
-                    cmpi.w  #50,(a0)
+                    cmp.w   #50,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     display_mouse_repeat_speed
@@ -16728,7 +16775,7 @@ inc_mouse_repeat_speed:
                     rts
 dec_mouse_repeat_speed:
                     lea     (mouse_repeat_speed,pc),a0
-                    cmpi.w  #1,(a0)
+                    cmp.w   #1,(a0)
                     beq     .min
                     subq.w  #1,(a0)
                     bra     display_mouse_repeat_speed
@@ -16743,7 +16790,7 @@ display_mouse_repeat_speed:
 ; ===========================================================================
 inc_current_color_set:
                     lea     (current_color_set,pc),a0
-                    cmpi.w  #2,(a0)
+                    cmp.w   #2,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     display_current_color_set
@@ -16776,7 +16823,7 @@ inc_background_color:
                     ror.l   d0,d1
                     moveq   #$F,d2
                     and.b   d1,d2
-                    cmpi.b  #$F,d2
+                    cmp.b   #$F,d2
                     beq     .max
                     addq.b  #1,d1
                     rol.l   d0,d1
@@ -16829,7 +16876,7 @@ inc_foreground_color:
                     ror.l   d0,d1
                     moveq   #$F,d2
                     and.b   d1,d2
-                    cmpi.b  #$F,d2
+                    cmp.b   #$F,d2
                     beq     .max
                     addq.b  #1,d1
                     rol.l   d0,d1
@@ -16953,7 +17000,7 @@ reset_polyphony_values:
 .loop:
                     move.b  d0,(a1)+
                     addq.b  #1,d0
-                    cmpi.b  #8,d0
+                    cmp.b   #8,d0
                     bne     .loop
                     bra     display_polyphony
 randomize_polyphony_values:
@@ -17004,7 +17051,7 @@ display_polyphony:
 ; ===========================================================================
 inc_f6_key_row_jump_value:
                     lea     (f6_key_row_jump_value,pc),a0
-                    cmpi.w  #127,(a0)
+                    cmp.w   #127,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     update_f6_key_row_jump_value
@@ -17031,7 +17078,7 @@ update_f6_key_row_jump_value:
 ; ===========================================================================
 inc_f7_key_row_jump_value:
                     lea     (f7_key_row_jump_value,pc),a0
-                    cmpi.w  #127,(a0)
+                    cmp.w   #127,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     update_f7_key_row_jump_value
@@ -17058,7 +17105,7 @@ update_f7_key_row_jump_value:
 ; ===========================================================================
 inc_f8_key_row_jump_value:
                     lea     (f8_key_row_jump_value,pc),a0
-                    cmpi.w  #127,(a0)
+                    cmp.w   #127,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     update_f8_key_row_jump_value
@@ -17085,7 +17132,7 @@ update_f8_key_row_jump_value:
 ; ===========================================================================
 inc_f9_key_row_jump_value:
                     lea     (f9_key_row_jump_value,pc),a0
-                    cmpi.w  #127,(a0)
+                    cmp.w   #127,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     update_f9_key_row_jump_value
@@ -17112,7 +17159,7 @@ update_f9_key_row_jump_value:
 ; ===========================================================================
 inc_f10_key_row_jump_value:
                     lea     (f10_key_row_jump_value,pc),a0
-                    cmpi.w  #127,(a0)
+                    cmp.w   #127,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     update_f10_key_row_jump_value
@@ -17161,7 +17208,7 @@ save_font:
 ; ===========================================================================
 inc_selected_char_mouse:
                     lea     (current_selected_char,pc),a0
-                    cmpi.w  #255,(a0)
+                    cmp.w   #255,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     draw_selected_char_grid
@@ -17188,7 +17235,7 @@ inc_selected_char_key:
                     lea     (current_selected_char,pc),a0
                     moveq   #$F,d0
                     and.w   (a0),d0
-                    cmpi.w  #15,d0
+                    cmp.w   #15,d0
                     beq     .max
                     addq.w  #1,(a0)
                     bra     draw_selected_char_grid
@@ -17196,7 +17243,7 @@ inc_selected_char_key:
                     rts
 dec_selected_char_column_key:
                     lea     (current_selected_char,pc),a0
-                    cmpi.w  #16,(a0)
+                    cmp.w   #16,(a0)
                     blt     .min
                     subi.w  #16,(a0)
                     bra     draw_selected_char_grid
@@ -17204,7 +17251,7 @@ dec_selected_char_column_key:
                     rts
 inc_selected_char_column_key:
                     lea     (current_selected_char,pc),a0
-                    cmpi.w  #239,(a0)
+                    cmp.w   #239,(a0)
                     bgt     .max
                     addi.w  #16,(a0)
                     bra     draw_selected_char_grid
@@ -17217,9 +17264,9 @@ select_current_char:
                     bmi     .out_of_bounds
                     subi.w  #12,d1
                     bmi     .out_of_bounds
-                    cmpi.w  #16,d0
+                    cmp.w   #16,d0
                     bcc     .out_of_bounds
-                    cmpi.w  #16,d1
+                    cmp.w   #16,d1
                     bcc     .out_of_bounds
                     lsl.w   #4,d1
                     or.w    d1,d0
@@ -17439,12 +17486,12 @@ clear_char_pixel:
 change_char_pixel:
                     asr.w   #3,d0
                     subi.w  #53,d0
-                    cmpi.w  #8,d0
+                    cmp.w   #8,d0
                     bcc     .out_of_bounds
                     not.b   d0
                     asr.w   #3,d1
                     subi.w  #12,d1
-                    cmpi.w  #7,d1
+                    cmp.w   #7,d1
                     bcc     .out_of_bounds
                     lea     (text_font,pc),a0
                     add.w   d1,a0
@@ -17968,7 +18015,7 @@ lbC02B780:
                     move.w  (lbW02B70E,pc),d0
                     bne     lbC02B7A2
                     move.w  (lbW02B710,pc),d0
-                    cmpi.w  #$C,d0
+                    cmp.w   #$C,d0
                     bhi     lbC02B7A2
                     subq.w  #1,d0
                     move.w  d0,d1
@@ -17989,7 +18036,7 @@ lbC02B7C2:
                     rts
 lbC02B7C4:
                     move.w  (lbW02B710,pc),d0
-                    cmpi.w  #12,d0
+                    cmp.w   #12,d0
                     bcc     lbC02B7C2
                     move.w  d0,d1
                     bra     lbC02C0B2
@@ -18035,14 +18082,14 @@ lbC02B82A:
                     subi.w  #128,d1
                     bmi     lbC02B85E
                     lsr.w   #3,d1
-                    cmpi.w  #13,d1
+                    cmp.w   #13,d1
                     bhi     lbC02B85E
                     sf      d0
                     subq.w  #1,d1
                     bpl     lbC02B842
                     st      d0
 lbC02B842:
-                    cmpi.w  #12,d1
+                    cmp.w   #12,d1
                     bne     lbC02B84A
                     moveq   #1,d0
 lbC02B84A:
@@ -18184,7 +18231,7 @@ lbC02B9B4:
                     rts
 lbC02B9BA:
                     bsr     lbC02BA78
-                    cmpi.w  #1,d0
+                    cmp.w   #1,d0
                     bhi     lbC02BA12
                     bsr     lbC02BAB2
                     move.l  (lbL02C53C,pc),d1
@@ -18634,13 +18681,13 @@ lbC02BEDA:
                     bmi     lbC02BF86
                     tst.b   d1
                     beq     lbC02BF24
-                    cmpi.b  #1,d1
+                    cmp.b   #1,d1
                     beq     lbC02BF2C
-                    cmpi.b  #2,d1
+                    cmp.b   #2,d1
                     beq     lbC02BF24
-                    cmpi.b  #3,d1
+                    cmp.b   #3,d1
                     beq     lbC02BF32
-                    cmpi.b  #4,d1
+                    cmp.b   #4,d1
                     beq     lbC02BF56
                     move.w  #$F00,(_CUSTOM|COLOR00)
                     bra     lbC02BF86
@@ -18687,7 +18734,7 @@ lbC02BF80:
 lbC02BF86:
                     rts
 lbC02BF88:
-                    cmpi.w  #100,(lbW02B710)
+                    cmp.w   #100,(lbW02B710)
                     beq     lbC02BFCC
                     move.l  #131,d0
                     move.l  #MEMF_CLEAR|MEMF_ANY,d1
@@ -18869,7 +18916,7 @@ lbC02C218:
 lbC02C21A:
                     move.w  (lbW02B710,pc),d0
                     sub.w   (lbW02B70E,pc),d0
-                    cmpi.w  #12,d0
+                    cmp.w   #12,d0
                     bls     lbC02C276
                     lea     (main_screen+((136*SCREEN_BYTES)+2)),a0
                     bsr     own_blitter
@@ -19268,9 +19315,9 @@ lbC02C808:
                     bra     lbC02C576
 lbC02C816:
                     move.b  (a0),d1
-                    cmpi.b  #'<',d1
+                    cmp.b   #'<',d1
                     beq     lbC02C876
-                    cmpi.b  #'>',d1
+                    cmp.b   #'>',d1
                     beq     lbC02C886
                     move.w  #lbC02C958-lbC02C56C,d5
                     moveq   #1,d6
@@ -19278,11 +19325,11 @@ lbC02C816:
                     bra     lbC02C576
 lbC02C832:
                     move.b  (a0),d1
-                    cmpi.b  #'=',d1
+                    cmp.b   #'=',d1
                     beq     lbC02C876
-                    cmpi.b  #'>',d1
+                    cmp.b   #'>',d1
                     beq     lbC02C896
-                    cmpi.b  #'<',d1
+                    cmp.b   #'<',d1
                     beq     lbC02C8A6
                     move.w  #lbC02C962-lbC02C56C,d5
                     moveq   #1,d6
@@ -19290,11 +19337,11 @@ lbC02C832:
                     bra     lbC02C576
 lbC02C854:
                     move.b  (a0),d1
-                    cmpi.b  #'=',d1
+                    cmp.b   #'=',d1
                     beq     lbC02C886
-                    cmpi.b  #'<',d1
+                    cmp.b   #'<',d1
                     beq     lbC02C896
-                    cmpi.b  #'>',d1
+                    cmp.b   #'>',d1
                     beq     lbC02C8B6
                     move.w  #lbC02C96C-lbC02C56C,d5
                     moveq   #1,d6
@@ -19597,15 +19644,15 @@ lbC02CC46:
 lbC02CC4E:
                     moveq   #0,d1
                     move.b  (a0)+,d1
-                    subi.b  #'0',d1
+                    sub.b   #'0',d1
                     bmi     lbC02CC7A
-                    cmpi.b  #1,d1
+                    cmp.b   #1,d1
                     bhi     lbC02CC7A
 lbC02CC62:
                     move.b  (a0)+,d0
-                    subi.b  #'0',d0
+                    sub.b   #'0',d0
                     bmi     lbC02CE72
-                    cmpi.b  #1,d0
+                    cmp.b   #1,d0
                     bhi     lbC02CE72
                     add.l   d1,d1
                     add.b   d0,d1
@@ -19616,15 +19663,15 @@ lbC02CC7A:
 lbC02CC82:
                     moveq   #0,d1
                     move.b  (a0)+,d1
-                    subi.b  #'0',d1
+                    sub.b   #'0',d1
                     bmi     lbC02CCAE
-                    cmpi.b  #7,d1
+                    cmp.b   #7,d1
                     bhi     lbC02CCAE
 lbC02CC96:
                     move.b  (a0)+,d0
-                    subi.b  #'0',d0
+                    sub.b   #'0',d0
                     bmi     lbC02CE72
-                    cmpi.b  #7,d0
+                    cmp.b   #7,d0
                     bhi     lbC02CE72
                     lsl.l   #3,d1
                     add.b   d0,d1
@@ -19697,7 +19744,7 @@ lbC02CE16:
 lbC02CE1E:
                     move.b  (a0)+,d0
                     beq     lbC02CE56
-                    cmpi.b  #10,d0
+                    cmp.b   #10,d0
                     beq     lbC02CE56
                     cmp.b   d2,d0
                     beq     lbC02CE3A
@@ -19713,7 +19760,7 @@ lbC02CE3A:
                     dbra    d3,lbC02CE1E
                     bra     lbC02CE56
 lbC02CE4A:
-                    cmpi.w  #4,d3
+                    cmp.w   #4,d3
                     beq     lbC02CE56
                     bra     lbC02CE72
 lbC02CE56:

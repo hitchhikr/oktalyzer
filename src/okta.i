@@ -182,6 +182,9 @@ OKT_SAMPLE_FILTER   equ     1*2
 OKT_SAMPLE_XFADE    equ     2*2
 OKT_SAMPLE_NORM     equ     3*2
 
+GAD_DONE            equ     0
+GAD_NEXT            equ     1
+
 KEY_MOD_NONE_BIT    equ     0
 KEY_MOD_SHIFT_BIT   equ     8
 KEY_MOD_ALT_BIT     equ     9
@@ -227,7 +230,7 @@ KEY_HELP            equ     $5F-$40
 
 ; ===========================================================================
                 IFD OKT_AUDIO_VAMPIRE
-OKT_AUDIO_BASE      equ     $400
+OKT_AUDIO_BASE      equ     $440
 OKT_AUDIO_DMA       equ     $296
 OKT_AUDIO_ADR       equ     0
 OKT_AUDIO_LEN       equ     4
@@ -236,6 +239,22 @@ OKT_AUDIO_CTRL      equ     $A
 OKT_AUDIO_PER       equ     $C
 OKT_AUDIO_SIZE      equ     $10
 OKT_AUDIO_HW_CHANS  equ     8
+V_AUD0VOL           equ     $8
+V_AUD1VOL           equ     $18
+V_AUD2VOL           equ     $28
+V_AUD3VOL           equ     $38
+V_AUD4VOL           equ     $48
+V_AUD5VOL           equ     $58
+V_AUD6VOL           equ     $68
+V_AUD7VOL           equ     $78
+V_AUD8VOL           equ     $88
+V_AUD9VOL           equ     $98
+V_AUD10VOL          equ     $A8
+V_AUD11VOL          equ     $B8
+V_AUD12VOL          equ     $C8
+V_AUD13VOL          equ     $D8
+V_AUD14VOL          equ     $E8
+V_AUD15VOL          equ     $F8
                 ELSE
 OKT_AUDIO_BASE      equ     $A0
 OKT_AUDIO_DMA       equ     $96
@@ -248,8 +267,6 @@ OKT_AUDIO_HW_CHANS  equ     4
                 ENDC
 
 ; ===========================================================================
-GAD_DONE            equ     0
-GAD_NEXT            equ     1
                     ; next gadget.l
                     ; flags.w
                     ; x.b,y.b,w.b,h.b
@@ -272,6 +289,7 @@ KL_HEAD             MACRO
                     dc.w    KL_ENTRY_HEAD,\1
                     dc.l    \2
                     ENDM
+
                     ; type.w,code.w
                     ; associated function.l
                     ; or
@@ -291,9 +309,11 @@ KEY                 MACRO
                 ENDC
             ENDC
                     ENDM
+
 KL_DONE             MACRO
                     dc.w    KL_ENTRY_DONE
                     ENDM
+
                     ; layout list.l
                     ; keyboard shortcuts list.l
                     ; gadgets list.l
@@ -308,13 +328,29 @@ SCREEN              MACRO
                     dc.l    0,0,0
                     ENDM
 
+CHUNK               MACRO
+            IF \1==0
+                    dc.l    0
+            ELSE
+                    dc.b    \1
+                    dc.l    \2,\3
+                IF NARG==4
+                    dc.l    \4
+                ENDC
+            ENDC
+                    ENDM
+
 ; ===========================================================================
 OKT_SET_AUDIO_ADR   MACRO
                     move.l  \1,(OKT_AUDIO_ADR,\2)
                     ENDM
 
 OKT_SET_AUDIO_LEN   MACRO
+                IFD OKT_AUDIO_VAMPIRE
+                    move.l  \1,(OKT_AUDIO_LEN,\2)
+                ELSE
                     move.w  \1,(OKT_AUDIO_LEN,\2)
+                ENDC
                     ENDM
 
 OKT_SET_AUDIO_PER   MACRO
@@ -322,26 +358,31 @@ OKT_SET_AUDIO_PER   MACRO
                     ENDM
 
 OKT_SET_AUDIO_VOL   MACRO
+                IFD OKT_AUDIO_VAMPIRE
+                    ; set channel panning
+                    ; a4 = panning table
+                    move.w  \1,d1
+                    mulu    (a4,d3.w*4),\1
+                    lsr.w   #7,\1
+                    lsl.w   #8,\1
+                    mulu    2(a4,d3.w*4),d1
+                    lsr.w   #7,d1
+                    or.w    d1,\1
+                ENDC
                     move.w  \1,(OKT_AUDIO_VOL,\2)
                     ENDM
 
+                IFD OKT_AUDIO_VAMPIRE
 OKT_SET_AUDIO_CTRL  MACRO
                     move.w  \1,(OKT_AUDIO_CTRL,\2)
                     ENDM
+                ENDC
 
 OKT_SET_AUDIO_DMA   MACRO
                     move.w  \1,_CUSTOM|OKT_AUDIO_DMA
                     ENDM
 
 OKT_SET_AUDIO_PAN   MACRO
-                    ; set panning
-                    move.w  d0,d1
-                    mulu    (a4,d3.w*4),d0
-                    lsr.w   #7,d0
-                    lsl.w   #8,d0
-                    mulu    2(a4,d3.w*4),d1
-                    lsr.w   #7,d1
-                    or.w    d1,d0
                     ENDM
 
 ; ===========================================================================
