@@ -1700,11 +1700,11 @@ set_caret_to_max_row:
                     rts
 
 ; ===========================================================================
-lbC01F21A:
+go_to_pattern:
                     lea     (ascii_MSG6,pc),a1
                     move.b  d0,(a1)
                     lea     (GotoPattern_MSG,pc),a0
-                    jsr     (lbC0248CC)
+                    jsr     (input_number)
                     bmi     lbC01F24E
                     cmp.w   (number_of_patterns),d0
                     bcs     lbC01F23C
@@ -9628,7 +9628,9 @@ lbC0248C0:
                     rts
 lbW0248CA:
                     dc.w     0
-lbC0248CC:
+
+; ===========================================================================
+input_number:
                     move.l  a0,-(a7)
                     move.l  a1,-(a7)
                     move.l  a1,a0
@@ -11897,7 +11899,7 @@ files_selector_events:
                     dc.l    handle_disk_changed
                     dc.w    EVT_LIST_END
 files_selector_sequence:
-                    SCREEN  files_selector_layout,file_selector_keys,files_selector_gadgets
+                    SCREEN  files_selector_layout,file_selector_keys_list,files_selector_gadgets
 lbC026B42:
                     bsr     lbC027724
                     bsr     lbC027738
@@ -13745,10 +13747,10 @@ max_lines:
                     dc.w    21
 gadgets_lists_to_fix:
                     dc.l    sample_editor_commands_gadgets
-                    dc.l    lbW028FDC
-                    dc.l    lbL0291B8
-                    dc.l    lbL0293F0
-                    dc.l    lbL029A1E
+                    dc.l    sample_editor_change_volume_linear_gadgets
+                    dc.l    sample_editor_change_volume_curve_gadgets
+                    dc.l    sample_editor_change_period_gadgets
+                    dc.l    sample_editor_sample_op_gadgets
                     dc.l    0
 lbC02814E:
                     move.w  d1,d0
@@ -13826,7 +13828,7 @@ lbB028218:
                     dc.b    0
                     even
 sample_editor_sequence:
-                    SCREEN  sample_editor_layout,sample_editor_keys,sample_editor_gadgets
+                    SCREEN  sample_editor_layout,sample_editor_keys_list,sample_editor_gadgets
 lbC02823A:
                     movem.l d2-d7/a2-a6,-(a7)
                     tst.b   (ntsc_flag)
@@ -14963,16 +14965,16 @@ sample_editor_change_volume_linear:
                     cmp.l   (sample_block_end),d0
                     beq     _error_what_block
 lbC028F32:
-                    move.l  #lbC028F3E,(current_cmd_ptr)
+                    move.l  #do_sample_editor_change_volume_linear,(current_cmd_ptr)
                     rts
-lbC028F3E:
+do_sample_editor_change_volume_linear:
                     move.w  #100,(lbW029F0E)
-                    lea     (lbW028FA0,pc),a0
+                    lea     (sample_editor_change_volume_linear_sequence,pc),a0
                     jsr     (process_commands_sequence)
                     bsr     lbC029026
-                    lea     (lbW028F60,pc),a0
+                    lea     (sample_editor_change_volume_linear_events,pc),a0
                     jmp     (stop_audio_and_process_event)
-lbW028F60:
+sample_editor_change_volume_linear_events:
                     dc.w    EVT_MORE_EVENTS
                     dc.l    process_events
                     dc.w    EVT_KEY_PRESSED
@@ -14991,23 +14993,23 @@ lbC028F90:
                     bsr     lbC028324
                     st      (quit_flag)
                     rts
-lbW028FA0:
-                    SCREEN  ascii_MSG15,lbW029012,lbW028FDC
-ascii_MSG15:
+sample_editor_change_volume_linear_sequence:
+                    SCREEN  sample_editor_change_volume_linear_layout,sample_editor_change_volume_linear_keys_list,sample_editor_change_volume_linear_gadgets
+sample_editor_change_volume_linear_layout:
                     dc.b    CMD_MOVE_TO_LINE,0
                     dc.l    max_lines
                     dc.b    CMD_TEXT,28,0,'    % ',0
                     dc.b    CMD_TEXT,28,1,'Do! Ok',0
                     dc.b    CMD_DONE
                     even
-lbW028FDC:
+sample_editor_change_volume_linear_gadgets:
                     GADGET  GAD_NEXT,0,28,0,6,1,lbC02903A,lbC02904C
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,28,1,3,1,lbC02905E,0
                     GADGET  GAD_DONE,0,32,1,2,1,lbC028F90,0
-lbW029012:
-                    KL_HEAD KEY_MOD_NONE,lbW02901C
+sample_editor_change_volume_linear_keys_list:
+                    KL_HEAD KEY_MOD_NONE,sample_editor_change_volume_linear_keys
                     KL_DONE
-lbW02901C:
+sample_editor_change_volume_linear_keys:
                     KEY     KEY_NO_REPEAT,KEY_ESC,lbC028F82
                     KL_DONE
 lbC029026:
@@ -15097,16 +15099,16 @@ sample_editor_change_volume_curve:
                     cmp.l   (sample_block_end),d0
                     beq     _error_what_block
 lbC02911E:
-                    move.l  #lbC02912A,(current_cmd_ptr)
+                    move.l  #do_sample_editor_change_volume_curve,(current_cmd_ptr)
                     rts
-lbC02912A:
-                    lea     (lbW02917C,pc),a0
+do_sample_editor_change_volume_curve:
+                    lea     (sample_editor_change_volume_curve_sequence,pc),a0
                     jsr     (process_commands_sequence)
                     bsr     lbC029762
-                    lea     (lbW029148,pc),a0
+                    lea     (sample_editor_change_volume_curve_events,pc),a0
                     jsr     (stop_audio_and_process_event)
                     bra     lbC0298CC
-lbW029148:
+sample_editor_change_volume_curve_events:
                     dc.w    EVT_MORE_EVENTS
                     dc.l    process_events
                     dc.w    EVT_MORE_EVENTS
@@ -15122,23 +15124,23 @@ lbC029170:
                     bsr     lbC0298CC
                     st      (quit_flag)
                     rts
-lbW02917C:
-                    SCREEN  ascii_MSG16,lbW0291EE,lbL0291B8
-ascii_MSG16:
+sample_editor_change_volume_curve_sequence:
+                    SCREEN  sample_editor_change_volume_curve_layout,sample_editor_change_volume_curve_keys_list,sample_editor_change_volume_curve_gadgets
+sample_editor_change_volume_curve_layout:
                     dc.b    CMD_MOVE_TO_LINE,0
                     dc.l    max_lines
                     dc.b    CMD_TEXT,28,0,'Cancel',0
                     dc.b    CMD_TEXT,28,1,'Do! Ok',0
                     dc.b    CMD_DONE
                     even
-lbL0291B8:
+sample_editor_change_volume_curve_gadgets:
                     GADGET  GAD_NEXT,0,28,0,6,1,lbC029202,0
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,28,1,3,1,lbC02920C,0
                     GADGET  GAD_DONE,0,32,1,2,1,lbC029214,0
-lbW0291EE:
-                    KL_HEAD KEY_MOD_NONE,lbW0291F8
+sample_editor_change_volume_curve_keys_list:
+                    KL_HEAD KEY_MOD_NONE,sample_editor_change_volume_curve_keys
                     KL_DONE
-lbW0291F8:
+sample_editor_change_volume_curve_keys:
                     KEY     KEY_NO_REPEAT,KEY_ESC,lbC029202
                     KL_DONE
 lbC029202:
@@ -15283,16 +15285,16 @@ sample_editor_change_period:
                     move.l  (sample_block_start),(lbL029F14)
                     move.l  (sample_block_end),(lbL029F18)
 lbC029366:
-                    move.l  #lbC029372,(current_cmd_ptr)
+                    move.l  #do_sample_editor_change_period,(current_cmd_ptr)
                     rts
-lbC029372:
+do_sample_editor_change_period:
                     move.w  #100,(lbW029F10)
-                    lea     (lbW0293B6,pc),a0
+                    lea     (sample_editor_change_period_sequence,pc),a0
                     jsr     (process_commands_sequence)
                     bsr     lbC029488
-                    lea     (lbW029394,pc),a0
+                    lea     (sample_editor_change_period_events,pc),a0
                     jmp     (stop_audio_and_process_event)
-lbW029394:
+sample_editor_change_period_events:
                     dc.w    EVT_MORE_EVENTS
                     dc.l    process_events
                     dc.w    EVT_KEY_PRESSED
@@ -15302,24 +15304,24 @@ lbW029394:
                     dc.w    EVT_KEY_RELEASED
                     dc.l    lbC029E1A
                     dc.w    EVT_LIST_END
-lbW0293B6:
-                    SCREEN  ascii_MSG17,lbW029438,lbL0293F0
-ascii_MSG17:
+sample_editor_change_period_sequence:
+                    SCREEN  sample_editor_change_period_layout,sample_editor_change_period_keys_list,sample_editor_change_period_gadgets
+sample_editor_change_period_layout:
                     dc.b    CMD_MOVE_TO_LINE,0
                     dc.l    max_lines
                     dc.b    CMD_TEXT,38,0,'to',0
                     dc.b    CMD_TEXT,35,1,'Do!   Ok',0
                     dc.b    CMD_DONE
                     even
-lbL0293F0:
+sample_editor_change_period_gadgets:
                     GADGET  GAD_NEXT,0,34,0,3,1,lbC029492,lbC0294AA
                     GADGET  GAD_NEXT,0,41,0,3,1,lbC0294EA,lbC029502
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,34,1,5,1,lbC029472,0
                     GADGET  GAD_DONE,0,40,1,4,1,lbC02945A,0
-lbW029438:
-                    KL_HEAD KEY_MOD_NONE,lbW029442
+sample_editor_change_period_keys_list:
+                    KL_HEAD KEY_MOD_NONE,sample_editor_change_period_keys
                     KL_DONE
-lbW029442:
+sample_editor_change_period_keys:
                     KEY     KEY_NO_REPEAT,KEY_ESC,lbC02944C
                     KL_DONE
 lbC02944C:
@@ -15802,16 +15804,16 @@ go_work:
                     cmp.l   (sample_block_end),d0
                     beq     _error_what_block
 .wrong_mode:
-                    move.l  #sample_editor_do_delta_filter,(current_cmd_ptr)
+                    move.l  #do_sample_editor_sample_op,(current_cmd_ptr)
                     rts
 
 ; ===========================================================================
-sample_editor_do_delta_filter:
-                    lea     (lbW0299E2,pc),a0
+do_sample_editor_sample_op:
+                    lea     (sample_editor_sample_op_sequence,pc),a0
                     jsr     (process_commands_sequence)
-                    lea     (lbW0299C0,pc),a0
+                    lea     (sample_editor_sample_op_events,pc),a0
                     jmp     (stop_audio_and_process_event)
-lbW0299C0:
+sample_editor_sample_op_events:
                     dc.w    EVT_MORE_EVENTS
                     dc.l    process_events
                     dc.w    EVT_KEY_PRESSED
@@ -15821,37 +15823,43 @@ lbW0299C0:
                     dc.w    EVT_KEY_RELEASED
                     dc.l    lbC029E1A
                     dc.w    EVT_LIST_END
-lbW0299E2:
-                    SCREEN  ascii_MSG19,lbW029A54,lbL029A1E
-ascii_MSG19:
+sample_editor_sample_op_sequence:
+                    SCREEN  sample_editor_sample_op_layout,sample_editor_sample_op_keys_list,sample_editor_sample_op_gadgets
+sample_editor_sample_op_layout:
                     dc.b    CMD_MOVE_TO_LINE,0
                     dc.l    max_lines
                     dc.b    CMD_TEXT,44,0,'Cancel',0
                     dc.b    CMD_TEXT,44,1,'Do! Ok',0
                     dc.b    CMD_DONE
                     even
-lbL029A1E:
-                    GADGET  GAD_NEXT,0,44,0,6,1,lbC029A68,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,44,1,3,1,lbC029A82,0
-                    GADGET  GAD_DONE,0,48,1,2,1,lbC029A76,0
-lbW029A54:
-                    KL_HEAD KEY_MOD_NONE,lbW029A5E
+sample_editor_sample_op_gadgets:
+                    GADGET  GAD_NEXT,0,44,0,6,1,sample_editor_sample_op_cancel,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,44,1,3,1,sample_editor_sample_op_do,0
+                    GADGET  GAD_DONE,0,48,1,2,1,sample_editor_sample_op_ok,0
+sample_editor_sample_op_keys_list:
+                    KL_HEAD KEY_MOD_NONE,sample_editor_sample_op_keys
                     KL_DONE
-lbW029A5E:
-                    KEY     KEY_NO_REPEAT,KEY_ESC,lbC029A68
+sample_editor_sample_op_keys:
+                    KEY     KEY_NO_REPEAT,KEY_ESC,sample_editor_sample_op_cancel
                     KL_DONE
-lbC029A68:
+
+; ===========================================================================
+sample_editor_sample_op_cancel:
                     jsr     (change_work_sample_size)
                     st      (quit_flag)
                     rts
-lbC029A76:
+
+; ===========================================================================
+sample_editor_sample_op_ok:
                     bsr     lbC028324
                     st      (quit_flag)
                     rts
-lbC029A82:
-                    bsr     lbC029A88
+
+; ===========================================================================
+sample_editor_sample_op_do:
+                    bsr     .run_op
                     bra     sample_editor_display_sample
-lbC029A88:
+.run_op:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
                     move.l  (work_sample_address_ptr),a0
@@ -16308,6 +16316,7 @@ lbC029E3E:
 lbC029E48:
                     clr.l   (lbL029E92)
                 IFD OKT_AUDIO_VAMPIRE
+                    ; 8 hw channels
                     clr.l   (lbL029E92+4)
                 ENDC
                     rts
@@ -16492,7 +16501,7 @@ prefs_events:
                     dc.l    process_events
                     dc.w    EVT_LIST_END
 prefs_sequence:
-                    SCREEN  prefs_layout,prefs_keys,prefs_gadgets
+                    SCREEN  prefs_layout,prefs_keys_list,prefs_gadgets
 
 ; ===========================================================================
 display_prefs_help:
@@ -18011,7 +18020,7 @@ lbW02B70E:
 lbW02B710:
                     dc.w    0
 effects_editor_sequence:
-                    SCREEN  effects_editor_layout,effects_editor_keys,effects_editor_gadgets
+                    SCREEN  effects_editor_layout,effects_editor_keys_list,effects_editor_gadgets
 lbC02B732:
                     bra     lbC02BFE0
 
@@ -20398,7 +20407,7 @@ main_screen_events:
                     dc.l    lbC029E1A
                     dc.w    EVT_LIST_END
 main_screen_sequence:
-                    SCREEN  main_screen_layout,main_screen_keys,main_screen_gadgets
+                    SCREEN  main_screen_layout,main_screen_keys_list,main_screen_gadgets
 main_screen_layout:
                     dc.b    CMD_SET_MAIN_COPPERLIST
                     dc.b    CMD_DONE
@@ -20599,16 +20608,16 @@ change_channel_8_gadget:
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,67,1,13,2,draw_available_memory,0
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,67,3,13,1,draw_song_metrics,0
                     GADGET  GAD_DONE,MOUSE_CMD_NO_HILITE,0,7,80,24,click_on_pattern,0
-main_screen_keys:
-                    KL_HEAD KEY_MOD_NONE,lbW0179BE
-                    KL_HEAD KEY_MOD_SHIFT,lbW017A58
-                    KL_HEAD KEY_MOD_ALT,lbW017AF2
-                    KL_HEAD KEY_MOD_AMIGA,lbW017B8E
-                    KL_HEAD KEY_MOD_CTRL,lbW017B6C
-                    KL_HEAD KEY_MOD_NUMPAD,lbW017BC0
-                    KL_HEAD KEY_MOD_ALT|KEY_MOD_NUMPAD,lbW017BCE
+main_screen_keys_list:
+                    KL_HEAD KEY_MOD_NONE,main_screen_keys
+                    KL_HEAD KEY_MOD_SHIFT,main_screen_keys_shift
+                    KL_HEAD KEY_MOD_ALT,main_screen_keys_alt
+                    KL_HEAD KEY_MOD_AMIGA,main_screen_keys_amiga
+                    KL_HEAD KEY_MOD_CTRL,main_screen_keys_ctrl
+                    KL_HEAD KEY_MOD_NUMPAD,main_screen_keys_numpad
+                    KL_HEAD KEY_MOD_ALT|KEY_MOD_NUMPAD,main_screen_keys_alt_numpad
                     KL_DONE
-lbW0179BE:
+main_screen_keys:
                     KEY     KEY_NO_REPEAT,KEY_F1,lbC01F298
                     KEY     KEY_NO_REPEAT,KEY_F2,lbC01F2B2
                     KEY     KEY_NO_REPEAT,KEY_F3,copy_pattern_block
@@ -20629,7 +20638,7 @@ lbW0179BE:
                     KEY     KEY_REPEAT,KEY_UP,previous_pattern_row
                     KEY     KEY_REPEAT,KEY_DOWN,next_pattern_row
                     KL_DONE
-lbW017A58:
+main_screen_keys_shift:
                     KEY     KEY_NO_REPEAT,KEY_F3,cut_pattern_block
                     KEY     KEY_NO_REPEAT,KEY_F4,lbC01F6F2
                     KEY     KEY_NO_REPEAT,KEY_F5,lbC01F846
@@ -20649,7 +20658,7 @@ lbW017A58:
                     KEY     KEY_REPEAT,KEY_UP,lbC01F39E
                     KEY     KEY_REPEAT,KEY_DOWN,lbC01F38C
                     KL_DONE
-lbW017AF2:
+main_screen_keys_alt:
                     KEY     KEY_NO_REPEAT,' ',lbC01F40C
                     KEY     KEY_NO_REPEAT,KEY_F5,lbC01F82C
                     KEY     KEY_NO_REPEAT,KEY_F6,note_down_block_current_sample
@@ -20665,13 +20674,13 @@ lbW017AF2:
                     KEY     KEY_RANGE_NO_REPEAT,'0','9',0,set_current_sample_number
                     KEY     KEY_RANGE_NO_REPEAT,'a','z',10,set_current_sample_number
                     KL_DONE
-lbW017B6C:
+main_screen_keys_ctrl:
                     KEY     KEY_REPEAT,KEY_UP,dec_sample_number
                     KEY     KEY_REPEAT,KEY_DOWN,inc_sample_number
                     KEY     KEY_REPEAT,KEY_LEFT,lbC01F122
                     KEY     KEY_REPEAT,KEY_RIGHT,lbC01F160
                     KL_DONE
-lbW017B8E:
+main_screen_keys_amiga:
                     KEY     KEY_NO_REPEAT,KEY_F10,effect_editor
                     KEY     KEY_NO_REPEAT,KEY_HELP,display_effects_help
                     KEY     KEY_REPEAT,KEY_LEFT,lbC01F2FC
@@ -20679,10 +20688,10 @@ lbW017B8E:
                     KEY     KEY_REPEAT,KEY_DOWN,lbC01F31E
                     KEY     KEY_REPEAT,KEY_UP,lbC01F344
                     KL_DONE
-lbW017BC0:
-                    KEY     KEY_RANGE_NO_REPEAT,'0','9',48,lbC01F21A
+main_screen_keys_numpad:
+                    KEY     KEY_RANGE_NO_REPEAT,'0','9',48,go_to_pattern
                     KL_DONE
-lbW017BCE:
+main_screen_keys_alt_numpad:
                     KEY     KEY_RANGE_NO_REPEAT,'0','9',0,set_quantize_amount_from_keyboard
                     KL_DONE
 
@@ -20724,10 +20733,10 @@ files_selector_gadgets:
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,42,11,11,1,switch_verify_mode,0
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,42,12,11,1,switch_clear_mode,0
                     GADGET  GAD_DONE,MOUSE_CMD_NO_REPEAT,54,10,6,3,format_disk,0
-file_selector_keys:
-                    KL_HEAD KEY_MOD_NONE,lbW01881E
+file_selector_keys_list:
+                    KL_HEAD KEY_MOD_NONE,file_selector_keys
                     KL_DONE
-lbW01881E:
+file_selector_keys:
                     KEY     KEY_NO_REPEAT,KEY_ESC,file_selector_cancel
                     KEY     KEY_NO_REPEAT,KEY_RETURN,file_selector_ok
                     KEY     KEY_NO_REPEAT,'a',lbC02756A
@@ -20797,13 +20806,13 @@ sample_editor_commands_gadgets:
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,57,1,7,1,sample_editor_sampler,0
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,65,0,9,1,sample_editor_inc_note_rate,sample_editor_dec_note_rate
                     GADGET  GAD_DONE,MOUSE_CMD_NO_REPEAT,65,1,9,1,sample_editor_switch_left_right,0
-sample_editor_keys:
-                    KL_HEAD KEY_MOD_NONE,lbW018B22
-                    KL_HEAD KEY_MOD_NUMPAD,lbW018B54
-                    KL_HEAD KEY_MOD_SHIFT,lbW018B66
-                    KL_HEAD KEY_MOD_ALT,lbW018BC0
+sample_editor_keys_list:
+                    KL_HEAD KEY_MOD_NONE,sample_editor_keys
+                    KL_HEAD KEY_MOD_NUMPAD,sample_editor_keys_numpad
+                    KL_HEAD KEY_MOD_SHIFT,sample_editor_keys_shift
+                    KL_HEAD KEY_MOD_ALT,sample_editor_keys_alt
                     KL_DONE
-lbW018B22:
+sample_editor_keys:
                     KEY     KEY_NO_REPEAT,KEY_ESC,sample_editor_exit
                     KEY     KEY_NO_REPEAT,KEY_DEL,sample_editor_clear_repeat
                     KEY     KEY_REPEAT,KEY_LEFT,lbC028ABC
@@ -20811,11 +20820,11 @@ lbW018B22:
                     KEY     KEY_REPEAT,KEY_UP,lbC028AF2
                     KEY     KEY_REPEAT,KEY_DOWN,lbC028B08
                     KL_DONE
-lbW018B54:
+sample_editor_keys_numpad:
                     KEY     KEY_REPEAT,'0',lbC0289EE
                     KEY     KEY_REPEAT,'.',lbC028A58
                     KL_DONE
-lbW018B66:
+sample_editor_keys_shift:
                     KEY     KEY_NO_REPEAT,'L',sample_editor_load_sample
                     KEY     KEY_NO_REPEAT,'S',sample_editor_save_sample
                     KEY     KEY_NO_REPEAT,'C',sample_editor_copy_sample
@@ -20828,7 +20837,7 @@ lbW018B66:
                     KEY     KEY_REPEAT,KEY_DOWN,lbC028B0C
                     KEY     KEY_NO_REPEAT,KEY_HELP,display_sample_editor_help
                     KL_DONE
-lbW018BC0:
+sample_editor_keys_alt:
                     KEY     KEY_REPEAT,KEY_LEFT,lbC028AC4
                     KEY     KEY_REPEAT,KEY_RIGHT,lbC028AE0
                     KEY     KEY_REPEAT,KEY_UP,lbC028AFA
@@ -20963,26 +20972,26 @@ prefs_gadgets:
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,23,26,8,3,cancel_prefs,0
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,34,27,7,1,switch_st_samples_mode,0
                     GADGET  GAD_DONE,MOUSE_CMD_NO_REPEAT,42,27,7,1,switch_st_tracks_mode,0
-prefs_keys:
-                    KL_HEAD KEY_MOD_NONE,lbW0194C0
-                    KL_HEAD KEY_MOD_SHIFT,lbW0194EA
-                    KL_HEAD KEY_MOD_AMIGA|KEY_MOD_ALT|KEY_MOD_SHIFT,lbW019514
+prefs_keys_list:
+                    KL_HEAD KEY_MOD_NONE,prefs_keys
+                    KL_HEAD KEY_MOD_SHIFT,prefs_keys_shift
+                    KL_HEAD KEY_MOD_AMIGA|KEY_MOD_ALT|KEY_MOD_SHIFT,prefs_keys_amiga_alt_shift
                     KL_DONE
-lbW0194C0:
+prefs_keys:
                     KEY     KEY_NO_REPEAT,KEY_ESC,cancel_prefs
                     KEY     KEY_REPEAT,KEY_LEFT,dec_selected_char_key
                     KEY     KEY_REPEAT,KEY_RIGHT,inc_selected_char_key
                     KEY     KEY_REPEAT,KEY_UP,dec_selected_char_column_key
                     KEY     KEY_REPEAT,KEY_DOWN,inc_selected_char_column_key
                     KL_DONE
-lbW0194EA:
+prefs_keys_shift:
                     KEY     KEY_REPEAT,KEY_LEFT,rotate_char_left
                     KEY     KEY_REPEAT,KEY_RIGHT,rotate_char_right
                     KEY     KEY_REPEAT,KEY_UP,rotate_char_up
                     KEY     KEY_REPEAT,KEY_DOWN,rotate_char_down
                     KEY     KEY_NO_REPEAT,KEY_HELP,display_prefs_help
                     KL_DONE
-lbW019514:
+prefs_keys_amiga_alt_shift:
                     KEY     KEY_NO_REPEAT,'C',save_font
                     KL_DONE
 
@@ -21057,28 +21066,28 @@ effects_editor_gadgets:
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_HILITE,14,16,5,14,lbC02BCFE,0
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_HILITE,20,16,25,14,lbC02BD16,0
                     GADGET  GAD_DONE,MOUSE_CMD_NO_HILITE,52,16,25,14,lbC02BD2E,0
-effects_editor_keys:
-                    KL_HEAD KEY_MOD_NONE,lbW019712
-                    KL_HEAD KEY_MOD_SHIFT,lbW01972C
-                    KL_HEAD KEY_MOD_ALT,lbW019746
-                    KL_HEAD KEY_MOD_AMIGA,lbW019760
+effects_editor_keys_list:
+                    KL_HEAD KEY_MOD_NONE,effects_editor_keys
+                    KL_HEAD KEY_MOD_SHIFT,effects_editor_keys_shift
+                    KL_HEAD KEY_MOD_ALT,effects_editor_keys_alt
+                    KL_HEAD KEY_MOD_AMIGA,effects_editor_keys_amiga
                     KL_DONE
-lbW019712:
+effects_editor_keys:
                     KEY     KEY_NO_REPEAT,KEY_ESC,lbC02B7DE
                     KEY     KEY_REPEAT,KEY_UP,lbC02C278
                     KEY     KEY_REPEAT,KEY_DOWN,lbC02C21A
                     KL_DONE
-lbW01972C:
+effects_editor_keys_shift:
                     KEY     KEY_NO_REPEAT,KEY_UP,lbC02C2CC
                     KEY     KEY_NO_REPEAT,KEY_DOWN,lbC02C2D8
                     KEY     KEY_NO_REPEAT,KEY_HELP,display_effects_editor_help
                     KL_DONE
-lbW019746:
+effects_editor_keys_alt:
                     KEY     KEY_REPEAT,KEY_UP,lbC02B7A4
                     KEY     KEY_REPEAT,KEY_DOWN,lbC02B780
                     KEY     KEY_NO_REPEAT,KEY_HELP,display_compute_help
                     KL_DONE
-lbW019760:
+effects_editor_keys_amiga:
                     KEY     KEY_NO_REPEAT,'c',lbC02B8FE
                     KEY     KEY_NO_REPEAT,'x',lbC02B866
                     KEY     KEY_NO_REPEAT,'i',lbC02B9BA
