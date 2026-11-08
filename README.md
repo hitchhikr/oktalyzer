@@ -15,6 +15,7 @@ To do:
 - Add new pattern effects.
 - Select pattern blocks with the mouse.
 - Add scrollbars in files requesters.
+- Add scrollbar in pattern view.
 - Better handling of line editing when quantization is turned off.
 - And maybe more...
 
