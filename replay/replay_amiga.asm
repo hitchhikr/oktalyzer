@@ -16,8 +16,15 @@ OKT_SCALING_LINES   equ     19552
 OKT_BUFFERS_LENGTH  equ     312
 
 _CUSTOM             equ     $DFF000
+INTENAR             equ     $1C
+INTREQR             equ     $1E
+DMACON              equ     $96
+INTENA              equ     $9A
+INTREQ              equ     $9C
+ADKCON              equ     $9E
+COLOR00             equ     $180
 OKT_AUDIO_BASE      equ     $A0
-OKT_AUDIO_DMA       equ     $96
+OKT_AUDIO_DMA       equ     DMACON
 OKT_AUDIO_ADR       equ     0
 OKT_AUDIO_LEN       equ     4
 OKT_AUDIO_PER       equ     6
@@ -195,28 +202,28 @@ OKT_custom_init:
                     move.l  d1,(a0)+
                     dbra    d0,.OKT_clear_mix_buffers
                     lea     (_CUSTOM|OKT_AUDIO_BASE),a1
-                    move.w  #$7FFF,($9C-$A0,a1)
-                    move.w  #$4780,($9A-$A0,a1)
-                    move.w  #$F,($96-$A0,a1)
-                    move.w  #$FF,($9E-$A0,a1)
+                    move.w  #$7FFF,(INTREQ-OKT_AUDIO_BASE,a1)
+                    move.w  #$4780,(INTENA-OKT_AUDIO_BASE,a1)
+                    move.w  #$F,(DMACON-OKT_AUDIO_BASE,a1)
+                    move.w  #$FF,(ADKCON-OKT_AUDIO_BASE,a1)
                     move.l  (OKT_final_mixing_buffers-OKT_vars,a6),a0
-                    move.l  a0,($A0-$A0,a1)
+                    move.l  a0,(OKT_AUDIO_BASE-OKT_AUDIO_BASE,a1)
                     lea     (512*2,a0),a0
-                    move.l  a0,($B0-$A0,a1)
+                    move.l  a0,($B0-OKT_AUDIO_BASE,a1)
                     lea     (512*2,a0),a0
-                    move.l  a0,($C0-$A0,a1)
+                    move.l  a0,($C0-OKT_AUDIO_BASE,a1)
                     lea     (512*2,a0),a0
-                    move.l  a0,($D0-$A0,a1)
+                    move.l  a0,($D0-OKT_AUDIO_BASE,a1)
                     move.w  #OKT_BUFFERS_LENGTH/2,d0
-                    move.w  d0,($A4-$A0,a1)
-                    move.w  d0,($B4-$A0,a1)
-                    move.w  d0,($C4-$A0,a1)
-                    move.w  d0,($D4-$A0,a1)
+                    move.w  d0,($A4-OKT_AUDIO_BASE,a1)
+                    move.w  d0,($B4-OKT_AUDIO_BASE,a1)
+                    move.w  d0,($C4-OKT_AUDIO_BASE,a1)
+                    move.w  d0,($D4-OKT_AUDIO_BASE,a1)
                     move.w  #227,d0
-                    move.w  d0,($A6-$A0,a1)
-                    move.w  d0,($B6-$A0,a1)
-                    move.w  d0,($C6-$A0,a1)
-                    move.w  d0,($D6-$A0,a1)
+                    move.w  d0,($A6-OKT_AUDIO_BASE,a1)
+                    move.w  d0,($B6-OKT_AUDIO_BASE,a1)
+                    move.w  d0,($C6-OKT_AUDIO_BASE,a1)
+                    move.w  d0,($D6-OKT_AUDIO_BASE,a1)
                     bset    #1,$BFE001
                     move.l  (OKT_vbr-OKT_vars,a6),a0
                     ; we use a level 6 interrupt if there are
@@ -229,7 +236,7 @@ OKT_custom_init:
                     move.l  (a0),(OKT_old_irq-OKT_vars,a6)
                     lea     (OKT_cia_int-OKT_vars,a6),a2
                     move.l	a2,(a0)
-                    lea     $BFD000+CIATBLO,a3
+                    lea     $BFD000|CIATBLO,a3
                     lea     (OKT_old_cia_timer-OKT_vars,a6),a2
                     move.b  CIAICR-CIATBLO(a3),(a2)+
                     move.b  CIACRB-CIATBLO(a3),(a2)+
@@ -245,21 +252,21 @@ OKT_custom_init:
                     move.b  d0,CIATBHI-CIATBLO(a3)
                     move.b  #%10000010,CIAICR-CIATBLO(a3)
                     move.b  #%00010001,CIACRB-CIATBLO(a3)
-                    move.w  #$E000,($9A-$A0,a1)
-                    move.w  #$8200,($96-$A0,a1)
+                    move.w  #$E000,(INTENA-OKT_AUDIO_BASE,a1)
+                    move.w  #$8200,(DMACON-OKT_AUDIO_BASE,a1)
                     rts
 .OKT_no_double_channels:
                     move.l  (a0),(OKT_old_irq-OKT_vars,a6)
                     lea     (OKT_audio_int-OKT_vars,a6),a2
                     move.l	a2,(a0)
                     move.w  (OKT_audio_int_single_bit-OKT_vars,a6),d0
-                    move.w	d0,($9C-$A0,a1)
+                    move.w	d0,(INTREQ-OKT_AUDIO_BASE,a1)
                     or.W    #$C000,d0
-                    move.w	d0,($9A-$A0,a1)
+                    move.w	d0,(INTENA-OKT_AUDIO_BASE,a1)
                     move.w  (OKT_audio_int_single_bit-OKT_vars,a6),d0
                     lsr.w   #7,d0
                     or.w    #$820F,d0
-                    move.w  d0,($96-$A0,a1)
+                    move.w  d0,(DMACON-OKT_AUDIO_BASE,a1)
                     rts
 
 ; ===========================================================================
@@ -267,8 +274,8 @@ OKT_stop:
                     movem.l d0/a0/a1/a2/a6,-(a7)
                     lea     (OKT_vars,pc),a6
                     lea     (_CUSTOM|OKT_AUDIO_DMA),a2
-                    move.w  #$7FFF,($9C-OKT_AUDIO_DMA,a2)
-                    move.w  #$6780,($9A-OKT_AUDIO_DMA,a2)
+                    move.w  #$7FFF,(INTREQ-OKT_AUDIO_DMA,a2)
+                    move.w  #$6780,(INTENA-OKT_AUDIO_DMA,a2)
                     move.w  #%1111,(a2)
                     moveq   #0,d0
                     move.w  d0,($A8-OKT_AUDIO_DMA,a2)
@@ -277,7 +284,7 @@ OKT_stop:
                     move.w  d0,($D8-OKT_AUDIO_DMA,a2)
                     tst.w   (OKT_audio_int_single_bit-OKT_vars,a6)
                     bne     .OKT_no_double_channels
-                    lea     $BFD000+CIATBLO,a0
+                    lea     $BFD000|CIATBLO,a0
                     lea     (OKT_old_cia_timer-OKT_vars,a6),a1
                     move.b  (a1)+,CIAICR-CIATBLO(a0)
                     move.b  (a1)+,CIACRB-CIATBLO(a0)
@@ -286,7 +293,7 @@ OKT_stop:
 .OKT_no_double_channels:
                     move.l  (OKT_vbr-OKT_vars,a6),a0
                     move.l  (OKT_old_irq-OKT_vars,a6),(a0)
-                    move.w	#$C000,($9A-OKT_AUDIO_DMA,a2)
+                    move.w	#$C000,(INTENA-OKT_AUDIO_DMA,a2)
                     movem.l (a7)+,d0/a0/a1/a2/a6
                     rts
 
@@ -312,14 +319,14 @@ OKT_get_vbr:
 ; ===========================================================================
 OKT_audio_int:
                     movem.l	d0-a6,-(a7)
-                    lea	    $DFF01C,a1
+                    lea	    _CUSTOM|INTENAR,a1
                     move.w	(a1)+,d0
                     and.w	(a1),d0
                     and.w   (OKT_audio_int_single_bit,pc),d0
                     beq     .OKT_no_int
-                    move.w	d0,$9C-$1E(a1)
+                    move.w	d0,(INTREQ-INTREQR,a1)
                 IFD SHOW_RASTERS
-                    move.w  #$77,$dff180
+                    move.w  #$77,_CUSTOM|COLOR00
                 ENDC
                     bsr     OKT_main
                     lea     (_CUSTOM|OKT_AUDIO_BASE),a1
@@ -349,24 +356,24 @@ OKT_audio_int:
                     move.l  a0,($30,a1)
 .OKT_no_int:
                 IFD SHOW_RASTERS
-                    move.w  #0,$dff180
+                    move.w  #0,_CUSTOM|COLOR00
                 ENDC
                     movem.l	(a7)+,d0-a6
                     rte
 
 ; ===========================================================================
 OKT_cia_int:
-                    tst.b   $BFDD00
+                    tst.b   $BFD000|CIAICR
                     movem.l d0-a6,-(a7)
-                    lea     $DFF09C,a0
+                    lea     _CUSTOM|INTREQ,a0
                     move.w  #$2000,(a0)
                     move.w  #$2000,(a0)
                 IFD SHOW_RASTERS
-                    move.w  #$770,$dff180
+                    move.w  #$770,_CUSTOM|COLOR00
                 ENDC
                     bsr     OKT_replay_handler
                 IFD SHOW_RASTERS
-                    move.w  #0,$dff180
+                    move.w  #0,_CUSTOM|COLOR00
                 ENDC
                     movem.l (a7)+,d0-a6
                     rte

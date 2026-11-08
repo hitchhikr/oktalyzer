@@ -14,7 +14,6 @@ To do:
 - Decode the rest of the source.
 - Add new pattern effects.
 - Select pattern blocks with the mouse.
-- Using (Shift)TAB key to navigate among the tracks (change edit mode toggle to spacebar).
 - Add scrollbars in files requesters.
 - Create an option to display rows numbers in decimal or hexadecimal.
 - Better handling of line editing when quantization is turned off.
@@ -56,5 +55,9 @@ Done:
 - Added a normalization function in sample editor.
 - Right mouse button click on a channel status will solo it.
 - Added Arp 4 effect (E).
+- Current displayed pattern number is now displayed beside channels status (top-right).
+- Row numbers are now only displayed once per line.
+- Range blocks aren't displayed or can't be selected if sample is empty.
+- Right mouse button on sample waveform to remove current block mark.
 
 A work in progress...

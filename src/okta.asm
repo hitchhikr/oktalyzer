@@ -609,6 +609,8 @@ patch_sys_requesters_function:
                     move.w  #_LVOAutoRequest,a0
                     cmp.w   #36,(LIB_VERSION,a1)
                     bcs     .old_intuition
+                    move.b  #2,pen_border_up
+                    move.b  #1,pen_border_down
                     move.w  #_LVOEasyRequestArgs,a0
 .old_intuition:
                     move.l  #our_sys_requesters_function,d0
@@ -2393,9 +2395,9 @@ draw_edit_mode_status:
 .edit_on:
                     jmp     (draw_text_with_coords_struct)
 .on_text:
-                    dc.b    22,3,' On',0
+                    dc.b    21,3,' On',0
 .off_text:
-                    dc.b    22,3,'Off',0
+                    dc.b    21,3,'Off',0
 
 ; ===========================================================================
 switch_edit_mode:
@@ -2418,13 +2420,13 @@ draw_midi_mode_status:
 .draw_it:
                     jmp     (draw_text_with_coords_struct)
 .off_text:
-                    dc.b    36,1,'Off',0
+                    dc.b    35,1,'Off',0
 .in_text:
-                    dc.b    36,1,'In ',0
+                    dc.b    35,1,'In ',0
 .out_text:
-                    dc.b    36,1,'Out',0
+                    dc.b    35,1,'Out',0
 .unk_text:
-                    dc.b    36,1,'---',0
+                    dc.b    35,1,'---',0
 
 ; ===========================================================================
 cycle_midi_modes_stop_audio_and_draw:
@@ -2449,7 +2451,7 @@ draw_copy_blocks_mode:
                     bne     .blocks_mode
                     lea     (.curs_text,pc),a0
 .blocks_mode:
-                    moveq   #35,d0
+                    moveq   #34,d0
                     moveq   #2,d1
                     jmp     (draw_text)
 .blck_text:
@@ -2474,15 +2476,15 @@ draw_polyphony_status:
 .poly_on:
                     lea     (.blank_text,pc),a0
                     jsr     (draw_text_with_coords_struct)
-                    moveq   #24,d0
+                    moveq   #23,d0
                     moveq   #4,d1
                     move.w  (polyphony_channels_count),d2
                     addq.w  #1,d2
                     bra     draw_one_char_alpha_numeric
 .blank_text:
-                    dc.b    22,4,'  ',0
+                    dc.b    21,4,'  ',0
 .off_text:
-                    dc.b    22,4,'Off',0
+                    dc.b    21,4,'Off',0
                     even
 
 ; ===========================================================================
@@ -2603,14 +2605,14 @@ draw_quantize_amount:
 .quantize_on:
                     lea     (.blank_text,pc),a0
                     jsr     (draw_text_with_coords_struct)
-                    moveq   #23,d0
+                    moveq   #22,d0
                     moveq   #5,d1
                     move.w  (quantize_amount,pc),d2
                     jmp     (draw_2_digits_decimal_number_leading_zeroes)
 .blank_text:
-                    dc.b    22,5,' ',0
+                    dc.b    21,5,' ',0
 .off_text:
-                    dc.b    22,5,'Off',0
+                    dc.b    21,5,'Off',0
 
 ; ===========================================================================
 dec_quantize_amount:
@@ -2651,28 +2653,28 @@ quantize_amount:
 ; ===========================================================================
 display_main_menu:
                     move.w  (current_song_position),d2
-                    moveq   #12,d0
+                    moveq   #11,d0
                     moveq   #1,d1
                     jsr     (draw_3_digits_decimal_number_leading_zeroes)
                     lea     (OKT_patterns),a0
                     move.w  (current_song_position),d2
                     move.b  (a0,d2.w),d2
-                    moveq   #13,d0
+                    moveq   #12,d0
                     moveq   #2,d1
                     jsr     (draw_2_digits_decimal_number_leading_zeroes)
                     move.w  (OKT_song_length),d2
-                    moveq   #12,d0
+                    moveq   #11,d0
                     moveq   #3,d1
                     jsr     (draw_3_digits_decimal_number_leading_zeroes)
                     move.w  (OKT_default_speed),d0
                     bsr     draw_current_speed
                     move.w  (number_of_patterns),d2
-                    moveq   #13,d0
+                    moveq   #12,d0
                     moveq   #6,d1
                     jsr     (draw_2_digits_decimal_number_leading_zeroes)
                     bsr     get_current_pattern_address_and_rows
                     move.w  d0,d2
-                    moveq   #23,d0
+                    moveq   #22,d0
                     moveq   #6,d1
                     jsr     (draw_2_digits_hex_number)
                     bsr     draw_edit_mode_status
@@ -2731,7 +2733,7 @@ draw_channel_inactive_status:
 ; ===========================================================================
 draw_current_speed:
                     move.w  d0,d2
-                    moveq   #13,d0
+                    moveq   #12,d0
                     moveq   #5,d1
                     bra     draw_2_digits_hex_number
 
@@ -2740,7 +2742,7 @@ draw_current_sample_infos:
                     lea     (.empty_name_text,pc),a0
                     jsr     (draw_text_with_coords_struct)
                     move.w  (current_sample_index,pc),d2
-                    moveq   #56,d0
+                    moveq   #55,d0
                     moveq   #0,d1
                     bsr     draw_one_char_alpha_numeric
                     ; name
@@ -2749,18 +2751,18 @@ draw_current_sample_infos:
                     lsl.w   #5,d0
                     add.w   d0,a0
                     move.l  a0,-(a7)
-                    moveq   #46,d0
+                    moveq   #45,d0
                     moveq   #1,d1
                     jsr     (draw_text)
                     move.l  (a7),a0
                     ; length
                     move.l  (SMP_LEN,a0),d2
-                    moveq   #46,d0
+                    moveq   #45,d0
                     moveq   #2,d1
                     jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     move.l  (a7),a0
                     lea     (.infos_header_text,pc),a0
-                    moveq   #40,d0
+                    moveq   #39,d0
                     moveq   #3,d1
                     jsr     (process_commands)
                     jsr     (normalize_current_sample_repeat)
@@ -2769,7 +2771,7 @@ draw_current_sample_infos:
                     moveq   #0,d2
                     move.w  (SMP_REP_START,a0),d2
                     add.l   d2,d2
-                    moveq   #46,d0
+                    moveq   #45,d0
                     moveq   #3,d1
                     jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     move.l  (a7),a0
@@ -2777,27 +2779,27 @@ draw_current_sample_infos:
                     moveq   #0,d2
                     move.w  (SMP_REP_LEN,a0),d2
                     add.l   d2,d2
-                    moveq   #46,d0
+                    moveq   #45,d0
                     moveq   #4,d1
                     jsr     (draw_6_digits_decimal_number_leading_zeroes)
                     move.l  (a7),a0
                     ; default volume
                     move.w  (SMP_VOL,a0),d2
-                    moveq   #46,d0
+                    moveq   #45,d0
                     moveq   #5,d1
                     jsr     (draw_2_digits_decimal_number_leading_zeroes)
                     ; allow volume modifications
                     lea     (change_sample_number_gadget),a0
                     bsr     lbC020C8A
-                    bra     .sample_mode
-.empty:
-                    lea     (.empty_infos_text,pc),a0
-                    moveq   #40,d0
-                    moveq   #3,d1
-                    jsr     (process_commands)
-                    ; forbid volume modifications
-                    lea     (change_sample_number_gadget),a0
-                    bsr     lbC020C92
+;                    bra     .sample_mode
+; .empty:
+                    ; lea     (.empty_infos_text,pc),a0
+                    ; moveq   #39,d0
+                    ; moveq   #3,d1
+                    ; jsr     (process_commands)
+                    ; ; forbid volume modifications
+                    ; lea     (change_sample_number_gadget),a0
+                    ; bsr     lbC020C92
 .sample_mode:
                     move.l  (a7)+,a0
                 IFD OKT_AUDIO_VAMPIRE
@@ -2807,23 +2809,23 @@ draw_current_sample_infos:
                     add.w   d0,d0
                     add.w   d0,d0
                     add.w   d0,a0
-                    moveq   #46,d0
+                    moveq   #45,d0
                     moveq   #6,d1
                     jmp     (draw_text)
                 ENDC
                     rts
 .empty_name_text:
-                    dc.b    46,1,'--------------------',0
+                    dc.b    45,1,'--------------------',0
 .infos_header_text:
                     dc.b    CMD_TEXT,0,0,'RStr:',0
                     dc.b    CMD_TEXT,0,1,'RLen:',0
                     dc.b    CMD_TEXT,0,2,'Vol.:',0
                     dc.b    CMD_DONE
-.empty_infos_text:
-                    dc.b    CMD_TEXT,0,0,'            ',0
-                    dc.b    CMD_TEXT,0,1,'            ',0
-                    dc.b    CMD_TEXT,0,2,'        ',0
-                    dc.b    CMD_DONE
+; .empty_infos_text:
+                    ; dc.b    CMD_TEXT,0,0,'            ',0
+                    ; dc.b    CMD_TEXT,0,1,'            ',0
+                    ; dc.b    CMD_TEXT,0,2,'        ',0
+                    ; dc.b    CMD_DONE
                     even
                 IFD OKT_AUDIO_VAMPIRE
 .sample_mode_text:
@@ -3242,6 +3244,13 @@ draw_pattern:
                     jsr     (clear_1_line_blitter)
                     moveq   #0,d7
                     bsr     get_current_pattern_ascii_number
+                    ; pattern number
+                    lea     (row_data_buffer),a0
+                    move.w  d4,(a0)
+                    sf.b    2(a0)
+                    moveq   #67,d0
+                    moveq   #6,d1
+                    jsr     (draw_text)
 .loop:
                     bsr     draw_row_data
                     addq.w  #1,d7
@@ -3276,11 +3285,8 @@ draw_row_data:
                     lea     (alpha_numeric_table),a2
                     lea     (full_note_table),a3
                     lea     (row_data_buffer),a5
-                    ; pattern number
-                    move.w  d4,(a5)+
                     lea     (OKT_channels_modes),a0
                     moveq   #2-1,d5
-.draw_channels_groups:
                     move.b  #' ',(a5)+
                     move.w  d7,d0
                     lsr.w   #4,d0
@@ -3289,6 +3295,7 @@ draw_row_data:
                     moveq   #$F,d0
                     and.w   d7,d0
                     move.b  (a2,d0.w),(a5)+
+.draw_channels_groups:
                     moveq   #2-1,d6
 .draw_channels:
                     ; column is doubled or not ?
@@ -8397,10 +8404,10 @@ OKT_init:
                     move.l  d1,(a0)+
                     dbra    d0,.OKT_clear_mix_buffers
                     lea     (_CUSTOM),a1
-                    move.w  #$FF,(ADKCON,a1)
                     move.w  #$7FFF,(INTREQ,a1)
                     move.w  #$4780,(INTENA,a1)
                     move.w  #DMAF_AUDIO,(DMACON,a1)
+                    move.w  #$FF,(ADKCON,a1)
                     move.l  (OKT_final_mixing_buffers,pc),a0
                     move.l  a0,(AUD0LCH,a1)
                     lea     (512*2,a0),a0
@@ -8465,9 +8472,9 @@ OKT_init:
                 ELSE
                     ; Vampire only
                     lea     (_CUSTOM),a1
-                    move.w  #$FF,(ADKCON,a1)
                     move.w  #$7FFF,(INTREQ,a1)
-                    move.w  #%11111111,(_CUSTOM|OKT_AUDIO_DMA)
+                    move.w  #%111111111111,(OKT_AUDIO_DMA,a1)
+                    move.w  #$FF,(ADKCON,a1)
                     move.l  (OKT_vbr,pc),a0
                     move.l  (a0),(OKT_old_irq)
                     lea     (OKT_cia_int,pc),a2
@@ -8497,29 +8504,28 @@ OKT_init:
 OKT_stop:
                     movem.l d0/a0/a1/a2/a3/a6,-(a7)
                     move.l  (OKT_vbr,pc),a3
-                    lea     (_CUSTOM|OKT_AUDIO_DMA),a2
-                    move.w  #$7FFF,(_CUSTOM|INTREQ)
+                    lea     (_CUSTOM),a2
+                    move.w  #$7FFF,(INTREQ,a2)
                 IFD OKT_AUDIO_VAMPIRE
-                    move.w  #$6000,(_CUSTOM|INTENA)
-                    move.w  #%11111111,(a2)
+                    move.w  #%111111111111,(INTREQ2,a2)
+                    move.w  #$6000,(INTENA,a2)
+                    move.w  #%1111,(DMACON,a2)
+                    move.w  #%111111111111,(OKT_AUDIO_DMA,a2)
+                    lea     (_CUSTOM|OKT_AUDIO_BASE),a2
                     moveq   #0,d0
-                    lea     (OKT_AUDIO_BASE-OKT_AUDIO_DMA,a2),a2
-                    move.w  d0,(V_AUD0VOL-OKT_AUDIO_BASE,a2)
-                    move.w  d0,(V_AUD1VOL-OKT_AUDIO_BASE,a2)
-                    move.w  d0,(V_AUD2VOL-OKT_AUDIO_BASE,a2)
-                    move.w  d0,(V_AUD3VOL-OKT_AUDIO_BASE,a2)
-                    move.w  d0,(V_AUD4VOL-OKT_AUDIO_BASE,a2)
-                    move.w  d0,(V_AUD5VOL-OKT_AUDIO_BASE,a2)
-                    move.w  d0,(V_AUD6VOL-OKT_AUDIO_BASE,a2)
-                    move.w  d0,(V_AUD7VOL-OKT_AUDIO_BASE,a2)
+                    moveq   #OKT_AUDIO_HW_CHANS-1,d1
+.OKT_clear_all_vols:
+                    move.w  d0,(OKT_AUDIO_VOL,a2)
+                    lea     (OKT_AUDIO_SIZE,a2),a2
+                    dbf     d1,.OKT_clear_all_vols
                 ELSE
-                    move.w  #$6780,(_CUSTOM|INTENA)
-                    move.w  #%1111,(a2)
+                    move.w  #$6780,(INTENA,a2)
+                    move.w  #%1111,(OKT_AUDIO_DMA,a2)
                     moveq   #0,d0
-                    move.w  d0,(AUD0VOL-OKT_AUDIO_DMA,a2)
-                    move.w  d0,(AUD1VOL-OKT_AUDIO_DMA,a2)
-                    move.w  d0,(AUD2VOL-OKT_AUDIO_DMA,a2)
-                    move.w  d0,(AUD3VOL-OKT_AUDIO_DMA,a2)
+                    move.w  d0,(AUD0VOL,a2)
+                    move.w  d0,(AUD1VOL,a2)
+                    move.w  d0,(AUD2VOL,a2)
+                    move.w  d0,(AUD3VOL,a2)
                     tst.w   (OKT_audio_int_single_bit)
                     bne     .OKT_double_channels
                     ; was a CIA interrupt
@@ -8533,7 +8539,7 @@ OKT_stop:
                     move.b  (a1),CIATBHI-CIATBLO(a0)
 .OKT_double_channels:
                     move.l  (OKT_old_irq,pc),(a3)
-                    move.w	#$C000,(_CUSTOM|INTENA)
+                    move.w	#$C000,(INTENA,a2)
                     movem.l (a7)+,d0/a0/a1/a2/a3/a6
                     rts
 
@@ -13869,15 +13875,20 @@ lbW0282A8:
 lbC0282B8:
                     move.l  d4,-(a7)
                     cmp.w   #EVT_LEFT_PRESSED,d0
-                    beq     lbC0282CE
+                    beq     .set_block_mark
+                    cmp.w   #EVT_RIGHT_PRESSED,d0
+                    beq     .remove_block_mark
                     cmp.w   #EVT_MOUSE_MOVED,d0
                     bne     lbC028306
                     tst.b   d3
                     beq     lbC028306
                     sf      d4
                     bra     lbC0282D0
-lbC0282CE:
-                    st      d4
+.remove_block_mark:
+                    moveq   #2,d4
+                    bra     lbC0282D0
+.set_block_mark:
+                    move.b  #1,d4
 lbC0282D0:
                     move.w  d2,d0
                     tst.b   (ntsc_flag)
@@ -13896,11 +13907,21 @@ lbC0282EE:
                     tst.b   d4
                     beq     lbC0282FA
                     move.w  d1,d0
+                    tst.l   (work_sample_address_ptr)
+                    beq     .no_sample
+                    cmp.b   #2,d4
+                    beq     .go_remove
                     bsr     sample_editor_set_mark
+.no_sample:
+                    bra     lbC028306
+.go_remove:
+                    bsr     sample_editor_clear_mark_no_error
                     bra     lbC028306
 lbC0282FA:
                     move.w  (sample_editor_mouse_block_start),d0
                     bmi     lbC028306
+                    tst.l   (work_sample_address_ptr)
+                    beq     lbC028306
                     bsr     sample_editor_set_mark
 lbC028306:
                     move.l  (a7)+,d4
@@ -14059,7 +14080,13 @@ lbC0284DE:
                     move.w  #256,(lbW029ED2)
                     bsr     lbC028E96
                     bsr     sample_editor_draw_repeat_bars
+                    tst.l   (work_sample_address_ptr)
+                    beq     .no_range_to_draw
                     bra     lbC02895C
+.no_range_to_draw:
+                    rts
+
+; ===========================================================================
 lbC0284F6:
                     bsr     own_blitter
                     move.l  #(BC0F_DEST<<16),(BLTCON0,a6)
@@ -14333,6 +14360,9 @@ lbC028936:
 sample_editor_clear_mark:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
+
+; ===========================================================================
+sample_editor_clear_mark_no_error:
                     movem.l d0/d1/d2,-(a7)
                     moveq   #-1,d0
                     moveq   #-1,d1
@@ -17926,14 +17956,14 @@ skip_caret_position:
                     addq.w  #1,d3
                     rts
 caret_default_positions:
-                    dc.b    6,10,11,12,13
-                    dc.b    15,19,20,21,22
-                    dc.b    24,28,29,30,31
-                    dc.b    33,37,38,39,40
-                    dc.b    45,49,50,51,52
-                    dc.b    54,58,59,60,61
-                    dc.b    63,67,68,69,70
-                    dc.b    72,76,77,78,79
+                    dc.b    4,8,9,10,11
+                    dc.b    13,17,18,19,20
+                    dc.b    22,26,27,28,29
+                    dc.b    31,35,36,37,38
+                    dc.b    40,44,45,46,47
+                    dc.b    49,53,54,55,56
+                    dc.b    58,62,63,64,65
+                    dc.b    67,71,72,73,74
 lbL02B684:
                     dc.l    change_channel_1_gadget
                     dc.l    change_channel_2_gadget
@@ -20293,7 +20323,7 @@ main_copperlist_struct:
                     dc.l    pattern_copper_jump,pattern_copper_part,pattern_copper_back_jump
                     dc.l    0
 our_window_struct:
-                    dc.w    0,0,172,26
+                    dc.w    0,0,172,27
                     dc.b    0,1
                     dc.l    IDCMP_GADGETUP
                     dc.l    WFLG_NOCAREREFRESH|WFLG_ACTIVATE|WFLG_DEPTHGADGET|WFLG_DRAGBAR 
@@ -20308,31 +20338,41 @@ oktalyzer_name:
                     dc.b    'Oktalyzer',0
 our_gadget_struct:
                     dc.l    0
-                    dc.w    8,13,157,9
+                    dc.w    6,12,160,12
                     dc.w    GFLG_GADGHCOMP,GACT_RELVERIFY,GTYP_BOOLGADGET
-                    dc.l    our_gadget_border_struct
+                    dc.l    our_gadget_border_struct_up
                     dc.l    0
                     dc.l    our_gadget_text_struct
                     dc.l    0,0
                     dc.W    0
                     dc.l    0
-our_gadget_border_struct:
-                    dc.w    -1,-1
+our_gadget_border_struct_up:
+                    dc.w    0,0
+pen_border_up:
                     dc.b    1,0
-                    dc.b    1,5
-                    dc.l    our_gadget_border_coords
+                    dc.b    1,3
+                    dc.l    our_gadget_border_coords_up
+                    dc.l    our_gadget_border_struct_down
+our_gadget_border_struct_down:
+                    dc.w    0,0
+pen_border_down:
+                    dc.b    2,0
+                    dc.b    1,3
+                    dc.l    our_gadget_border_coords_down
                     dc.l    0
-our_gadget_border_coords:
+our_gadget_border_coords_up:
+                    dc.w    159,0
                     dc.w    0,0
-                    dc.w    158,0
-                    dc.w    158,10
-                    dc.w    0,10
-                    dc.w    0,0
+                    dc.w    0,11
+our_gadget_border_coords_down:
+                    dc.w    0,11
+                    dc.w    159,11
+                    dc.w    159,0
 our_gadget_text_struct:
                     dc.b    1,0
                     dc.b    1
                     dc.b    0
-                    dc.w    11,1
+                    dc.w    12,2
                     dc.l    topaz_font_struct
                     dc.l    our_gadget_text
                     dc.w    0,0
@@ -20366,34 +20406,34 @@ main_screen_layout:
 ; ===========================================================================
 main_menu_layout:
                     dc.b    CMD_CLEAR_MAIN_MENU
-                    dc.b    CMD_TEXT,1,0,'Current Song:',0
-                    dc.b    CMD_TEXT,1,1,'New  Pos..:',0
-                    dc.b    CMD_TEXT,1,2,'Load Patt.:',0
-                    dc.b    CMD_TEXT,1,3,'Save Len..:',0
-                    dc.b    CMD_TEXT,1,4,'Pref Ins. Del.',0
-                    dc.b    CMD_TEXT,1,5,'Exit Speed:',0
-                    dc.b    CMD_TEXT,6,6,'SLen.:',0
+                    dc.b    CMD_TEXT,0,0,'Current Song:',0
+                    dc.b    CMD_TEXT,0,1,'New  Pos..:',0
+                    dc.b    CMD_TEXT,0,2,'Load Patt.:',0
+                    dc.b    CMD_TEXT,0,3,'Save Len..:',0
+                    dc.b    CMD_TEXT,0,4,'Pref Ins. Del.',0
+                    dc.b    CMD_TEXT,0,5,'Exit Speed:',0
+                    dc.b    CMD_TEXT,5,6,'SLen.:',0
                     dc.b    CMD_SUB_COMMAND,0
                     dc.l    wb_cli_text_ptr
-                    dc.b    CMD_TEXT,16,0,'Editor:',0
-                    dc.b    CMD_TEXT,16,1,'Play Song MidiMode:',0
-                    dc.b    CMD_TEXT,16,2,'Play Patt Copy Cut',0
-                    dc.b    CMD_TEXT,16,3,'Edit.:    Replc. Mix It',0
-                    dc.b    CMD_TEXT,16,4,'Poly.:    NoteUp NoDown',0
-                    dc.b    CMD_TEXT,16,5,'Quant:    OctaUp OcDown',0
-                    dc.b    CMD_TEXT,16,6,'PLen.:    ChInst ChaEff',0
-                    dc.b    CMD_TEXT,40,0,'Current Sample:',0
-                    dc.b    CMD_TEXT,40,1,'Name: --------------------',0
-                    dc.b    CMD_TEXT,40,2,'Len.:         Load  Clear',0
+                    dc.b    CMD_TEXT,15,0,'Editor:',0
+                    dc.b    CMD_TEXT,15,1,'Play Song MidiMode:',0
+                    dc.b    CMD_TEXT,15,2,'Play Patt Copy Cut',0
+                    dc.b    CMD_TEXT,15,3,'Edit.:    Replc. Mix It',0
+                    dc.b    CMD_TEXT,15,4,'Poly.:    NoteUp NoDown',0
+                    dc.b    CMD_TEXT,15,5,'Quant:    OctaUp OcDown',0
+                    dc.b    CMD_TEXT,15,6,'PLen.:    ChInst ChaEff',0
+                    dc.b    CMD_TEXT,39,0,'Current Sample:',0
+                    dc.b    CMD_TEXT,39,1,'Name: --------------------',0
+                    dc.b    CMD_TEXT,39,2,'Len.:         Load  Clear',0
                 IFD OKT_AUDIO_VAMPIRE
-                    dc.b    CMD_TEXT,40,6,'Mode:',0
+                    dc.b    CMD_TEXT,39,6,'Mode:',0
                 ELSE
-                    dc.b    CMD_TEXT,40,6,' ',0
+                    dc.b    CMD_TEXT,39,6,' ',0
                 ENDC
-                    dc.b    CMD_TEXT,54,3,'Save  Clear',0
-                    dc.b    CMD_TEXT,54,4,'Edit   All',0
-                    dc.b    CMD_TEXT,54,5,'Copy   Mix',0
-                    dc.b    CMD_TEXT,54,6,'Swap  ClrCB',0
+                    dc.b    CMD_TEXT,53,3,'Save  Clear',0
+                    dc.b    CMD_TEXT,53,4,'Edit   All',0
+                    dc.b    CMD_TEXT,53,5,'Copy   Mix',0
+                    dc.b    CMD_TEXT,53,6,'Swap  ClrCB',0
                     dc.b    CMD_TEXT,67,0,'Memory:',0
                     dc.b    CMD_SUB_COMMAND,0
                     dc.l    available_memory_text_ptr
@@ -20488,57 +20528,57 @@ play_help_layout:
 wb_cli_text_ptr:
                     dc.l    CLI_MSG
 CLI_MSG:
-                    dc.b    CMD_TEXT,1,6,'CLI',0
+                    dc.b    CMD_TEXT,0,6,'CLI',0
                     dc.b    CMD_DONE
 WB_MSG:
-                    dc.b    CMD_TEXT,1,6,'WB',0
+                    dc.b    CMD_TEXT,0,6,'WB',0
                     dc.b    CMD_DONE
                     even
 main_screen_gadgets:
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,1,1,4,1,new_song,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,1,2,4,1,load_song,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,1,3,4,1,save_song,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,1,4,4,1,prefs,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,1,5,4,1,exit_oktalyzer,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,1,6,4,1,go_to_cli_workbench,0
-                    GADGET  GAD_NEXT,0,6,1,9,1,inc_song_position,dec_song_position
-                    GADGET  GAD_NEXT,0,6,2,9,1,inc_pattern,dec_pattern
-                    GADGET  GAD_NEXT,0,6,3,9,1,inc_song_length,dec_song_length
-                    GADGET  GAD_NEXT,0,6,4,4,1,insert_song_position,0
-                    GADGET  GAD_NEXT,0,11,4,4,1,delete_song_position,0
-                    GADGET  GAD_NEXT,0,6,5,9,1,inc_replay_speed,dec_replay_speed
-                    GADGET  GAD_NEXT,0,6,6,9,1,inc_patterns,dec_patterns
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,16,1,9,1,play_song,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,16,2,9,1,play_pattern,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,16,3,9,1,switch_edit_mode,0
-                    GADGET  GAD_NEXT,0,16,4,9,1,inc_polyphony_channels_count,dec_polyphony_channels_count
-                    GADGET  GAD_NEXT,0,16,5,9,1,inc_quantize_amount,dec_quantize_amount
-                    GADGET  GAD_NEXT,0,16,6,9,1,inc_current_pattern_rows,dec_current_pattern_rows
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,26,1,13,1,cycle_midi_modes_stop_audio_and_draw,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,26,2,4,1,copy_pattern_block,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,31,2,3,1,cut_pattern_block,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,35,2,4,1,switch_copy_blocks_mode,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,26,3,6,1,replace_block,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,33,3,6,1,mix_block,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,26,4,6,1,note_up_block,note_up_block_current_sample
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,33,4,6,1,note_down_block,note_down_block_current_sample
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,26,5,6,1,octave_up_block,octave_up_block_current_sample
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,33,5,6,1,octave_down_block,octave_down_block_current_sample
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,26,6,6,1,change_block_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,33,6,6,1,change_block_effect,effect_editor
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,0,1,4,1,new_song,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,0,2,4,1,load_song,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,0,3,4,1,save_song,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,0,4,4,1,prefs,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,0,5,4,1,exit_oktalyzer,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,0,6,4,1,go_to_cli_workbench,0
+                    GADGET  GAD_NEXT,0,5,1,9,1,inc_song_position,dec_song_position
+                    GADGET  GAD_NEXT,0,5,2,9,1,inc_pattern,dec_pattern
+                    GADGET  GAD_NEXT,0,5,3,9,1,inc_song_length,dec_song_length
+                    GADGET  GAD_NEXT,0,5,4,4,1,insert_song_position,0
+                    GADGET  GAD_NEXT,0,10,4,4,1,delete_song_position,0
+                    GADGET  GAD_NEXT,0,5,5,9,1,inc_replay_speed,dec_replay_speed
+                    GADGET  GAD_NEXT,0,5,6,9,1,inc_patterns,dec_patterns
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,15,1,9,1,play_song,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,15,2,9,1,play_pattern,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,15,3,9,1,switch_edit_mode,0
+                    GADGET  GAD_NEXT,0,15,4,9,1,inc_polyphony_channels_count,dec_polyphony_channels_count
+                    GADGET  GAD_NEXT,0,15,5,9,1,inc_quantize_amount,dec_quantize_amount
+                    GADGET  GAD_NEXT,0,15,6,9,1,inc_current_pattern_rows,dec_current_pattern_rows
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,25,1,13,1,cycle_midi_modes_stop_audio_and_draw,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,25,2,4,1,copy_pattern_block,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,30,2,3,1,cut_pattern_block,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,34,2,4,1,switch_copy_blocks_mode,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,25,3,6,1,replace_block,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,32,3,6,1,mix_block,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,25,4,6,1,note_up_block,note_up_block_current_sample
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,32,4,6,1,note_down_block,note_down_block_current_sample
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,25,5,6,1,octave_up_block,octave_up_block_current_sample
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,32,5,6,1,octave_down_block,octave_down_block_current_sample
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,25,6,6,1,change_block_sample,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,32,6,6,1,change_block_effect,effect_editor
 change_sample_number_gadget:
-                    GADGET  GAD_NEXT,0,40,1,26,1,inc_sample_number,dec_sample_number
-                    GADGET  GAD_NEXT,0,40,5,8,1,inc_sample_volume,dec_sample_volume
-;                    GADGET  GAD_NEXT,0,40,6,7,1,inc_sample_type,dec_sample_type
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,54,2,4,1,load_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,54,3,4,1,save_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,54,4,4,1,sample_editor,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,54,5,4,1,copy_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,54,6,4,1,swap_samples,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,60,2,5,1,clear_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,60,3,5,2,clear_all_samples,0
-                    GADGET  GAD_NEXT,0,60,5,5,1,mix_samples,0
-                    GADGET  GAD_NEXT,0,60,6,5,1,free_sample_copy_buffer,0
+                    GADGET  GAD_NEXT,0,39,1,26,1,inc_sample_number,dec_sample_number
+                    GADGET  GAD_NEXT,0,39,5,8,1,inc_sample_volume,dec_sample_volume
+;                    GADGET  GAD_NEXT,0,39,6,7,1,inc_sample_type,dec_sample_type
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,2,4,1,load_sample,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,3,4,1,save_sample,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,4,4,1,sample_editor,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,5,4,1,copy_sample,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,6,4,1,swap_samples,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,59,2,5,1,clear_sample,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,59,3,5,2,clear_all_samples,0
+                    GADGET  GAD_NEXT,0,59,5,5,1,mix_samples,0
+                    GADGET  GAD_NEXT,0,59,6,5,1,free_sample_copy_buffer,0
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,71,5,1,2,set_all_channels_on,set_all_channels_off
 change_channel_1_gadget:
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,72,5,1,2,switch_channel_1_on_off,set_channel_1_solo
@@ -20726,17 +20766,17 @@ sample_editor_help_layout:
                     dc.b    CMD_DONE
                     even
 sample_editor_gadgets:
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,26,1,13,1,cycle_midi_modes_stop_audio_and_draw,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,40,1,26,1,sample_editor_inc_sample_number,sample_editor_dec_sample_number
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,25,1,13,1,cycle_midi_modes_stop_audio_and_draw,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,39,1,26,1,sample_editor_inc_sample_number,sample_editor_dec_sample_number
 ;                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,40,6,7,1,sample_editor_inc_sample_type,sample_editor_dec_sample_type
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,54,2,4,1,sample_editor_load_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,54,3,4,1,sample_editor_save_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,54,5,4,1,sample_editor_copy_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,54,6,4,1,sample_editor_swap_samples,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,60,2,5,1,sample_editor_clear_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,60,3,5,2,sample_editor_clear_all_samples,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,60,5,5,1,sample_editor_mix_samples,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,60,6,5,1,sample_editor_free_sample_copy_buffer,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,2,4,1,sample_editor_load_sample,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,3,4,1,sample_editor_save_sample,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,5,4,1,sample_editor_copy_sample,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,6,4,1,sample_editor_swap_samples,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,59,2,5,1,sample_editor_clear_sample,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,59,3,5,2,sample_editor_clear_all_samples,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,59,5,5,1,sample_editor_mix_samples,0
+                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,59,6,5,1,sample_editor_free_sample_copy_buffer,0
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,1,10,34,1,sample_editor_set_sample_name,0
 sample_editor_commands_gadgets:
                     GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,1,0,4,1,sample_editor_exit,0

@@ -232,6 +232,7 @@ KEY_HELP            equ     $5F-$40
                 IFD OKT_AUDIO_VAMPIRE
 OKT_AUDIO_BASE      equ     $440
 OKT_AUDIO_DMA       equ     $296
+INTREQ2             equ     $29C
 OKT_AUDIO_ADR       equ     0
 OKT_AUDIO_LEN       equ     4
 OKT_AUDIO_VOL       equ     8
