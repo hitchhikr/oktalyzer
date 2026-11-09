@@ -48,6 +48,9 @@ OKT_SET_AUDIO_LEN   MACRO
                     move.w  \1,(OKT_AUDIO_LEN,\2)
                     ENDM
 
+OKT_SET_AUDIO_CTRL  MACRO
+                    ENDM
+
 ; ===========================================================================
 OKT_init_buffers:
                     movem.l d1-a6,-(a7)

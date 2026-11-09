@@ -216,7 +216,7 @@ OKT_init_variables:
                     move.w  #-1,(OKT_next_song_pos-OKT_vars,a6)
                     move.w  (OKT_default_speed-OKT_vars,a6),(OKT_current_speed-OKT_vars,a6)
                     clr.w   (OKT_action_cycle-OKT_vars,a6)
-                    sf      (OKT_filter_status-OKT_vars,a6)
+                    sf.b    (OKT_filter_status-OKT_vars,a6)
                     clr.w   (OKT_dmacon-OKT_vars,a6)
                     rts
 
@@ -319,7 +319,7 @@ OKT_set_hw_regs:
 .OKT_blink:
                     bset    #1,($BFE001)
 .OKT_set_hw_volumes:
-                    ; ; set hw volumes
+                    ; set hw volumes
                     move.w  (OKT_global_volume-OKT_vars,a6),d2
                     lea     (OKT_channels_volumes-OKT_vars,a6),a0
                     lea     (_CUSTOM|OKT_AUDIO_BASE),a1

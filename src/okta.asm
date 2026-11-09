@@ -4,6 +4,8 @@
 ; Original code by Armin 'TIP' Sander.
 ; Disassembled and improved by Franck 'hitchhikr' Charlet.
 ; ===========================================================================
+; TODO:
+; - fix the highlighting on vampire.
 
 ; ===========================================================================
             IFD __VASM
@@ -193,6 +195,12 @@ ntsc_flag:
 
 ; ===========================================================================
 set_aga_context:
+                IFD OKT_AUDIO_VAMPIRE
+                    move.w  #$2C,copper_ddfstrt+2
+                    move.w  #$B4,copper_ddfstop+2
+                    move.w  #%10011,copper_fmode+2
+                    rts
+                ELSE
                     move.w  _CUSTOM+DENISEID,d0
                     moveq   #31-1,d2
                     and.w   #$FF,d0
@@ -210,12 +218,9 @@ set_aga_context:
 .machine_is_aga:
                     move.w  #$2C,copper_ddfstrt+2
                     move.w  #$B4,copper_ddfstop+2
-                IFD OKT_AUDIO_VAMPIRE
-                    move.w  #%10011,copper_fmode+2
-                ELSE
                     move.w  #%11,copper_fmode+2
-                ENDC
                     rts
+                ENDC
 
 ; ===========================================================================
 free_resources:
@@ -416,13 +421,13 @@ vbi_int_code:
                     beq     .draw_pos
                     move.w  d0,-(a7)
                     move.w  (OKT_song_pos,pc),d2
-                    moveq   #12,d0
+                    moveq   #11,d0
                     moveq   #1,d1
                     jsr     (draw_3_digits_decimal_number_leading_zeroes)
                     lea     (OKT_patterns),a0
                     move.w  (OKT_song_pos,pc),d2
                     move.b  (a0,d2.w),d2
-                    moveq   #13,d0
+                    moveq   #12,d0
                     moveq   #2,d1
                     jsr     (draw_2_digits_decimal_number_leading_zeroes)
                     move.w  (a7)+,d0
@@ -704,14 +709,14 @@ stop_audio_channels:
                     lea     (_CUSTOM),a0
                     moveq   #0,d0
                 IFD OKT_AUDIO_VAMPIRE
-                    move.w  d0,($408,a0)
-                    move.w  d0,($418,a0)
-                    move.w  d0,($428,a0)
-                    move.w  d0,($438,a0)
                     move.w  d0,($448,a0)
                     move.w  d0,($458,a0)
                     move.w  d0,($468,a0)
                     move.w  d0,($478,a0)
+                    move.w  d0,($488,a0)
+                    move.w  d0,($498,a0)
+                    move.w  d0,($4A8,a0)
+                    move.w  d0,($4B8,a0)
                     move.w  #%11111111,(OKT_AUDIO_DMA,a0)
                 ELSE
                     move.w  d0,(AUD0VOL,a0)
@@ -1010,14 +1015,10 @@ lbC01EA70:
                     moveq   #0,d5
                     move.b  (a0),d5
                     move.w  d5,d2
-                    cmp.w   #45,d2
-                    blt     lbC01EACE
-                    subq.w  #3,d2
-lbC01EACE:
-                    subq.w  #6,d2
+                    sub.w   (caret_default_positions-1),d2
                     ext.l   d2
                     divu.w  #18,d2
-                    move.w  d2,(lbW01EC40)
+                    move.w  d2,(current_channel_from_caret)
                     add.w   d1,d1
                     add.w   d1,d1
                     add.w   d1,a5
@@ -1170,7 +1171,7 @@ lbL01EC18:
                     dc.l    lbC01EC74,0,0,0,0
 lbL01EC2C:
                     dc.l    lbC01ED3A,0,0,0,0
-lbW01EC40:
+current_channel_from_caret:
                     dc.w    0
 lbW01EC42:
                     dc.w    0
@@ -1207,7 +1208,7 @@ lbC01EC7A:
                     beq     lbC01ECBC
                     move.w  d0,d1
                     movem.l d0/a0,-(a7)
-                    move.w  (lbW01EC40,pc),d0
+                    move.w  (current_channel_from_caret,pc),d0
                     movem.w d0/d1,-(a7)
                     jsr     (lbC029E3E)
                     movem.w (a7)+,d0/d1
@@ -1266,7 +1267,7 @@ lbC01ED46:
                     tst.b   d1
                     beq     lbC01ED62
                     move.w  d0,d1
-                    move.w  (lbW01EC40,pc),d0
+                    move.w  (current_channel_from_caret,pc),d0
                     movem.w d0/d1,-(a7)
                     jsr     (lbC029E3E)
                     movem.w (a7)+,d0/d1
@@ -1466,6 +1467,7 @@ lbC01EF5A:
 ;                    bra     lbC01EFDA
 ;lbC01EFB6:
                     move.w  (SMP_VOL,a2),d3
+                    moveq   #0,d1
                     move.w  (SMP_REP_LEN,a2),d1
                     bne     lbC01EFCA
                     lea     (OKT_empty_waveform),a1
@@ -1492,6 +1494,7 @@ lbC01EFE8:
                     moveq   #DMAB_AUD0,d5
                     bset    d4,d5
                     move.w  d5,(_CUSTOM|OKT_AUDIO_DMA)
+                    ; *$10
                     lsl.w   #4,d4
                     add.w   d4,a2
                     ; A0
@@ -1504,16 +1507,27 @@ lbC01EFE8:
                     move.w  #113,(OKT_AUDIO_PER,a2)
                     bsr     wait_raster
                     move.w  d2,(OKT_AUDIO_PER,a2)
+                IFD OKT_AUDIO_VAMPIRE
+                    ; center it
+                    move.w  d3,d2
+                    mulu.w  #255,d2
+                    lsr.w   #6,d2
+                    lsl.w   #8,d2
+                    mulu.w  #255,d3
+                    lsr.w   #6,d3
+                    or.w    d2,d3
+                    OKT_SET_AUDIO_CTRL #0,a2
+                ENDC
                     move.w  d3,(OKT_AUDIO_VOL,a2)
                     ori.w   #DMAF_SETCLR,d5
                     move.w  d5,(_CUSTOM|OKT_AUDIO_DMA)
                     bsr     wait_raster
-                    move.l  a1,(OKT_AUDIO_ADR,a2)
-                IFD OKT_AUDIO_VAMPIRE
-                    move.l  d1,(OKT_AUDIO_LEN,a2)
-                ELSE
-                    move.w  d1,(OKT_AUDIO_LEN,a2)
-                ENDC
+                   move.l  a1,(OKT_AUDIO_ADR,a2)
+               IFD OKT_AUDIO_VAMPIRE
+                   move.l  d1,(OKT_AUDIO_LEN,a2)
+               ELSE
+                   move.w  d1,(OKT_AUDIO_LEN,a2)
+               ENDC
                     movem.l (a7)+,d5/a2
                     rts
 
@@ -2711,8 +2725,19 @@ draw_channels_muted_status:
                     moveq   #72,d5
                     move.b  (channels_mute_flags),d6
                     lea     (OKT_channels_modes),a4
+                IFD OKT_AUDIO_VAMPIRE
+                    move.w  (OKT_channels,pc),d7
+                    moveq   #8-1,d1
+                    sub.w   d7,d1
+                    lsr.b   d1,d6
+                ELSE
                     moveq   #8-1,d7
+                ENDC
 .loop:
+                IFD OKT_AUDIO_VAMPIRE
+                    ; single channel only
+                    bsr     draw_channel_muted_status
+                ELSE
                     tst.w   (a4)+
                     beq     .single
                     ; doubled channel
@@ -2726,7 +2751,18 @@ draw_channels_muted_status:
                     bsr     draw_channel_inactive_status
                     subq.w  #1,d7
 .done:
+                ENDC
                     dbra    d7,.loop
+                IFD OKT_AUDIO_VAMPIRE
+                    ; remove spurious channels
+                    moveq   #8-1,d7
+                    sub.w   (OKT_channels,pc),d7
+                    bra     .go_remove
+.loop_remove:
+                    bsr     draw_channel_inactive_status
+.go_remove:
+                    dbf     d7,.loop_remove
+                ENDC
                     lea     (channels_number_text),a0
                     moveq   #72,d0
                     moveq   #6,d1
@@ -2812,7 +2848,7 @@ draw_current_sample_infos:
                     jsr     (draw_2_digits_decimal_number_leading_zeroes)
                     ; allow volume modifications
                     lea     (change_sample_number_gadget),a0
-                    bsr     lbC020C8A
+                    bsr     make_gadget_visible
 ;                    bra     .sample_mode
 ; .empty:
                     ; lea     (.empty_infos_text,pc),a0
@@ -2821,7 +2857,7 @@ draw_current_sample_infos:
                     ; jsr     (process_commands)
                     ; ; forbid volume modifications
                     ; lea     (change_sample_number_gadget),a0
-                    ; bsr     lbC020C92
+                    ; bsr     make_gadget_invisible
 .sample_mode:
                     move.l  (a7)+,a0
                 IFD OKT_AUDIO_VAMPIRE
@@ -3312,10 +3348,15 @@ draw_row_data:
                     lea     (full_note_table),a3
                     lea     (row_data_buffer),a5
                     lea     (OKT_channels_modes),a0
-                    moveq   #2-1,d5
                     move.w  d7,d0
                     ; row number
                     lea     (alpha_numeric_table),a2
+                    ; no grouping, just draw them as a block
+                IFD OKT_AUDIO_VAMPIRE
+                    move.w  (OKT_channels,pc),d5
+                ELSE
+                    moveq   #2-1,d5
+                ENDC
                     tst.b   (show_decimal_rows)
                     bne     .draw_in_hex
                     lea     (decimal_table_ascii),a1
@@ -3339,6 +3380,11 @@ draw_row_data:
                     and.w   d7,d0
                     move.b  (a2,d0.w),(a5)+
 .draw_channels_groups:
+                IFD OKT_AUDIO_VAMPIRE
+.draw_channels:
+                    bsr     .draw_pattern_channel
+                    dbra    d5,.draw_channels
+                ELSE
                     moveq   #2-1,d6
 .draw_channels:
                     ; column is doubled or not ?
@@ -3363,6 +3409,7 @@ draw_row_data:
 .next_channels:
                     dbra    d6,.draw_channels
                     dbra    d5,.draw_channels_groups
+                ENDC
                     sf      (a5)
                     ; now, draw it
                     lea     (row_data_buffer),a0
@@ -3983,9 +4030,9 @@ lbC020A60:
                     beq     lbC020A86
                     move.l  d0,a0
                     move.w  (4,a0),d0
-                    btst    #MOUSE_CMD_NO_REPEAT_BIT,d0
+                    btst    #GADGET_NO_REPEAT_BIT,d0
                     bne     lbC020A86
-                    btst    #MOUSE_CMD_TRAP_RMB_BIT,d0
+                    btst    #GADGET_TRAP_RMB_BIT,d0
                     bne     lbC020A86
                     movem.l (a7)+,d0/a0
                     bra     lbC020A8C
@@ -4015,7 +4062,7 @@ lbC020A8C:
                     bra     lbC020AE0
 lbC020AC4:
                     move.w  (4,a2),d7
-                    btst    #MOUSE_CMD_TRAP_RMB_BIT,d7
+                    btst    #GADGET_TRAP_RMB_BIT,d7
                     bne     lbC020AE0
                     move.l  (a2,d4.w),d7
                     beq     lbC020AE0
@@ -4048,7 +4095,7 @@ check_gadget_mouse_coords:
 .loop:
                     move.l  d0,a0
                     move.w  (4,a0),d0
-                    btst    #14,d0
+                    btst    #GADGET_DISABLED_BIT,d0
                     bne     .no_hit
                     move.b  (6,a0),d0
                     cmp.b   d2,d0
@@ -4177,7 +4224,7 @@ draw_box_around_gadget:
                     move.l  a0,d0
                     beq     .no_draw
                     move.w  (4,a0),d0
-                    btst    #MOUSE_CMD_NO_HILITE_BIT,d0
+                    btst    #GADGET_NO_HILITE_BIT,d0
                     bne     .no_draw
                     lea     (main_screen),a2
                     moveq   #0,d3
@@ -4222,12 +4269,16 @@ draw_box_around_gadget:
                     rts
 
 ; ===========================================================================
-lbC020C8A:
-                    and.w   #%1011111111111111,(4,a0)
+make_gadget_visible:
+                    and.w   #~GADGET_DISABLED,(4,a0)
                     rts
-lbC020C92:
-                    ori.w   #%0100000000000000,(4,a0)
+
+; ===========================================================================
+make_gadget_invisible:
+                    ori.w   #GADGET_DISABLED,(4,a0)
                     rts
+
+; ===========================================================================
 lbC020C9A:
                     lea     (main_screen+(56*SCREEN_BYTES)),a1
                     bra     lbC020CBC
@@ -7226,6 +7277,7 @@ OKT_init_variables:
                     move.l  d1,(a0)+
                     dbra    d0,.OKT_clear_pattern_line_buffer
                     lea     (OKT_channels_indexes,pc),a0
+                    ; indexes
                     move.l  #$07060504,(a0)+
                     move.l  #$03020100,(a0)+
                     ; volumes at max
@@ -7246,7 +7298,7 @@ OKT_init_variables:
                     move.w  #-1,(OKT_next_song_pos)
                     move.w  (OKT_default_speed),(OKT_current_speed)
                     clr.w   (OKT_action_cycle)
-                    clr.w   (OKT_filter_status)
+                    sf.b    (OKT_filter_status)
                     clr.w   (OKT_dmacon)
                     clr.w   (refresh_visual)
                     sf.b    (trigger_vumeters_bits)
@@ -7284,6 +7336,7 @@ OKT_replay_handler:
 ; ===========================================================================
 OKT_new_row:
                     clr.w   (OKT_action_cycle)
+                    ; next row
                     move.l  (OKT_current_pattern,pc),a1
                     add.w   (OKT_rows_size,pc),a1
                     move.l  a1,(OKT_current_pattern)
@@ -7596,6 +7649,9 @@ OKT_fill_single_channels:
                     move.b  (channels_mute_flags),d6
                 IFD OKT_AUDIO_VAMPIRE
                     move.w  (OKT_channels,pc),d7
+                    moveq   #8-1,d1
+                    sub.w   d7,d1
+                    lsr.b   d1,d6
                 ELSE
                     moveq   #8-1,d7
                 ENDC
@@ -7687,11 +7743,9 @@ OKT_fill_single_channel_data:
                     ; start sample address
                     OKT_SET_AUDIO_ADR d2,a4
                     ; 8/16 bit
-                IFD OKT_AUDIO_VAMPIRE
 ;                    OKT_SET_AUDIO_CTRL SMP_TYPE(a1),a4
                     ; TODO: temporary
                     OKT_SET_AUDIO_CTRL #0,a4
-                ENDC
                     ; note index
                     move.w  d3,(CHAN_NOTE_S,a3)
                     add.w   d3,d3
@@ -7825,6 +7879,9 @@ OKT_handle_effects_single_channels:
                     move.b  (channels_mute_flags),d6
                 IFD OKT_AUDIO_VAMPIRE
                     move.w  (OKT_channels,pc),d7
+                    moveq   #8-1,d1
+                    sub.w   d7,d1
+                    lsr.b   d1,d6
                 ELSE
                     moveq   #8-1,d7
                 ENDC
@@ -9295,7 +9352,11 @@ OKT_channels:
 trigger_vumeters:
                     moveq   #0,d0
                     move.b  (trigger_vumeters_bits,pc),d0
+                IFD OKT_AUDIO_VAMPIRE
+                    move.w  (OKT_channels,pc),d7
+                ELSE
                     moveq   #8-1,d7
+                ENDC
                     lea     (vumeters_levels+(4*8)-4),a0
                     moveq   #0,d1
 .trigger_vumeter:
@@ -9944,7 +10005,7 @@ error_what_repeat:
                     bra     display_error
 
 ; ===========================================================================
-lbC025132:
+erase_filled_box:
                     moveq   #NABC|NANBC,d4
                     jmp     (draw_filled_box_with_minterms)
 
@@ -10154,13 +10215,14 @@ clear_1_line_blitter:
 ; ===========================================================================
 own_blitter:
                     GFX     OwnBlitter
-                    GFX     WaitBlit
                     lea     (_CUSTOM),a6
+                    WAIT_BLITTER
                     rts
 
 ; ===========================================================================
 disown_blitter:
-                    GFX     WaitBlit
+                    lea     (_CUSTOM),a6
+                    WAIT_BLITTER
                     GFX     DisownBlitter
                     rts
 
@@ -10208,9 +10270,14 @@ draw_filled_box_with_minterms:
                     ori.w   #BC0F_SRCC|BC0F_DEST,d0
                     swap    d0
                     bsr     own_blitter
+                IFD OKT_AUDIO_VAMPIRE
+                    move.w  #$FFFF,(BLTADAT,a6)
+                    move.w  #$FFFF,(BLTBDAT,a6)
+                ELSE
+                    move.w  #$FFFF,(BLTADAT,a6)
+                ENDC
                     move.l  d0,(BLTCON0,a6)
                     move.l  d4,(BLTAFWM,a6)
-                    move.w  #$FFFF,(BLTADAT,a6)
                     move.w  d5,(BLTCMOD,a6)
                     move.w  d5,(BLTDMOD,a6)
                     move.l  a3,(BLTCPTH,a6)
@@ -10258,6 +10325,7 @@ prepare_line_drawing:
                     move.w  #$8000,(BLTADAT,a6)
                     moveq   #-1,d0
                     move.w  d0,(BLTAFWM,a6)
+                    clr.w   (BLTALWM,a6)
                     move.w  d0,(BLTBDAT,a6)
                     moveq   #80,d0
                     move.w  d0,(BLTCMOD,a6)
@@ -10300,7 +10368,7 @@ lbC025712:
                     addx.b  d5,d5
                     move.b  (octants_table,pc,d5.w),d5
                     add.w   d2,d2
-                    GFX     WaitBlit
+                    WAIT_BLITTER
                     move.w  d2,(BLTBMOD,a6)
                     sub.w   d3,d2
                     bge     .signed_octant
@@ -11811,12 +11879,14 @@ display_messagebox:
                     move.l  #60<<16,(BLTAMOD,a6)
                     move.l  (requester_screen_pos,pc),(BLTAPTH,a6)
                     move.l  #requesters_save_buffer,(BLTDPTH,a6)
+                    ; save buffer
                     move.w  #(24*64)+(20/2),(BLTSIZE,a6)
-                    GFX     WaitBlit
+                    WAIT_BLITTER
                     move.l  #((BC0F_DEST|ABC|ABNC|ANBC|ANBNC|NABC|NABNC|NANBC|NANBNC)<<16),(BLTCON0,a6)
                     move.w  #60,(BLTDMOD,a6)
                     move.l  (requester_screen_pos,pc),(BLTDPTH,a6)
                     move.w  #(24*64)+(20/2),(BLTSIZE,a6)
+                    ; fill
                     bsr     disown_blitter
                     move.l  (requester_screen_pos,pc),a3
                     moveq   #2,d0
@@ -11836,7 +11906,7 @@ shift_lines_ntsc:
 remove_messagebox:
                     bsr     own_blitter
                     move.l  #((SRCA|BC0F_DEST|ABC|ABNC|ANBC|ANBNC)<<16),(BLTCON0,a6)
-                    move.l  #$FFFFFFFF,(BLTAFWM,a6)
+                    move.l  #-1,(BLTAFWM,a6)
                     move.l  #60,(BLTAMOD,a6)
                     move.l  #requesters_save_buffer,(BLTAPTH,a6)
                     move.l  (requester_screen_pos,pc),(BLTDPTH,a6)
@@ -15093,7 +15163,7 @@ sample_editor_change_volume_linear_layout:
                     even
 sample_editor_change_volume_linear_gadgets:
                     GADGET  GAD_NEXT,0,28,0,6,1,lbC02903A,lbC02904C
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,28,1,3,1,lbC02905E,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,28,1,3,1,lbC02905E,0
                     GADGET  GAD_DONE,0,32,1,2,1,lbC028F90,0
 sample_editor_change_volume_linear_keys_list:
                     KL_HEAD KEY_MOD_NONE,sample_editor_change_volume_linear_keys
@@ -15224,7 +15294,7 @@ sample_editor_change_volume_curve_layout:
                     even
 sample_editor_change_volume_curve_gadgets:
                     GADGET  GAD_NEXT,0,28,0,6,1,lbC029202,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,28,1,3,1,lbC02920C,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,28,1,3,1,lbC02920C,0
                     GADGET  GAD_DONE,0,32,1,2,1,lbC029214,0
 sample_editor_change_volume_curve_keys_list:
                     KL_HEAD KEY_MOD_NONE,sample_editor_change_volume_curve_keys
@@ -15405,7 +15475,7 @@ sample_editor_change_period_layout:
 sample_editor_change_period_gadgets:
                     GADGET  GAD_NEXT,0,34,0,3,1,lbC029492,lbC0294AA
                     GADGET  GAD_NEXT,0,41,0,3,1,lbC0294EA,lbC029502
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,34,1,5,1,lbC029472,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,34,1,5,1,lbC029472,0
                     GADGET  GAD_DONE,0,40,1,4,1,lbC02945A,0
 sample_editor_change_period_keys_list:
                     KL_HEAD KEY_MOD_NONE,sample_editor_change_period_keys
@@ -15923,7 +15993,7 @@ sample_editor_sample_op_layout:
                     even
 sample_editor_sample_op_gadgets:
                     GADGET  GAD_NEXT,0,44,0,6,1,sample_editor_sample_op_cancel,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,44,1,3,1,sample_editor_sample_op_do,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,44,1,3,1,sample_editor_sample_op_do,0
                     GADGET  GAD_DONE,0,48,1,2,1,sample_editor_sample_op_ok,0
 sample_editor_sample_op_keys_list:
                     KL_HEAD KEY_MOD_NONE,sample_editor_sample_op_keys
@@ -16158,6 +16228,9 @@ lbC029B18:
                     moveq   #0,d0
                     move.b  (a2),d0
                     sub.b   d7,d0
+                    ; set in lbC029CAE
+                    ;lea     (AUD0DAT,a6),a5
+                    ;lea     (AUD1DAT,a6),a6
                     move.b  d0,(a5)
                     move.b  d0,(a6)
                     add.w   d0,d0
@@ -16207,6 +16280,9 @@ lbC029BAC:
                     moveq   #0,d0
                     move.b  (a2),d0
                     sub.b   d7,d0
+                    ; set in lbC029CAE
+                    ;lea     (AUD0DAT,a6),a5
+                    ;lea     (AUD1DAT,a6),a6
                     move.b  d0,(a5)
                     move.b  d0,(a6)
                     add.w   d0,d0
@@ -16527,7 +16603,12 @@ samples_load_mode:
 samples_save_format:
                     dc.w    0
 prefs_palette:
-                    dc.w    $697,$000,$976,$000,$679,$000
+                IFD OKT_AUDIO_VAMPIRE
+                    dc.w    $967
+                ELSE
+                    dc.w    $697
+                ENDC
+                    dc.w    $000,$976,$000,$679,$000
 polyphony:
                     dc.b    0,1,2,3,4,5,6,7
 mouse_repeat_delay:
@@ -17152,7 +17233,7 @@ randomize_polyphony_values:
                     lea     (polyphony,pc),a1
                     moveq   #8-1,d0
 .loop:
-                    move.b  $dff006,d1
+                    move.b  _CUSTOM|VHPOSR,d1
                     eor.b   d0,d1
                     add.b   $bfe801,d1
                     eor.b   d0,d1
@@ -17161,14 +17242,14 @@ randomize_polyphony_values:
                     and.b   #7,d1
                     move.b  d1,(a1)+
                     dbra    d0,.loop
-                    bra     display_polyphony
+                    ;bra     display_polyphony
 display_polyphony:
                     move.w  #244,d0
                     move.w  #99,d1
                     move.w  #300,d2
                     move.w  #156,d3
                     lea     (main_screen),a3
-                    jsr     (lbC025132)
+                    jsr     (erase_filled_box)
                     jsr     (prepare_line_drawing)
                     lea     (polyphony,pc),a5
                     move.w  #99,d6
@@ -18015,6 +18096,19 @@ construct_caret_positions_and_channels_config:
                     move.l  a0,(lbL02B61E)
                     move.l  #-1,(a0)
                     move.l  #-1,(4,a0)
+                    lea     (OKT_channels_modes,pc),a4
+                IFD OKT_AUDIO_VAMPIRE
+                    ; count the number of channels
+                    moveq   #4-1,d0
+                    move.w  #-1,(OKT_channels)
+.OKT_get_channels_size:
+                    addq.w  #1,(OKT_channels)
+                    tst.w   (a4)+
+                    beq     .OKT_not_doubled
+                    addq.w  #1,(OKT_channels)
+.OKT_not_doubled:
+                    dbra    d0,.OKT_get_channels_size
+                ENDC
                     lea     (channels_number_text,pc),a2
                     lea     (lbL02B684,pc),a3
                     lea     (OKT_channels_modes,pc),a4
@@ -18023,8 +18117,15 @@ construct_caret_positions_and_channels_config:
                     moveq   #0,d3
                     moveq   #0,d4
                     moveq   #'1',d6
+                IFD OKT_AUDIO_VAMPIRE
+                    move.w  (OKT_channels,pc),d7
+                ELSE
                     moveq   #4-1,d7
+                ENDC
 .loop:
+                IFD OKT_AUDIO_VAMPIRE
+                    bsr     copy_caret_position
+                ELSE
                     tst.w   (a4)+
                     beq     .single
                     bsr     copy_caret_position
@@ -18034,7 +18135,18 @@ construct_caret_positions_and_channels_config:
                     bsr     copy_caret_position
                     bsr     skip_caret_position
 .done:
+                ENDC
                     dbra    d7,.loop
+                IFD OKT_AUDIO_VAMPIRE
+                    ; remove spurious channels
+                    moveq   #8-1,d7
+                    sub.w   (OKT_channels,pc),d7
+                    bra     .go_remove
+.loop_remove:
+                    bsr     skip_caret_position
+.go_remove:
+                    dbf     d7,.loop_remove
+                ENDC
                     sf      (a6)
                     subq.w  #1,d4
                     clr.w   (caret_pos_x)
@@ -18048,6 +18160,7 @@ copy_caret_position:
                     ; channel number
                     move.b  d6,(a2)+
                     addq.b  #1,d6
+                    ; caret positions for this channel
                     move.b  (a5)+,(a6)+
                     move.b  (a5)+,(a6)+
                     move.b  (a5)+,(a6)+
@@ -18055,7 +18168,7 @@ copy_caret_position:
                     move.b  (a5)+,(a6)+
                     addq.w  #5,d4
                     move.l  (a3)+,a0
-                    jsr     (lbC020C8A)
+                    jsr     (make_gadget_visible)
                     lea     (lbL02B61E,pc),a1
                     move.l  (a1),a0
                     move.b  d3,(a0)+
@@ -18067,9 +18180,11 @@ skip_caret_position:
                     move.b  #' ',(a2)+
                     addq.w  #5,a5
                     move.l  (a3)+,a0
-                    jsr     (lbC020C92)
+                    jsr     (make_gadget_invisible)
                     addq.w  #1,d3
                     rts
+                    ; don't remove that
+                    dc.b    0
 caret_default_positions:
                     dc.b    4,8,9,10,11
                     dc.b    13,17,18,19,20
@@ -18079,6 +18194,7 @@ caret_default_positions:
                     dc.b    49,53,54,55,56
                     dc.b    58,62,63,64,65
                     dc.b    67,71,72,73,74
+                    even
 lbL02B684:
                     dc.l    change_channel_1_gadget
                     dc.l    change_channel_2_gadget
@@ -20650,12 +20766,12 @@ WB_MSG:
                     dc.b    CMD_DONE
                     even
 main_screen_gadgets:
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,0,1,4,1,new_song,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,0,2,4,1,load_song,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,0,3,4,1,save_song,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,0,4,4,1,prefs,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,0,5,4,1,exit_oktalyzer,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,0,6,4,1,go_to_cli_workbench,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,0,1,4,1,new_song,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,0,2,4,1,load_song,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,0,3,4,1,save_song,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,0,4,4,1,prefs,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,0,5,4,1,exit_oktalyzer,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,0,6,4,1,go_to_cli_workbench,0
                     GADGET  GAD_NEXT,0,5,1,9,1,inc_song_position,dec_song_position
                     GADGET  GAD_NEXT,0,5,2,9,1,inc_pattern,dec_pattern
                     GADGET  GAD_NEXT,0,5,3,9,1,inc_song_length,dec_song_length
@@ -20663,57 +20779,57 @@ main_screen_gadgets:
                     GADGET  GAD_NEXT,0,10,4,4,1,delete_song_position,0
                     GADGET  GAD_NEXT,0,5,5,9,1,inc_replay_speed,dec_replay_speed
                     GADGET  GAD_NEXT,0,5,6,9,1,inc_patterns,dec_patterns
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,15,1,9,1,play_song,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,15,2,9,1,play_pattern,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,15,3,9,1,switch_edit_mode,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,15,1,9,1,play_song,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,15,2,9,1,play_pattern,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,15,3,9,1,switch_edit_mode,0
                     GADGET  GAD_NEXT,0,15,4,9,1,inc_polyphony_channels_count,dec_polyphony_channels_count
                     GADGET  GAD_NEXT,0,15,5,9,1,inc_quantize_amount,dec_quantize_amount
                     GADGET  GAD_NEXT,0,15,6,9,1,inc_current_pattern_rows,dec_current_pattern_rows
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,25,1,13,1,cycle_midi_modes_stop_audio_and_draw,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,25,2,4,1,copy_pattern_block,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,30,2,3,1,cut_pattern_block,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,34,2,4,1,switch_copy_blocks_mode,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,25,3,6,1,replace_block,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,32,3,6,1,mix_block,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,25,4,6,1,note_up_block,note_up_block_current_sample
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,32,4,6,1,note_down_block,note_down_block_current_sample
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,25,5,6,1,octave_up_block,octave_up_block_current_sample
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,32,5,6,1,octave_down_block,octave_down_block_current_sample
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,25,6,6,1,change_block_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,32,6,6,1,change_block_effect,effect_editor
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,25,1,13,1,cycle_midi_modes_stop_audio_and_draw,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,25,2,4,1,copy_pattern_block,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,30,2,3,1,cut_pattern_block,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,34,2,4,1,switch_copy_blocks_mode,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,25,3,6,1,replace_block,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,32,3,6,1,mix_block,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,25,4,6,1,note_up_block,note_up_block_current_sample
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,32,4,6,1,note_down_block,note_down_block_current_sample
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,25,5,6,1,octave_up_block,octave_up_block_current_sample
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,32,5,6,1,octave_down_block,octave_down_block_current_sample
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,25,6,6,1,change_block_sample,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,32,6,6,1,change_block_effect,effect_editor
 change_sample_number_gadget:
                     GADGET  GAD_NEXT,0,39,1,26,1,inc_sample_number,dec_sample_number
                     GADGET  GAD_NEXT,0,39,5,8,1,inc_sample_volume,dec_sample_volume
 ;                    GADGET  GAD_NEXT,0,39,6,7,1,inc_sample_type,dec_sample_type
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,2,4,1,load_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,3,4,1,save_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,4,4,1,sample_editor,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,5,4,1,copy_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,6,4,1,swap_samples,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,59,2,5,1,clear_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,59,3,5,2,clear_all_samples,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,2,4,1,load_sample,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,3,4,1,save_sample,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,4,4,1,sample_editor,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,5,4,1,copy_sample,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,6,4,1,swap_samples,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,59,2,5,1,clear_sample,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,59,3,5,2,clear_all_samples,0
                     GADGET  GAD_NEXT,0,59,5,5,1,mix_samples,0
                     GADGET  GAD_NEXT,0,59,6,5,1,free_sample_copy_buffer,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,71,5,1,2,set_all_channels_on,set_all_channels_off
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,71,5,1,2,set_all_channels_on,set_all_channels_off
 change_channel_1_gadget:
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,72,5,1,2,switch_channel_1_on_off,set_channel_1_solo
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,72,5,1,2,switch_channel_1_on_off,set_channel_1_solo
 change_channel_2_gadget:
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,73,5,1,2,switch_channel_2_on_off,set_channel_2_solo
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,73,5,1,2,switch_channel_2_on_off,set_channel_2_solo
 change_channel_3_gadget:
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,74,5,1,2,switch_channel_3_on_off,set_channel_3_solo
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,74,5,1,2,switch_channel_3_on_off,set_channel_3_solo
 change_channel_4_gadget:
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,75,5,1,2,switch_channel_4_on_off,set_channel_4_solo
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,75,5,1,2,switch_channel_4_on_off,set_channel_4_solo
 change_channel_5_gadget:
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,76,5,1,2,switch_channel_5_on_off,set_channel_5_solo
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,76,5,1,2,switch_channel_5_on_off,set_channel_5_solo
 change_channel_6_gadget:
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,77,5,1,2,switch_channel_6_on_off,set_channel_6_solo
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,77,5,1,2,switch_channel_6_on_off,set_channel_6_solo
 change_channel_7_gadget:
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,78,5,1,2,switch_channel_7_on_off,set_channel_7_solo
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,78,5,1,2,switch_channel_7_on_off,set_channel_7_solo
 change_channel_8_gadget:
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,79,5,1,2,switch_channel_8_on_off,set_channel_8_solo
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,66,1,14,2,draw_available_memory,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,66,3,14,1,draw_song_metrics,0
-                    GADGET  GAD_DONE,MOUSE_CMD_NO_HILITE,0,7,80,24,click_on_pattern,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,79,5,1,2,switch_channel_8_on_off,set_channel_8_solo
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,66,1,14,2,draw_available_memory,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,66,3,14,1,draw_song_metrics,0
+                    GADGET  GAD_DONE,GADGET_NO_HILITE,0,7,80,24,click_on_pattern,0
 main_screen_keys_list:
                     KL_HEAD KEY_MOD_NONE,main_screen_keys
                     KL_HEAD KEY_MOD_SHIFT,main_screen_keys_shift
@@ -20824,21 +20940,21 @@ files_selector_layout:
                     dc.b    CMD_DONE
                     even
 files_selector_gadgets:
-                    GADGET  GAD_NEXT,MOUSE_CMD_TRAP_RMB|MOUSE_CMD_NO_HILITE,1,16,38,14,lbC026D32,lbC026DA6
-                    GADGET  GAD_NEXT,MOUSE_CMD_TRAP_RMB|MOUSE_CMD_NO_HILITE,41,16,38,14,lbC026D32,lbC026D64
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,2,10,36,1,file_selector_set_drawer_name,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,2,11,36,1,file_selector_set_file_name,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,2,12,6,1,file_selector_ok,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,9,12,6,1,file_selector_reread_dir,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,16,12,6,1,file_selector_parent_dir,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,23,12,6,1,file_selector_delete_file,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,30,12,6,1,file_selector_cancel,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,64,12,7,1,file_selector_install_ok_dir,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,72,12,6,1,file_selector_delete_ok_dir,0
+                    GADGET  GAD_NEXT,GADGET_TRAP_RMB|GADGET_NO_HILITE,1,16,38,14,lbC026D32,lbC026DA6
+                    GADGET  GAD_NEXT,GADGET_TRAP_RMB|GADGET_NO_HILITE,41,16,38,14,lbC026D32,lbC026D64
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,2,10,36,1,file_selector_set_drawer_name,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,2,11,36,1,file_selector_set_file_name,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,2,12,6,1,file_selector_ok,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,9,12,6,1,file_selector_reread_dir,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,16,12,6,1,file_selector_parent_dir,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,23,12,6,1,file_selector_delete_file,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,30,12,6,1,file_selector_cancel,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,64,12,7,1,file_selector_install_ok_dir,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,72,12,6,1,file_selector_delete_ok_dir,0
                     GADGET  GAD_NEXT,0,42,10,11,1,inc_trackdisk_unit_number,dec_trackdisk_unit_number
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,42,11,11,1,switch_verify_mode,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,42,12,11,1,switch_clear_mode,0
-                    GADGET  GAD_DONE,MOUSE_CMD_NO_REPEAT,54,10,6,3,format_disk,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,42,11,11,1,switch_verify_mode,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,42,12,11,1,switch_clear_mode,0
+                    GADGET  GAD_DONE,GADGET_NO_REPEAT,54,10,6,3,format_disk,0
 file_selector_keys_list:
                     KL_HEAD KEY_MOD_NONE,file_selector_keys
                     KL_DONE
@@ -20881,37 +20997,37 @@ sample_editor_help_layout:
                     dc.b    CMD_DONE
                     even
 sample_editor_gadgets:
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,25,1,13,1,cycle_midi_modes_stop_audio_and_draw,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,39,1,26,1,sample_editor_inc_sample_number,sample_editor_dec_sample_number
-;                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,40,6,7,1,sample_editor_inc_sample_type,sample_editor_dec_sample_type
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,2,4,1,sample_editor_load_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,3,4,1,sample_editor_save_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,5,4,1,sample_editor_copy_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,6,4,1,sample_editor_swap_samples,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,59,2,5,1,sample_editor_clear_sample,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,59,3,5,2,sample_editor_clear_all_samples,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,59,5,5,1,sample_editor_mix_samples,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,59,6,5,1,sample_editor_free_sample_copy_buffer,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,1,10,34,1,sample_editor_set_sample_name,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,25,1,13,1,cycle_midi_modes_stop_audio_and_draw,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,39,1,26,1,sample_editor_inc_sample_number,sample_editor_dec_sample_number
+;                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,40,6,7,1,sample_editor_inc_sample_type,sample_editor_dec_sample_type
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,2,4,1,sample_editor_load_sample,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,3,4,1,sample_editor_save_sample,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,5,4,1,sample_editor_copy_sample,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,6,4,1,sample_editor_swap_samples,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,59,2,5,1,sample_editor_clear_sample,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,59,3,5,2,sample_editor_clear_all_samples,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,59,5,5,1,sample_editor_mix_samples,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,59,6,5,1,sample_editor_free_sample_copy_buffer,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,1,10,34,1,sample_editor_set_sample_name,0
 sample_editor_commands_gadgets:
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,1,0,4,1,sample_editor_exit,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,1,1,4,1,sample_editor_swap,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,6,0,4,2,sample_editor_mark_all,sample_editor_clear_mark
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,11,0,4,1,sample_editor_copy_and_cut,sample_editor_cut
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,11,1,4,1,sample_editor_copy,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,16,0,7,1,sample_editor_paste,sample_editor_replace
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,16,1,7,1,sample_editor_reverse,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,24,0,6,2,sample_editor_change_volume_linear,sample_editor_change_volume_curve
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,31,0,6,2,sample_editor_change_period,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,38,0,5,1,sample_editor_filter,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,38,1,5,1,sample_editor_boost,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,44,0,5,1,sample_editor_xfade,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,44,1,5,1,sample_editor_normalize,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,50,0,6,2,sample_editor_set_repeat,sample_editor_clear_repeat
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,57,0,7,1,sample_editor_monitor,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,57,1,7,1,sample_editor_sampler,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,65,0,9,1,sample_editor_inc_note_rate,sample_editor_dec_note_rate
-                    GADGET  GAD_DONE,MOUSE_CMD_NO_REPEAT,65,1,9,1,sample_editor_switch_left_right,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,1,0,4,1,sample_editor_exit,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,1,1,4,1,sample_editor_swap,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,6,0,4,2,sample_editor_mark_all,sample_editor_clear_mark
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,11,0,4,1,sample_editor_copy_and_cut,sample_editor_cut
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,11,1,4,1,sample_editor_copy,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,16,0,7,1,sample_editor_paste,sample_editor_replace
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,16,1,7,1,sample_editor_reverse,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,24,0,6,2,sample_editor_change_volume_linear,sample_editor_change_volume_curve
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,31,0,6,2,sample_editor_change_period,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,38,0,5,1,sample_editor_filter,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,38,1,5,1,sample_editor_boost,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,44,0,5,1,sample_editor_xfade,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,44,1,5,1,sample_editor_normalize,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,50,0,6,2,sample_editor_set_repeat,sample_editor_clear_repeat
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,57,0,7,1,sample_editor_monitor,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,57,1,7,1,sample_editor_sampler,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,65,0,9,1,sample_editor_inc_note_rate,sample_editor_dec_note_rate
+                    GADGET  GAD_DONE,GADGET_NO_REPEAT,65,1,9,1,sample_editor_switch_left_right,0
 sample_editor_keys_list:
                     KL_HEAD KEY_MOD_NONE,sample_editor_keys
                     KL_HEAD KEY_MOD_NUMPAD,sample_editor_keys_numpad
@@ -21014,10 +21130,10 @@ prefs_help_layout:
                     dc.b    CMD_DONE
                     even
 prefs_gadgets:
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,14,12,2,1,switch_channel_1_type,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,17,12,2,1,switch_channel_2_type,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,20,12,2,1,switch_channel_3_type,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,23,12,2,1,switch_channel_4_type,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,14,12,2,1,switch_channel_1_type,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,17,12,2,1,switch_channel_2_type,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,20,12,2,1,switch_channel_3_type,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,23,12,2,1,switch_channel_4_type,0
                 IFD OKT_AUDIO_VAMPIRE
                     GADGET  GAD_NEXT,0,2,13,23,1,inc_default_pattern_length,dec_default_pattern_length
                 ELSE
@@ -21026,7 +21142,7 @@ prefs_gadgets:
                 IFD OKT_AUDIO_VAMPIRE
                     GADGET  GAD_NEXT,0,2,15,23,1,inc_samples_load_mode,dec_samples_load_mode
                 ENDC
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,2,16,23,1,switch_samples_save_format,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,2,16,23,1,switch_samples_save_format,0
                     GADGET  GAD_NEXT,0,2,18,23,1,inc_mouse_repeat_delay,dec_mouse_repeat_delay
                     GADGET  GAD_NEXT,0,2,19,23,1,inc_mouse_repeat_speed,dec_mouse_repeat_speed
                     GADGET  GAD_NEXT,0,2,21,15,1,inc_current_color_set,dec_current_color_set
@@ -21052,33 +21168,33 @@ prefs_gadgets:
                     GADGET  GAD_NEXT,0,38,17,1,1,inc_polyphony_value_6,dec_polyphony_value_6
                     GADGET  GAD_NEXT,0,38,18,1,1,inc_polyphony_value_7,dec_polyphony_value_7
                     GADGET  GAD_NEXT,0,38,19,1,1,inc_polyphony_value_8,dec_polyphony_value_8
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,29,22,10,1,reset_polyphony_values,randomize_polyphony_values
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,29,22,10,1,reset_polyphony_values,randomize_polyphony_values
                     GADGET  GAD_NEXT,0,43,13,6,1,inc_f6_key_row_jump_value,dec_f6_key_row_jump_value
                     GADGET  GAD_NEXT,0,43,15,6,1,inc_f7_key_row_jump_value,dec_f7_key_row_jump_value
                     GADGET  GAD_NEXT,0,43,17,6,1,inc_f8_key_row_jump_value,dec_f8_key_row_jump_value
                     GADGET  GAD_NEXT,0,43,19,6,1,inc_f9_key_row_jump_value,dec_f9_key_row_jump_value
                     GADGET  GAD_NEXT,0,43,21,6,1,inc_f10_key_row_jump_value,dec_f10_key_row_jump_value
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_HILITE,53,12,8,7,set_char_pixel,clear_char_pixel
+                    GADGET  GAD_NEXT,GADGET_NO_HILITE,53,12,8,7,set_char_pixel,clear_char_pixel
                     GADGET  GAD_NEXT,0,53,20,8,1,inc_selected_char_mouse,dec_selected_char_mouse
                     GADGET  GAD_NEXT,0,59,22,1,1,rotate_char_up,rotate_char_down
                     GADGET  GAD_NEXT,0,58,23,1,1,rotate_char_left,rotate_char_right
                     GADGET  GAD_NEXT,0,60,23,1,1,rotate_char_right,rotate_char_left
                     GADGET  GAD_NEXT,0,59,24,1,1,rotate_char_down,rotate_char_up
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,22,5,1,outline_char,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,23,4,1,restore_undo_buffer,swap_undo_buffer
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,24,5,1,restore_copy_buffer,swap_copy_buffer
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,25,3,1,copy_to_copy_buffer_and_erase_char,erase_char
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,57,25,4,1,copy_to_copy_buffer,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,26,8,1,mirror_char_x,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,53,27,8,1,mirror_char_y,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_HILITE,62,12,16,16,select_current_char,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,1,27,6,1,load_prefs,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,7,27,6,1,save_prefs,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,13,27,5,1,use_prefs,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,18,27,5,1,old_prefs,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,23,27,8,1,cancel_prefs,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,2,24,23,1,switch_patterns_rows_mode,0
-                    GADGET  GAD_DONE,MOUSE_CMD_NO_REPEAT,42,27,7,1,switch_st_load_mode,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,22,5,1,outline_char,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,23,4,1,restore_undo_buffer,swap_undo_buffer
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,24,5,1,restore_copy_buffer,swap_copy_buffer
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,25,3,1,copy_to_copy_buffer_and_erase_char,erase_char
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,57,25,4,1,copy_to_copy_buffer,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,26,8,1,mirror_char_x,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,27,8,1,mirror_char_y,0
+                    GADGET  GAD_NEXT,GADGET_NO_HILITE,62,12,16,16,select_current_char,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,1,27,6,1,load_prefs,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,7,27,6,1,save_prefs,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,13,27,5,1,use_prefs,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,18,27,5,1,old_prefs,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,23,27,8,1,cancel_prefs,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,2,24,23,1,switch_patterns_rows_mode,0
+                    GADGET  GAD_DONE,GADGET_NO_REPEAT,42,27,7,1,switch_st_load_mode,0
 prefs_keys_list:
                     KL_HEAD KEY_MOD_NONE,prefs_keys
                     KL_HEAD KEY_MOD_SHIFT,prefs_keys_shift
@@ -21161,18 +21277,18 @@ compute_help_layout:
 effects_editor_gadgets:
                     GADGET  GAD_NEXT,0,3,10,5,3,lbC02B780,0
                     GADGET  GAD_NEXT,0,8,10,5,3,lbC02B7A4,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,13,10,6,3,lbC02B8FE,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,19,10,5,3,lbC02B866,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,24,10,7,3,lbC02B9BA,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,31,10,6,3,lbC02BB16,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,37,10,6,3,lbC02BC20,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,43,10,6,3,lbC02BC20,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_REPEAT,49,10,6,3,lbC02B7DE,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_HILITE,2,16,4,14,lbC02B7E6,lbC02B7EA
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_HILITE,9,16,5,14,lbC02BCE6,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_HILITE,14,16,5,14,lbC02BCFE,0
-                    GADGET  GAD_NEXT,MOUSE_CMD_NO_HILITE,20,16,25,14,lbC02BD16,0
-                    GADGET  GAD_DONE,MOUSE_CMD_NO_HILITE,52,16,25,14,lbC02BD2E,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,13,10,6,3,lbC02B8FE,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,19,10,5,3,lbC02B866,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,24,10,7,3,lbC02B9BA,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,31,10,6,3,lbC02BB16,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,37,10,6,3,lbC02BC20,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,43,10,6,3,lbC02BC20,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,49,10,6,3,lbC02B7DE,0
+                    GADGET  GAD_NEXT,GADGET_NO_HILITE,2,16,4,14,lbC02B7E6,lbC02B7EA
+                    GADGET  GAD_NEXT,GADGET_NO_HILITE,9,16,5,14,lbC02BCE6,0
+                    GADGET  GAD_NEXT,GADGET_NO_HILITE,14,16,5,14,lbC02BCFE,0
+                    GADGET  GAD_NEXT,GADGET_NO_HILITE,20,16,25,14,lbC02BD16,0
+                    GADGET  GAD_DONE,GADGET_NO_HILITE,52,16,25,14,lbC02BD2E,0
 effects_editor_keys_list:
                     KL_HEAD KEY_MOD_NONE,effects_editor_keys
                     KL_HEAD KEY_MOD_SHIFT,effects_editor_keys_shift
@@ -21503,7 +21619,11 @@ mouse_pointer:
                     dc.w    0,0
                     cnop    0,8
 bottom_credits_picture:
-                    incbin  "pic_640x8.hi1"
+                IFD OKT_AUDIO_VAMPIRE
+                    incbin  "banner_v_640x8.hi1"
+                ELSE
+                    incbin  "banner_a_640x8.hi1"
+                ENDC
 
 ; ===========================================================================
                     section chip_blocks,bss_c

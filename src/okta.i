@@ -125,12 +125,14 @@ EVT_KEY_RELEASED    equ     14
 RESP_EVT_ROUT_1     equ     10
 RESP_EVT_ROUT_2     equ     14
 
-MOUSE_CMD_TRAP_RMB_BIT equ 11
-MOUSE_CMD_NO_REPEAT_BIT equ 12
-MOUSE_CMD_NO_HILITE_BIT equ 13
-MOUSE_CMD_TRAP_RMB  equ     (1<<MOUSE_CMD_TRAP_RMB_BIT)
-MOUSE_CMD_NO_REPEAT equ     (1<<MOUSE_CMD_NO_REPEAT_BIT)
-MOUSE_CMD_NO_HILITE equ     (1<<MOUSE_CMD_NO_HILITE_BIT)
+GADGET_TRAP_RMB_BIT equ     11
+GADGET_NO_REPEAT_BIT equ    12
+GADGET_NO_HILITE_BIT equ    13
+GADGET_DISABLED_BIT equ     14
+GADGET_TRAP_RMB     equ     (1<<GADGET_TRAP_RMB_BIT)
+GADGET_NO_REPEAT    equ     (1<<GADGET_NO_REPEAT_BIT)
+GADGET_NO_HILITE    equ     (1<<GADGET_NO_HILITE_BIT)
+GADGET_DISABLED     equ     (1<<GADGET_DISABLED_BIT)
 
 VIS_DRAW_VUMETERS   equ     0
 VIS_PATT_SCROLL     equ     1
@@ -364,20 +366,20 @@ OKT_SET_AUDIO_VOL   MACRO
                     ; a4 = panning table
                     move.w  \1,d1
                     mulu    (a4,d3.w*4),\1
-                    lsr.w   #7,\1
+                    lsr.w   #6,\1
                     lsl.w   #8,\1
                     mulu    2(a4,d3.w*4),d1
-                    lsr.w   #7,d1
+                    lsr.w   #6,d1
                     or.w    d1,\1
                 ENDC
                     move.w  \1,(OKT_AUDIO_VOL,\2)
                     ENDM
 
-                IFD OKT_AUDIO_VAMPIRE
 OKT_SET_AUDIO_CTRL  MACRO
+                IFD OKT_AUDIO_VAMPIRE
                     move.w  \1,(OKT_AUDIO_CTRL,\2)
-                    ENDM
                 ENDC
+                    ENDM
 
 OKT_SET_AUDIO_DMA   MACRO
                     move.w  \1,_CUSTOM|OKT_AUDIO_DMA
@@ -420,4 +422,15 @@ DISK                MACRO
                     move.l  DiskBase,a6
                     jsr     (_LVO\1,a6)
                     move.l  (a7)+,a6
+                    ENDM
+
+WAIT_BLITTER        MACRO
+                IFD OKT_AUDIO_VAMPIRE
+                    btst    #6,(DMACONR,a6)
+.wait_blit\@:
+                    btst    #6,(DMACONR,a6)
+                    bne     .wait_blit\@
+                ELSE
+                    GFX     WaitBlit
+                ENDC
                     ENDM

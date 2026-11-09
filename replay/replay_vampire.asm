@@ -121,7 +121,6 @@ OKT_get_vbr:
                     move    sr,d0
                     or.w    #$800,d0
                     move    d0,sr
-                    move.w  #%10000,_CUSTOM|FMODE
                     ; movec vbr,d0
                     dc.w    $4E7A,$0801
                     rte

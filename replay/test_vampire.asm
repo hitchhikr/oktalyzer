@@ -34,6 +34,8 @@ start:
                     move.w  $DFF002,-(a7)
                     move.w  #$7FFF,$DFF096
                     move.w  #$7FFF,$DFF09A
+                    ; allow access to SAGA registers
+                    move.w  #%10000,$DFF1FC
                     lea	    music,a0
                     bsr	    OKT_init
                     beq     .error_init

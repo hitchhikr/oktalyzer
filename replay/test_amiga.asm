@@ -61,10 +61,9 @@ start:
                     jsr     _LVOWaitTOF(a6)
                     jsr     _LVOWaitTOF(a6)
 
+.error_mem:
                     ; only necessary if using more than 4 channels
                     bsr     OKT_release_buffers
-.error_mem:
-
                     moveq   #0,d0
                     rts
 
