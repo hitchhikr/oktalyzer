@@ -34,7 +34,9 @@
 
 ; ===========================================================================
 SCREEN_WIDTH        equ     640
+SCREEN_HEIGHT       equ     256
 SCREEN_BYTES        equ     (SCREEN_WIDTH/8)
+SCREEN_SIZE         equ     (SCREEN_BYTES*SCREEN_HEIGHT)
 
 PREFS_FILE_LEN      equ     2102
 TRACK_LEN           equ     (22*512)
@@ -365,10 +367,12 @@ OKT_SET_AUDIO_VOL   MACRO
                     ; set channel panning
                     ; a4 = panning table
                     move.w  \1,d1
+                    mc68020
                     mulu    (a4,d3.w*4),\1
                     lsr.w   #6,\1
                     lsl.w   #8,\1
                     mulu    2(a4,d3.w*4),d1
+                    mc68000
                     lsr.w   #6,d1
                     or.w    d1,\1
                 ENDC

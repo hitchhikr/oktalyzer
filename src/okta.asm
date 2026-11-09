@@ -9,11 +9,7 @@
 
 ; ===========================================================================
             IFD __VASM
-                IFD OKT_AUDIO_VAMPIRE
-                    mc68060
-                ELSE
                     mc68000
-                ENDC
                     opt     o+
                     opt     a+
             ENDC
@@ -98,13 +94,22 @@ main:
                     beq     .error
                 ENDC
                     bsr     init_all
+                    bmi     .error_vampire
                     jsr     (auto_load_prefs)
                     bsr     main_loop
+.error_vampire:
                 IFND OKT_AUDIO_VAMPIRE
 .error:
                     bsr     OKT_release_buffers
                 ENDC
                     bsr     free_resources
+                    cmp.b   #2,(vampire_detected)
+                    bne     .ok_vampire
+                    moveq   #RECOVERY_ALERT,d0
+                    moveq   #24,d1
+                    lea     err_vampire_msg,a0
+                    INT     DisplayAlert
+.ok_vampire:
                     lea     (main-4,pc),a0
                     move.l  a0,d1
                     lsr.l   #2,d1
@@ -134,6 +139,8 @@ init_all:
                     jsr     (close_workbench)
                     bsr     init_copper_bitplanes
                     bsr     set_pal_ntsc_context
+                    bsr     alloc_vampire_buffer
+                    bmi     .error_mem
                     bsr     set_aga_context
                     bsr     install_vbi_int
                     bsr     patch_sys_requesters_function
@@ -150,8 +157,32 @@ init_all:
                     lea     (our_gadget_struct),a0
                     ; add to the y pos
                     add.w   d0,(gg_TopEdge,a0)
+                    lea     (copperlist),a0
                     bsr     install_our_copperlist
-                    bra     construct_main_copperlist
+                    bsr     test_vampire
+                IFD OKT_AUDIO_VAMPIRE
+                    ; must be a proper vampire
+                    bmi     .error_vampire
+                    ; good to go
+                    move.b  #1,(vampire_detected)
+                ELSE
+                    bmi     .no_vampire
+                    ; good to go
+                    move.b  #1,(vampire_detected)
+.no_vampire:
+                ENDC
+                    ; needed a second time
+                    bsr     set_aga_context
+                    bsr     construct_main_copperlist
+                    moveq   #OK,d0
+                    rts
+.error_vampire:
+                    move.b  #2,(vampire_detected)
+                    moveq   #ERROR,d0
+                    rts
+.error_mem:
+                    moveq   #ERROR,d0
+                    rts
 our_task:
                     dc.l    0
 current_dir_lock:
@@ -195,12 +226,14 @@ ntsc_flag:
 
 ; ===========================================================================
 set_aga_context:
-                IFD OKT_AUDIO_VAMPIRE
+                    cmp.b   #1,(vampire_detected)
+                    bne.b   .no_vampire
                     move.w  #$2C,copper_ddfstrt+2
                     move.w  #$B4,copper_ddfstop+2
                     move.w  #%10011,copper_fmode+2
-                    rts
-                ELSE
+                    move.w  #%10011,copper_test_fmode+2
+                    move.w  #%10001000000000,vampire_shift+2
+.no_vampire:
                     move.w  _CUSTOM+DENISEID,d0
                     moveq   #31-1,d2
                     and.w   #$FF,d0
@@ -219,8 +252,32 @@ set_aga_context:
                     move.w  #$2C,copper_ddfstrt+2
                     move.w  #$B4,copper_ddfstop+2
                     move.w  #%11,copper_fmode+2
+                    move.w  #%11,copper_test_fmode+2
                     rts
-                ENDC
+
+; ===========================================================================
+test_vampire:
+                    move.w  $DFF3FC,d0
+                    moveq   #31-1,d2
+                    and.w   #$FF00,d0
+.check_chipset_loop:
+                    move.w  $DFF3FC,d1
+                    and.w   #$FF00,d1
+                    cmp.b   d0,d1
+                    bne     .not_vampire
+                    dbf     d2,.check_chipset_loop
+                    lsr.w   #8,d0
+                    ; V4_500
+                    cmp.w   #3,d0
+                    blt     .not_vampire
+                    ; V4_600
+                    cmp.w   #7,d0
+                    bgt     .not_vampire
+                    moveq   #OK,d0
+                    rts
+.not_vampire:
+                    moveq   #ERROR,d0
+                    rts
 
 ; ===========================================================================
 free_resources:
@@ -230,8 +287,9 @@ free_resources:
                     bsr     free_all_samples_and_song
                     bsr     restore_sys_requesters_function
                     bsr     remove_ints
+                    bsr     free_vampire_buffer
                     jsr     (open_workbench)
-                    jsr     restore_screen
+                    jsr     (restore_screen)
                     move.l  current_dir_lock,d1
                     DOS     UnLock
                     bra     close_libraries
@@ -324,6 +382,37 @@ save_joy0dat:
                     dc.w    0
 
 ; ===========================================================================
+alloc_vampire_buffer:
+                    move.l  #MEMF_CLEAR|MEMF_CHIP,d1
+                    move.l  #SCREEN_SIZE,d0
+                    EXEC    AllocMem
+                    move.l  d0,(phony_blitter_block)
+                    beq     .no_mem
+                    move.l  d0,a0
+                    lea     (SCREEN_HEIGHT*SCREEN_BYTES,a0),a1
+                    move.l  #$ffffffff,d0
+.fill_phony_blitter_block:
+                    move.l  d0,(a0)+
+                    cmp.l   a1,a0
+                    bcs     .fill_phony_blitter_block
+                    moveq   #OK,d0
+                    rts
+.no_mem:
+                    moveq   #ERROR,d0
+                    rts
+
+; ===========================================================================
+free_vampire_buffer:
+                    move.l  (phony_blitter_block),d0
+                    beq     .empty
+                    move.l  d0,a1
+                    move.l  #SCREEN_SIZE,d0
+                    EXEC    FreeMem
+                    clr.l   (phony_blitter_block)
+.empty:
+                    rts
+
+; ===========================================================================
 install_vbi_int:
                     moveq   #-1,d0
                     EXEC    AllocSignal
@@ -345,6 +434,8 @@ install_vbi_int:
 
 ; ===========================================================================
 remove_vbi_int:
+                    move.b  (vbi_signal_mask_bit,pc),d0
+                    beq     .was_not_active
                     lea     (vbi_int_struct,pc),a1
                     moveq   #INTB_VERTB,d0
                     EXEC    RemIntServer
@@ -353,6 +444,7 @@ remove_vbi_int:
                     moveq   #0,d0
                     move.b  (vbi_signal_mask_bit,pc),d0
                     EXEC    FreeSignal
+.was_not_active:
                     rts
 vbi_signal_mask_bit:
                     dc.b    0
@@ -629,14 +721,18 @@ restore_sys_requesters_function:
                     move.l  d2,-(a7)
                     EXEC    Disable
                     addq.w  #1,(main_spinlock)
-                    move.l  (IntBase),a1
+                    move.l  (IntBase),d0
+                    beq     .old_intuition
+                    move.l  d0,a1
                     move.w  #_LVOAutoRequest,a0
                     cmp.w   #36,(LIB_VERSION,a1)
                     bcs     .old_intuition
                     move.w  #_LVOEasyRequestArgs,a0
 .old_intuition:
                     move.l  (old_sys_requesters_function,pc),d0
+                    beq     .was_not_set
                     EXEC    SetFunction
+.was_not_set:
                     EXEC    Enable
                     move.l  (a7)+,d2
                     rts
@@ -709,6 +805,8 @@ stop_audio_channels:
                     lea     (_CUSTOM),a0
                     moveq   #0,d0
                 IFD OKT_AUDIO_VAMPIRE
+                    cmp.b   #1,(vampire_detected)
+                    bne     .error
                     move.w  d0,($448,a0)
                     move.w  d0,($458,a0)
                     move.w  d0,($468,a0)
@@ -718,6 +816,7 @@ stop_audio_channels:
                     move.w  d0,($4A8,a0)
                     move.w  d0,($4B8,a0)
                     move.w  #%11111111,(OKT_AUDIO_DMA,a0)
+.error:
                 ELSE
                     move.w  d0,(AUD0VOL,a0)
                     move.w  d0,(AUD1VOL,a0)
@@ -813,7 +912,6 @@ set_full_screen_copperlist_ntsc:
                     move.w  #56,(shift_y_mouse_coord_ntsc)
 .no_ntsc:
                     move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
-.spinning:
                     EXEC    Enable
                     rts
 
@@ -825,7 +923,6 @@ construct_full_screen_copperlist_ntsc:
                     lea     (fullscreen_copperlist_ntsc_struct),a0
                     bsr     construct_copperlist
                     move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
-.spinning:
                     EXEC    Enable
                     rts
 
@@ -844,7 +941,6 @@ restore_full_screen_copperlist_ntsc:
                     clr.w   (shift_y_mouse_coord_ntsc)
 .no_ntsc:
                     move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
-.spinning:
                     EXEC    Enable
                     rts
 
@@ -856,7 +952,6 @@ construct_main_copperlist:
                     lea     (main_copperlist_struct),a0
                     bsr     construct_copperlist
                     move.w  #DMAF_SETCLR|DMAF_COPPER,(_CUSTOM|DMACON)
-.spinning:
                     EXEC    Enable
                     rts
 full_screen_copperlist_flag:
@@ -925,7 +1020,6 @@ set_copperlist_jump:
 ; ===========================================================================
 install_our_copperlist:
                     movem.l d0/d1/a0/a1,-(a7)
-                    lea     (copperlist),a0
                     jsr     (setup_screen)
                     move.l  d0,(screen_mem_block)
                     movem.l (a7)+,d0/d1/a0/a1
@@ -1519,7 +1613,7 @@ lbC01EFE8:
                     OKT_SET_AUDIO_CTRL #0,a2
                 ENDC
                     move.w  d3,(OKT_AUDIO_VOL,a2)
-                    ori.w   #DMAF_SETCLR,d5
+                    or.w    #DMAF_SETCLR,d5
                     move.w  d5,(_CUSTOM|OKT_AUDIO_DMA)
                     bsr     wait_raster
                    move.l  a1,(OKT_AUDIO_ADR,a2)
@@ -2696,13 +2790,9 @@ display_main_menu:
                     tst.b   (show_decimal_rows)
                     bne     .draw_in_hex
                     lea     (decimal_table_ascii),a0
-                IFD OKT_AUDIO_VAMPIRE
-                    lea     (a0,d0.w*4),a0
-                ELSE
                     add.w   d0,d0
                     add.w   d0,d0
                     lea     (a0,d0.w),a0
-                ENDC
                     moveq   #21,d0
                     moveq   #6,d1
                     jsr     (draw_text)
@@ -2962,35 +3052,35 @@ do_draw_available_memory_and_song_metrics:
                     or.l    (largest_mem_avail,pc),d1
                     EXEC    AvailMem
                     ; too much memory to display
-                    cmp.l   #99999999,d0
+                    cmp.l   #999999999,d0
                     blt     .enough_chip
                     lea     (plenty_text,pc),a0
-                    move.w  #72,d0
+                    move.w  #71,d0
                     move.w  #1,d1
                     jsr     (draw_text)
                     bra     .too_much_chip
 .enough_chip:
                     move.l  d0,d2
-                    moveq   #72,d0
+                    moveq   #71,d0
                     moveq   #1,d1
-                    jsr     (draw_8_digits_decimal_number_leading_zeroes)
+                    jsr     (draw_9_digits_decimal_number_leading_zeroes)
 .too_much_chip:
                     moveq   #MEMF_FAST,d1
                     or.l    (largest_mem_avail,pc),d1
                     EXEC    AvailMem
                     ; too much memory to display
-                    cmp.l   #99999999,d0
+                    cmp.l   #999999999,d0
                     blt     .enough_fast
                     lea     (plenty_text,pc),a0
-                    move.w  #72,d0
+                    move.w  #71,d0
                     move.w  #2,d1
                     jsr     (draw_text)
                     bra     .too_much_fast
 .enough_fast:
                     move.l  d0,d2
-                    moveq   #72,d0
+                    moveq   #71,d0
                     moveq   #2,d1
-                    jsr     (draw_8_digits_decimal_number_leading_zeroes)
+                    jsr     (draw_9_digits_decimal_number_leading_zeroes)
 .too_much_fast:
                     move.w  (current_song_metrics_index,pc),d0
                     bne     .patterns
@@ -3008,9 +3098,9 @@ do_draw_available_memory_and_song_metrics:
                     bsr     get_samples_metrics
 .draw_it:
                     move.l  d0,d2
-                    moveq   #72,d0
+                    moveq   #71,d0
                     moveq   #3,d1
-                    jmp     (draw_8_digits_decimal_number_leading_zeroes)
+                    jmp     (draw_9_digits_decimal_number_leading_zeroes)
 get_patterns_metrics:
                     move.l  d2,-(a7)
                     lea     (OKT_patterns_list),a0
@@ -3041,7 +3131,7 @@ get_samples_metrics:
                     dbra    d1,.loop
                     rts
 plenty_text:
-                    dc.b    ' Plenty!',0
+                    dc.b    '  Plenty!',0
                     even
 
 ; ===========================================================================
@@ -3360,17 +3450,11 @@ draw_row_data:
                     tst.b   (show_decimal_rows)
                     bne     .draw_in_hex
                     lea     (decimal_table_ascii),a1
-                IFD OKT_AUDIO_VAMPIRE
-                    move.b  (a1,d0.w*4),(a5)+
-                    move.b  1(a1,d0.w*4),(a5)+
-                    move.b  2(a1,d0.w*4),(a5)+
-                ELSE
                     add.w   d0,d0
                     add.w   d0,d0
                     move.b  (a1,d0.w),(a5)+
                     move.b  1(a1,d0.w),(a5)+
                     move.b  2(a1,d0.w),(a5)+
-                ENDC
                     bra     .draw_channels_groups
 .draw_in_hex:
                     move.b  #' ',(a5)+
@@ -3533,29 +3617,29 @@ decode_input_raw_key:
                     moveq   #IEQUALIFIER_CAPSLOCK|IEQUALIFIER_RSHIFT|IEQUALIFIER_LSHIFT,d2
                     and.w   d1,d2
                     beq     .key_shift_capslock
-                    ori.w   #KEY_MOD_SHIFT,d0
+                    or.w    #KEY_MOD_SHIFT,d0
 .key_shift_capslock:
                     moveq   #IEQUALIFIER_RALT|IEQUALIFIER_LALT,d2
                     and.w   d1,d2
                     beq     .key_alt
-                    ori.w   #KEY_MOD_ALT,d0
+                    or.w    #KEY_MOD_ALT,d0
 .key_alt:
                     move.w  #IEQUALIFIER_RCOMMAND|IEQUALIFIER_LCOMMAND,d2
                     and.w   d1,d2
                     beq     .key_amiga
-                    ori.w   #KEY_MOD_AMIGA,d0
+                    or.w    #KEY_MOD_AMIGA,d0
 .key_amiga:
                     btst    #IEQUALIFIERB_NUMERICPAD,d1
                     beq     .key_numeric_pad
-                    ori.w   #KEY_MOD_NUMPAD,d0
+                    or.w    #KEY_MOD_NUMPAD,d0
 .key_numeric_pad:
                     btst    #IEQUALIFIERB_REPEAT,d1
                     beq     .key_repeat
-                    ori.w   #KEY_MOD_REPEAT,d0
+                    or.w    #KEY_MOD_REPEAT,d0
 .key_repeat:
                     btst    #IEQUALIFIERB_CONTROL,d1
                     beq     .key_control
-                    ori.w   #KEY_MOD_CTRL,d0
+                    or.w    #KEY_MOD_CTRL,d0
 .key_control:
                     cmp.b   #$40,d0
                     bhi     .not_printable
@@ -4275,7 +4359,7 @@ make_gadget_visible:
 
 ; ===========================================================================
 make_gadget_invisible:
-                    ori.w   #GADGET_DISABLED,(4,a0)
+                    or.w    #GADGET_DISABLED,(4,a0)
                     rts
 
 ; ===========================================================================
@@ -6602,8 +6686,10 @@ install_midi_ints:
 remove_midi_ints:
                     movem.l d0/d1/a0/a1,-(a7)
                     EXEC    Disable
+                    move.l  (old_midi_in_int),d0
+                    beq     .receive_was_not_active
                     move.w  #INTF_RBF,(_CUSTOM|INTENA)
-                    move.l  (old_midi_in_int),a1
+                    move.l  d0,a1
                     moveq   #INTB_RBF,d0
                     EXEC    SetIntVector
                     move.w  (old_serial_receive_intena),d0
@@ -6612,8 +6698,10 @@ remove_midi_ints:
                     move.w  d0,(_CUSTOM|INTENA)
                     move.w  #INTF_RBF,(_CUSTOM|INTREQ)
 .receive_was_not_active:
+                    move.l  (old_midi_out_int),d0
+                    beq     .transmit_was_not_active
                     move.w  #INTF_TBE,(_CUSTOM|INTENA)
-                    move.l  (old_midi_out_int),a1
+                    move.l  d0,a1
                     moveq   #0,d0
                     EXEC    SetIntVector
                     move.w  (old_serial_transmit_intena),d0
@@ -7492,7 +7580,7 @@ OKT_turn_dma_on:
                     move.w  (a0),d0
                     beq     .OKT_no_channels
                     clr.w   (a0)
-                    ori.w   #DMAF_SETCLR,d0
+                    or.w    #DMAF_SETCLR,d0
                     OKT_SET_AUDIO_DMA d0
                     ; dma wait
                     lea     (_CUSTOM|VHPOSR),a0
@@ -9448,6 +9536,7 @@ do_go_to_cli_workbench:
                     jsr     (patch_sys_requesters_function,pc)
                     jsr     (reinstall_midi_ints,pc)
                     EXEC    Enable
+                    lea     (copperlist),a0
                     bsr     install_our_copperlist
                     bra     display_main_menu
 
@@ -10267,17 +10356,22 @@ draw_filled_box_with_minterms:
                     addq.w  #1,d3
                     moveq   #0,d0
                     move.w  d6,d0
-                    ori.w   #BC0F_SRCC|BC0F_DEST,d0
+                    or.w    #BC0F_SRCA|BC0F_SRCC|BC0F_DEST,d0
+                ;IFD OKT_AUDIO_VAMPIRE
+                    ;or.w    #,d0
+                ;ENDC
                     swap    d0
                     bsr     own_blitter
-                IFD OKT_AUDIO_VAMPIRE
-                    move.w  #$FFFF,(BLTADAT,a6)
-                    move.w  #$FFFF,(BLTBDAT,a6)
-                ELSE
-                    move.w  #$FFFF,(BLTADAT,a6)
-                ENDC
+                ;IFD OKT_AUDIO_VAMPIRE
+                    move.l  (phony_blitter_block),(BLTAPTH,a6)
+                    ;move.w  #$FFFF,(BLTADAT,a6)
+                    ;move.w  #$FFFF,(BLTBDAT,a6)
+                ;ELSE
+                ;    move.w  #$FFFF,(BLTADAT,a6)
+                ;ENDC
                     move.l  d0,(BLTCON0,a6)
                     move.l  d4,(BLTAFWM,a6)
+                    move.w  d5,(BLTAMOD,a6)
                     move.w  d5,(BLTCMOD,a6)
                     move.w  d5,(BLTDMOD,a6)
                     move.l  a3,(BLTCPTH,a6)
@@ -10379,7 +10473,7 @@ lbC025712:
                     move.w  d2,(BLTAMOD,a6)
                     and.w   #$F,d0
                     ror.w   #4,d0
-                    ori.w   #BC0F_SRCA|BC0F_SRCC|BC0F_DEST|ABC|ABNC|NABC|NANBC,d0
+                    or.w    #BC0F_SRCA|BC0F_SRCC|BC0F_DEST|ABC|ABNC|NABC|NANBC,d0
                     movem.w d0/d5,(BLTCON0,a6)
                     move.l  a1,(BLTCPTH,a6)
                     move.l  a1,(BLTDPTH,a6)
@@ -10790,6 +10884,13 @@ lbC025DD2:
                     rts
 
 ; ===========================================================================
+draw_9_digits_decimal_number_leading_zeroes:
+                    lea     (decimal_number_leading_zeroes_table_9,pc),a0
+                    lea     (decimal_number_leading_zeroes_text,pc),a1
+                    move.l  #'0000',(2,a1)
+                    move.l  #'0000',(6,a1)
+                    move.w  #'0'<<8,(10,a1)
+                    bra     draw_decimal_number_leading_zeroes
 draw_8_digits_decimal_number_leading_zeroes:
                     lea     (decimal_number_leading_zeroes_table_8,pc),a0
                     lea     (decimal_number_leading_zeroes_text,pc),a1
@@ -10841,6 +10942,8 @@ draw_decimal_number_leading_zeroes:
 .done:
                     lea     (decimal_number_leading_zeroes_text,pc),a0
                     bra     draw_text_with_coords_struct
+decimal_number_leading_zeroes_table_9:
+                    dc.l    100000000
 decimal_number_leading_zeroes_table_8:
                     dc.l    10000000
 decimal_number_leading_zeroes_table_7:
@@ -11304,12 +11407,8 @@ draw_text_with_coords_struct:
                     moveq   #0,d0
                     move.b  (a0)+,d0
                     beq     .done
-                IFD OKT_AUDIO_VAMPIRE
-                    lea     (a2,d0.w*8),a1
-                ELSE
                     lsl.w   #3,d0
                     lea     (a2,d0.w),a1
-                ENDC
                     move.b  (a1)+,(a3)+
                     move.b  (a1)+,((SCREEN_BYTES*1)-1,a3)
                     move.b  (a1)+,((SCREEN_BYTES*2)-1,a3)
@@ -11330,12 +11429,8 @@ draw_text_without_coords:
                     moveq   #0,d0
                     move.b  (a0)+,d0
                     beq     .done
-                IFD OKT_AUDIO_VAMPIRE
-                    lea     (a3,d0.w*8),a2
-                ELSE
                     lsl.w   #3,d0
                     lea     (a3,d0.w),a2
-                ENDC
                     move.b  (a2)+,(a1)+
                     move.b  (a2)+,((SCREEN_BYTES*1)-1,a1)
                     move.b  (a2)+,((SCREEN_BYTES*2)-1,a1)
@@ -11361,12 +11456,8 @@ draw_text_with_blanks:
                     moveq   #0,d0
                     move.b  (a0)+,d0
                     beq     .clear_loop
-                IFD OKT_AUDIO_VAMPIRE
-                    lea     (a3,d0.w*8),a1
-                ELSE
                     lsl.w   #3,d0
                     lea     (a3,d0.w),a1
-                ENDC
                     move.b  (a1)+,(a2)+
                     move.b  (a1)+,((SCREEN_BYTES*1)-1,a2)
                     move.b  (a1)+,((SCREEN_BYTES*2)-1,a2)
@@ -16453,7 +16544,7 @@ sample_editor_inc_note_rate:
 
 ; ===========================================================================
 sample_editor_switch_left_right:
-                    eori.w  #1,(lbW029EFE)
+                    eor.w   #1,(lbW029EFE)
                     bra     sample_editor_draw_sample_infos
 lbW029E10:
                     dc.w    25
@@ -16873,7 +16964,7 @@ switch_channel_4_type:
 switch_channel_type:
                     lea     (OKT_channels_modes,pc),a0
                     add.w   d0,d0
-                    eori.w  #1,(a0,d0.w)
+                    eor.w   #1,(a0,d0.w)
 display_channels_type:
                     moveq   #14,d2
                     lea     (OKT_channels_modes,pc),a5
@@ -16952,7 +17043,7 @@ display_samples_load_mode:
 
 ; ===========================================================================
 switch_samples_save_format:
-                    eori.w  #1,(samples_save_format)
+                    eor.w   #1,(samples_save_format)
                     bra     display_samples_save_format
 display_samples_save_format:
                     lea     (.samples_save_format_text,pc),a0
@@ -19031,9 +19122,12 @@ lbC02BFE8:
                     add.w   d0,d0
                     add.w   d0,d0
                     lea     (lbL01D89C),a0
-                    move.l  (a0,d0.w),a1
+                    move.l  (a0,d0.w),d0
+                    beq     .empty
+                    move.l  d0,a1
                     move.l  #131,d0
                     EXEC    FreeMem
+.empty:
                     moveq   #OK,d0
                     rts
 lbC02C01C:
@@ -20249,7 +20343,9 @@ setup_screen:
 ; ===========================================================================
 restore_screen:
                     move.l  (screen_mem_block),a0
-                    movem.l a1/a4-a6,-(a7)
+                    movem.l d0/a1/a4-a6,-(a7)
+                    move.l  a0,d0
+                    beq     .empty
                     move.l  a0,a5
                     movea.l (4,a5),a1
                     cmpa.l  #0,a1
@@ -20262,7 +20358,9 @@ restore_screen:
                     move.l  (0,a5),(a0)
                     move.l  a5,a0
                     jsr     (free_mem_block,pc)
-                    movem.l (a7)+,a1/a4-a6
+.empty:
+                    movem.l (a7)+,d0/a1/a4-a6
+
                     rts
 
 ; ===========================================================================
@@ -20615,6 +20713,15 @@ topaz_font_struct:
                     dc.b    0,0
 topaz_name:
                     dc.b    'topaz.font',0
+                    even
+err_vampire_msg:
+                    dc.w    (640-((.emsg-.msg)*8))/2
+                    dc.b    14
+.msg
+                    dc.b    "I need a proper vampire card"
+.emsg:
+                    dc.b    0
+                    dc.b    0
                     even
 
 ; ===========================================================================
@@ -21360,7 +21467,8 @@ pattern_bitplane_top_pos:
                     dc.w    0
 pattern_play_flag:
                     dc.b    0
-                    even
+vampire_detected:
+                    dc.b    0
 lbW01B294:
                     dc.w    0
 polyphony_channels_count:
@@ -21439,6 +21547,8 @@ lbL01BC60:
                     dc.l    0
 lbL01BC64:
                     dc.l    0
+phony_blitter_block:
+                    dc.l    0
 save_sample_mode:
                     dc.w    0
 midi_mode:
@@ -21505,6 +21615,12 @@ BACK_COLOR          equ     COLOR31
                 ELSE
 BACK_COLOR          equ     COLOR00
                 ENDC
+copperlist_black:
+                    dc.w    COLOR00,$000
+                    dc.w    BPLCON0,$200
+copper_test_fmode:
+                    dc.w    FMODE,0
+                    dc.l    -2,-2
 copperlist:
 sprites_bps:
                     dc.w    SPR0PTH,0,SPR0PTL,0,SPR1PTH,0,SPR1PTL,0,SPR2PTH,0,SPR2PTL,0,SPR3PTH,0,SPR3PTL,0
@@ -21522,7 +21638,9 @@ copper_fmode:
                     dc.w    $2B09,-2
                     ; mouse pointer colors
                     dc.w    COLOR17,$926,COLOR18,$C37,COLOR19,$F49
-                    dc.w    BPLCON1,0,BPLCON2,%111111
+vampire_shift:
+                    dc.w    BPLCON1,0
+                    dc.w    BPLCON2,%111111
                     dc.w    BPL1MOD,0
 ; =====
 main_menu_copper_jump:
@@ -21581,8 +21699,7 @@ credits_bp:
 copper_end_line:
                     dc.w    $2C09,-2
                     dc.w    BPLCON0,$200
-                    dc.l    -2
-                    dc.l    -2
+                    dc.l    -2,-2
 ; =====
 main_menu_copper_part:
                     dc.w    $2C09,-2

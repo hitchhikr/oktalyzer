@@ -59,7 +59,7 @@ Done:
 - Row numbers are now only displayed once per line.
 - Range blocks aren't displayed or can't be selected if sample is empty.
 - Right mouse button on sample waveform to remove current block mark.
-- Available memory and song metrics are now displayed with 8 digits.
+- Available memory and song metrics are now displayed with 9 digits.
 - Patterns rows can now be displayed in either decimal or hexadecimal (default).
 
 A work in progress...
