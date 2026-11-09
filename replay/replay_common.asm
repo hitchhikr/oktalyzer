@@ -1120,8 +1120,23 @@ OKT_periods_table:
                     dc.w    $17D,$168,$153,$140,$12E,$11D,$10D,$FE,$F0,$E2,$D6,$CA,$BE,$B4,$AA
                     dc.w    $A0,$97,$8F,$87,$7F,$78,$71,0
                 IFD OKT_AUDIO_VAMPIRE
-OKT_panning_table:  dc.w    $af,$50,$50,$af,$af,$50,$50,$af
-                    dc.w    $af,$50,$50,$af,$af,$50,$50,$af
+OKT_panning_table:
+                    ;       left
+                    dc.w    $af,$50
+                    ;       right
+                    dc.w    $50,$af
+                    ;       left
+                    dc.w    $af,$50
+                    ;       right
+                    dc.w    $50,$af
+                    ;       left
+                    dc.w    $af,$50
+                    ;       right
+                    dc.w    $50,$af
+                    ;       left
+                    dc.w    $af,$50
+                    ;       right
+                    dc.w    $50,$af
                 ENDC
 OKT_global_volume:
                     dc.w    64

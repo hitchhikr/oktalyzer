@@ -228,8 +228,7 @@ ntsc_flag:
 set_aga_context:
                     cmp.b   #1,(vampire_detected)
                     bne.b   .no_vampire
-                    move.w  #$2C,copper_ddfstrt+2
-                    move.w  #$B4,copper_ddfstop+2
+                    bsr     .machine_is_aga
                     move.w  #%10011,copper_fmode+2
                     move.w  #%10011,copper_test_fmode+2
                     move.w  #%10001000000000,vampire_shift+2
@@ -824,7 +823,7 @@ stop_audio_channels:
                     move.w  d0,(AUD3VOL,a0)
                     move.w  #DMAF_AUDIO,(DMACON,a0)
                 ENDC
-                    jsr     (lbC029E48)
+                    jsr     (clear_currently_playing_channels_flags)
                     movem.l (a7)+,d0/a0
                     rts
 
@@ -1077,7 +1076,7 @@ lbC01EA58:
                     addq.w  #1,d0
                     tst.w   d2
                     bne     lbC01EA66
-                    jsr     (lbC029E50)
+                    jsr     (stop_currently_played_sample)
                     bra     lbC01EA6C
 lbC01EA66:
                     st      d1
@@ -1306,7 +1305,7 @@ lbC01EC7A:
                     movem.w d0/d1,-(a7)
                     jsr     (lbC029E3E)
                     movem.w (a7)+,d0/d1
-                    bsr     lbC01EF1E
+                    bsr     key_jazz
                     movem.l (a7)+,d0/a0
 lbC01ECBC:
                     movem.l d0/a0,-(a7)
@@ -1365,7 +1364,7 @@ lbC01ED46:
                     movem.w d0/d1,-(a7)
                     jsr     (lbC029E3E)
                     movem.w (a7)+,d0/d1
-                    bra     lbC01EF1E
+                    bra     key_jazz
 lbC01ED62:
                     rts
 lbC01ED64:
@@ -1510,7 +1509,11 @@ lbC01EF0E:
 ascii_MSG55:
                     dc.b    '--- 0000',0
                     even
-lbC01EF1E:
+
+; ===========================================================================
+; in: d0 = channel
+key_jazz:
+                IFND OKT_AUDIO_VAMPIRE
                     cmp.b   #MIDI_OUT,(midi_mode)
                     bne     lbC01EF5A
                     movem.l d2/a2,-(a7)
@@ -1528,25 +1531,26 @@ lbC01EF1E:
                     move.w  (SMP_VOL,a0),d2
 ;lbC01EF4A:
                     move.w  (current_sample_index,pc),d0
-                    jsr     (lbC0229C4)
+                    jsr     (send_midi_note)
                     movem.l (a7)+,d2/a2
                     rts
 lbC01EF5A:
+                ENDC
                     tst.l   (work_sample_address_ptr)
-                    beq     lbC01EFE4
+                    beq     .no_sample
                     tst.l   (work_sample_size)
-                    beq     lbC01EFE4
+                    beq     .no_sample
                     movem.l d2-d4/a2,-(a7)
                     ; channel bit
                     move.w  d0,-(a7)
                     move.w  d1,-(a7)
-                    jsr     (lbC028E96)
+                    jsr     (normalize_work_sample_repeat)
                     move.w  (a7)+,d1
                     lea     (OKT_samples_infos),a2
                     move.w  (current_sample_index,pc),d0
                     lsl.w   #5,d0
                     add.w   d0,a2
-                    lea     (lbW02513C),a0
+                    lea     (OKT_periods_table-2),a0
                     add.w   d1,d1
                     move.w  (a0,d1.w),d2
                     move.l  (work_sample_address_ptr),a0
@@ -1558,16 +1562,16 @@ lbC01EF5A:
 ;                    moveq   #64,d3
 ;                    lea     (OKT_empty_waveform),a1
 ;                    moveq   #2/2,d1
-;                    bra     lbC01EFDA
+;                    bra     .empty
 ;lbC01EFB6:
                     move.w  (SMP_VOL,a2),d3
                     moveq   #0,d1
                     move.w  (SMP_REP_LEN,a2),d1
-                    bne     lbC01EFCA
+                    bne     .have_a_repeat
                     lea     (OKT_empty_waveform),a1
-                    moveq   #2/2,d1
-                    bra     lbC01EFDA
-lbC01EFCA:
+                    moveq   #4/2,d1
+                    bra     .empty
+.have_a_repeat:
                     move.l  a0,a1
                     moveq   #0,d4
                     move.w  (SMP_REP_START,a2),d4
@@ -1576,13 +1580,13 @@ lbC01EFCA:
                     add.w   d4,d0
                     add.l   d4,d4
                     adda.l  d4,a1
-lbC01EFDA:
+.empty:
                     move.w  (a7)+,d4
-                    bsr     lbC01EFE8
+                    bsr     .play_sample
                     movem.l (a7)+,d2-d4/a2
-lbC01EFE4:
+.no_sample:
                     rts
-lbC01EFE8:
+.play_sample:
                     movem.l d5/a2,-(a7)
                     lea     (_CUSTOM|OKT_AUDIO_BASE),a2
                     moveq   #DMAB_AUD0,d5
@@ -1598,7 +1602,7 @@ lbC01EFE8:
                 ELSE
                     move.w  d0,(OKT_AUDIO_LEN,a2)
                 ENDC
-                    move.w  #113,(OKT_AUDIO_PER,a2)
+                    move.w  #$358,(OKT_AUDIO_PER,a2)
                     bsr     wait_raster
                     move.w  d2,(OKT_AUDIO_PER,a2)
                 IFD OKT_AUDIO_VAMPIRE
@@ -1610,17 +1614,19 @@ lbC01EFE8:
                     mulu.w  #255,d3
                     lsr.w   #6,d3
                     or.w    d2,d3
+                    ; TODO: temporary
                     OKT_SET_AUDIO_CTRL #0,a2
                 ENDC
                     move.w  d3,(OKT_AUDIO_VOL,a2)
                     or.w    #DMAF_SETCLR,d5
                     move.w  d5,(_CUSTOM|OKT_AUDIO_DMA)
                     bsr     wait_raster
-                   move.l  a1,(OKT_AUDIO_ADR,a2)
+                    ; end or repeat
+                    move.l  a1,(OKT_AUDIO_ADR,a2)
                IFD OKT_AUDIO_VAMPIRE
-                   move.l  d1,(OKT_AUDIO_LEN,a2)
+                    move.l  d1,(OKT_AUDIO_LEN,a2)
                ELSE
-                   move.w  d1,(OKT_AUDIO_LEN,a2)
+                    move.w  d1,(OKT_AUDIO_LEN,a2)
                ENDC
                     movem.l (a7)+,d5/a2
                     rts
@@ -2939,15 +2945,6 @@ draw_current_sample_infos:
                     ; allow volume modifications
                     lea     (change_sample_number_gadget),a0
                     bsr     make_gadget_visible
-;                    bra     .sample_mode
-; .empty:
-                    ; lea     (.empty_infos_text,pc),a0
-                    ; moveq   #39,d0
-                    ; moveq   #3,d1
-                    ; jsr     (process_commands)
-                    ; ; forbid volume modifications
-                    ; lea     (change_sample_number_gadget),a0
-                    ; bsr     make_gadget_invisible
 .sample_mode:
                     move.l  (a7)+,a0
                 IFD OKT_AUDIO_VAMPIRE
@@ -2969,11 +2966,6 @@ draw_current_sample_infos:
                     dc.b    CMD_TEXT,0,1,'RLen:',0
                     dc.b    CMD_TEXT,0,2,'Vol.:',0
                     dc.b    CMD_DONE
-; .empty_infos_text:
-                    ; dc.b    CMD_TEXT,0,0,'            ',0
-                    ; dc.b    CMD_TEXT,0,1,'            ',0
-                    ; dc.b    CMD_TEXT,0,2,'        ',0
-                    ; dc.b    CMD_DONE
                     even
                 IFD OKT_AUDIO_VAMPIRE
 .sample_mode_text:
@@ -3806,7 +3798,7 @@ get_mouse_coords:
                     lsr.w   #1,d0
                     lsr.w   #1,d1
                     lea     (mouse_pointer),a0
-                    moveq   #9,d2
+                    moveq   #(emouse_pointer_gfx-mouse_pointer_gfx)/4,d2
                     addi.w  #128,d0
                     addi.w  #44,d1
                     add.w   d1,d2
@@ -4673,10 +4665,12 @@ lbC020F2C:
                     bhi     lbC021024
                     move.w  d1,(SMP_REP_START,a5)
                     move.w  d0,(SMP_REP_LEN,a5)
-                    ; sample mode
+                    ; sample mode by default
                     move.w  #SMP_TYPE_8_BIT,(SMP_TYPE,a5)
                     bra     .next_sample
 .empty_sample:
+                    ; sample mode by default anyway
+                    move.w  #SMP_TYPE_8_BIT,(SMP_TYPE,a5)
                     move.l  a5,a0
                     bsr     lbC021032
 .next_sample:
@@ -5039,10 +5033,10 @@ read_samples_from_okta_song_file:
                     bmi     .read_error
                     tst.b   (pattern_patch_flag)
                     beq     .no_patch
-                    ; restore mode 8 samples from 4 to 8 bit
+                    ; convert mode 8 samples from 4 to 8 bit
                     ; in older modules
                     tst.w   (SMP_TYPE,a5)
-                    bne     .no_patch
+                    bne     .no_convert
                     move.l  (length_of_sample_to_load),d0
                     move.l  (address_of_sample_to_load),a0
 .patch_loop:
@@ -5051,7 +5045,8 @@ read_samples_from_okta_song_file:
                     move.b  d1,(a0)+
                     subq.l  #1,d0
                     bne     .patch_loop
-                    ; set to 8 bit
+.no_convert:
+                    ; set to 8 bit by default
                     move.w  #SMP_TYPE_8_BIT,(SMP_TYPE,a5)
 .no_patch:
                     lea     (SMP_INFOS_LEN,a5),a5
@@ -5810,7 +5805,7 @@ load_iff_or_raw_sample:
                     move.l  (iff_sample_size_loaded,pc),d0
                     cmpi.l  #131070,d0
                     bls     .too_big
-                    bsr     error_sample_clipped
+                    bsr     error_sample_shortened
                     move.l  #131070,d0
 .too_big:
                     cmpi.l  #2,d0
@@ -6853,9 +6848,11 @@ lbC0229B2:
                     jmp     (lbC02296E,pc)
 lbC0229C2:
                     rts
-lbC0229C4:
+
+; ===========================================================================
+send_midi_note:
                     tst.b   d2
-                    beq     lbC0229FC
+                    beq     send_midi_note_off
                     movem.l d2/d3,-(a7)
                     move.b  d1,d3
                     and.b   #$F,d0
@@ -6873,7 +6870,9 @@ lbC0229F2:
                     jsr     (lbC02296E,pc)
                     movem.l (a7)+,d2/d3
                     rts
-lbC0229FC:
+
+; ===========================================================================
+send_midi_note_off:
                     move.l  d2,-(a7)
                     move.b  d1,d2
                     and.b   #$F,d0
@@ -6912,7 +6911,7 @@ lbC022A4E:
                     sf      (2,a2)
                     move.b  (a2),d0
                     move.b  (1,a2),d1
-                    jsr     (lbC0229FC,pc)
+                    jsr     (send_midi_note_off,pc)
 lbC022A68:
                     lea     (6,a2),a2
                     dbra    d2,lbC022A4E
@@ -6936,11 +6935,11 @@ send_midi_out:
                     beq     lbC022AD2
                     move.b  (a2),d0
                     move.b  (1,a2),d1
-                    jsr     (lbC0229FC,pc)
+                    jsr     (send_midi_note_off,pc)
 lbC022AD2:
                     move.b  d5,d0
                     move.b  d6,d1
-                    jsr     (lbC0229C4,pc)
+                    jsr     (send_midi_note,pc)
                     move.b  d5,(a2)
                     move.b  d6,(1,a2)
                     lsr.l   #6,d3
@@ -7862,7 +7861,7 @@ OKT_fill_single_channel_data:
                     ; length before repeat
                     OKT_SET_AUDIO_LEN d1,a4
                     move.l  #OKT_empty_waveform,(CHAN_SMP_REP_START,a3)
-                    move.w  #2/2,(CHAN_SMP_REP_LEN_S,a3)
+                    move.w  #4/2,(CHAN_SMP_REP_LEN_S,a3)
 .OKT_no_data:
                     rts
 .OKT_real_repeat:
@@ -8408,8 +8407,23 @@ OKT_volume_fade:
 
 ; ===========================================================================
                 IFD OKT_AUDIO_VAMPIRE
-OKT_panning_table:  dc.w    $af,$50,$50,$af,$af,$50,$50,$af
-                    dc.w    $af,$50,$50,$af,$af,$50,$50,$af
+OKT_panning_table:  
+                    ;       left
+                    dc.w    $af,$50
+                    ;       right
+                    dc.w    $50,$af
+                    ;       left
+                    dc.w    $af,$50
+                    ;       right
+                    dc.w    $50,$af
+                    ;       left
+                    dc.w    $af,$50
+                    ;       right
+                    dc.w    $50,$af
+                    ;       left
+                    dc.w    $af,$50
+                    ;       right
+                    dc.w    $50,$af
                 ENDC
 OKT_action_cycle:
                     dc.w    0
@@ -9884,7 +9898,7 @@ errors_text:
                     dc.b    'Only In Mode 4/B !',0
                     dc.b    '  Left One Bit !  ',0
                     dc.b    '  Block Copied !  ',0
-                    dc.b    ' Sample Clipped ! ',0
+                    dc.b    'Sample Shortened !',0
                     dc.b    'Sample Too Short !',0
                     dc.b    'IFF Struct Error !',0
                     dc.b    '  Same Sample !!  ',0
@@ -10020,8 +10034,8 @@ error_left_one_bit:
 error_block_copied:
                     moveq   #ERROR_BLOCK_COPIED,d0
                     bra     display_error
-error_sample_clipped:
-                    moveq   #ERROR_SMP_CLIPPED,d0
+error_sample_shortened:
+                    moveq   #ERROR_SMP_SHORTENED,d0
                     bra     display_error
 error_sample_too_short:
                     moveq   #ERROR_SMP_TOO_SHORT,d0
@@ -10099,7 +10113,7 @@ erase_filled_box:
                     jmp     (draw_filled_box_with_minterms)
 
 ; ===========================================================================
-lbW02513C:
+                    ; keep this
                     dc.w    0
 OKT_periods_table:
                     dc.w    $358,$328,$2FA,$2D0,$2A6,$280,$25C,$23A,$21A,$1FC,$1E0,$1C5,$1AC,$194
@@ -13989,7 +14003,7 @@ sample_editor_events:
                     dc.w    EVT_KEY_PRESSED
                     dc.l    lbC02814E
                     dc.w    EVT_BYTE_FROM_SER
-                    dc.l    lbC0281AE
+                    dc.l    receive_midi_events
                     dc.w    EVT_KEY_RELEASED
                     dc.l    lbC029E1A
                     dc.w    EVT_LIST_END
@@ -14031,13 +14045,15 @@ lbC028172:
                     movem.l d0/d1,-(a7)
                     bsr     lbC029E3E
                     movem.l (a7)+,d0/d1
-                    jsr     (lbC01EF1E)
+                    jsr     (key_jazz)
 lbC0281A8:
                     moveq   #ERROR,d0
                     rts
 lbW0281AC:
                     dc.w    0
-lbC0281AE:
+
+; ===========================================================================
+receive_midi_events:
                     cmp.b   #MIDI_IN,(midi_mode)
                     bne     lbC0281F2
                     move.w  d1,d0
@@ -14048,7 +14064,7 @@ lbC0281AE:
                     addq.w  #1,d0
                     tst.w   d2
                     bne     lbC0281D2
-                    bsr     lbC029E50
+                    bsr     stop_currently_played_sample
                     bra     lbC0281F2
 lbC0281D2:
                     move.w  d0,d1
@@ -14059,7 +14075,7 @@ lbC0281D2:
                     movem.l d0/d1,-(a7)
                     bsr     lbC029E3E
                     movem.l (a7)+,d0/d1
-                    jsr     (lbC01EF1E)
+                    jsr     (key_jazz)
 lbC0281F2:
                     moveq   #ERROR,d0
                     rts
@@ -14279,7 +14295,7 @@ lbC028446:
 lbC02844A:
                     jsr     (release_after_line_drawing)
                     movem.l (a7)+,d2-d7/a2
-                    bsr     lbC028E96
+                    bsr     normalize_work_sample_repeat
                     bsr     sample_editor_draw_repeat_bars
                     bra     lbC02895C
 lbC028460:
@@ -14330,7 +14346,7 @@ lbC0284D4:
 lbC0284DE:
                     movem.l (a7)+,d2-d4/a2
                     move.w  #256,(lbW029ED2)
-                    bsr     lbC028E96
+                    bsr     normalize_work_sample_repeat
                     bsr     sample_editor_draw_repeat_bars
                     tst.l   (work_sample_address_ptr)
                     beq     .no_range_to_draw
@@ -15150,7 +15166,7 @@ sample_editor_copy_sample:
                     jmp     (copy_sample)
 
 ; ===========================================================================
-lbC028E96:
+normalize_work_sample_repeat:
                     movem.l d2,-(a7)
                     lea     (OKT_samples_infos),a0
                     move.w  (current_sample_index),d0
@@ -15230,7 +15246,7 @@ sample_editor_change_volume_linear_events:
                     dc.w    EVT_KEY_PRESSED
                     dc.l    lbC02814E
                     dc.w    EVT_BYTE_FROM_SER
-                    dc.l    lbC0281AE
+                    dc.l    receive_midi_events
                     dc.w    EVT_KEY_RELEASED
                     dc.l    lbC029E1A
                     dc.w    EVT_LIST_END
@@ -15366,7 +15382,7 @@ sample_editor_change_volume_curve_events:
                     dc.w    EVT_KEY_PRESSED
                     dc.l    lbC02814E
                     dc.w    EVT_BYTE_FROM_SER
-                    dc.l    lbC0281AE
+                    dc.l    receive_midi_events
                     dc.w    EVT_KEY_RELEASED
                     dc.l    lbC029E1A
                     dc.w    EVT_LIST_END
@@ -15550,7 +15566,7 @@ sample_editor_change_period_events:
                     dc.w    EVT_KEY_PRESSED
                     dc.l    lbC02814E
                     dc.w    EVT_BYTE_FROM_SER
-                    dc.l    lbC0281AE
+                    dc.l    receive_midi_events
                     dc.w    EVT_KEY_RELEASED
                     dc.l    lbC029E1A
                     dc.w    EVT_LIST_END
@@ -15620,7 +15636,7 @@ lbC0294C2:
 lbC0294D0:
                     move.w  (lbW0294E6,pc),d0
                     add.w   d0,d0
-                    lea     (lbW02513C),a0
+                    lea     (OKT_periods_table-2),a0
                     move.w  (a0,d0.w),(lbW0294E8)
                     rts
 lbW0294E6:
@@ -15653,7 +15669,7 @@ lbC02951A:
 lbC029528:
                     move.w  (lbW02953E,pc),d0
                     add.w   d0,d0
-                    lea     (lbW02513C),a0
+                    lea     (OKT_periods_table-2),a0
                     move.w  (a0,d0.w),(lbW029540)
                     rts
 lbW02953E:
@@ -16069,7 +16085,7 @@ sample_editor_sample_op_events:
                     dc.w    EVT_KEY_PRESSED
                     dc.l    lbC02814E
                     dc.w    EVT_BYTE_FROM_SER
-                    dc.l    lbC0281AE
+                    dc.l    receive_midi_events
                     dc.w    EVT_KEY_RELEASED
                     dc.l    lbC029E1A
                     dc.w    EVT_LIST_END
@@ -16452,7 +16468,7 @@ lbC029CAC:
 lbC029CAE:
                     jsr     (stop_audio_channels)
                     lea     (_CUSTOM),a6
-                    lea     (lbW02513C),a0
+                    lea     (OKT_periods_table-2),a0
                     move.w  (lbW029E10),d0
                     add.w   d0,d0
                     add.w   d0,a0
@@ -16561,43 +16577,53 @@ lbC029E1A:
                     move.b  (a0,d0.w),d1
                     bmi     lbC029E3A
                     move.w  d1,d0
-                    bsr     lbC029E50
+                    bsr     stop_currently_played_sample
 lbC029E3A:
                     moveq   #ERROR,d0
                     rts
 lbC029E3E:
-                    lea     (lbL029E92,pc),a0
+                    lea     (currently_playing_channels_flags,pc),a0
                     move.b  d1,(a0,d0.w)
                     rts
-lbC029E48:
-                    clr.l   (lbL029E92)
+
+; ===========================================================================
+clear_currently_playing_channels_flags:
+                    clr.l   (currently_playing_channels_flags)
                 IFD OKT_AUDIO_VAMPIRE
                     ; 8 hw channels
-                    clr.l   (lbL029E92+4)
+                    clr.l   (currently_playing_channels_flags+4)
                 ENDC
                     rts
-lbC029E50:
+
+; ===========================================================================
+stop_currently_played_sample:
                     cmp.b   #MIDI_OUT,(midi_mode)
-                    bne     lbC029E6A
+                    bne     .no_midi_out
                     move.b  d0,d1
                     move.w  (current_sample_index),d0
-                    jmp     (lbC0229FC)
-lbC029E6A:
-                    lea     (lbL029E92,pc),a0
+                    jmp     (send_midi_note_off)
+.no_midi_out:
+                    lea     (currently_playing_channels_flags,pc),a0
                     lea     (_CUSTOM|OKT_AUDIO_BASE),a1
                     moveq   #OKT_AUDIO_HW_CHANS-1,d1
-lbC029E76:
+.loop:
                     cmp.b   (a0)+,d0
-                    beq     lbC029E84
+                    beq     .set_to_empty
                     lea     (OKT_AUDIO_SIZE,a1),a1
-                    dbra    d1,lbC029E76
+                    dbra    d1,.loop
                     rts
-lbC029E84:
+.set_to_empty:
                     sf      -(a0)
+                    ; OKT_AUDIO_ADR
                     move.l  #OKT_empty_waveform,(a1)+
-                    move.w  #2/2,(a1)+
+                    ; OKT_AUDIO_LEN
+                IFD OKT_AUDIO_VAMPIRE
+                    move.l  #4/2,(a1)+
+                ELSE
+                    move.w  #4/2,(a1)+
+                ENDC
                     rts
-lbL029E92:
+currently_playing_channels_flags:
                     dcb.b   OKT_AUDIO_HW_CHANS,0
 
 ; ===========================================================================
@@ -21241,11 +21267,7 @@ prefs_gadgets:
                     GADGET  GAD_NEXT,GADGET_NO_REPEAT,17,12,2,1,switch_channel_2_type,0
                     GADGET  GAD_NEXT,GADGET_NO_REPEAT,20,12,2,1,switch_channel_3_type,0
                     GADGET  GAD_NEXT,GADGET_NO_REPEAT,23,12,2,1,switch_channel_4_type,0
-                IFD OKT_AUDIO_VAMPIRE
                     GADGET  GAD_NEXT,0,2,13,23,1,inc_default_pattern_length,dec_default_pattern_length
-                ELSE
-                    GADGET  GAD_NEXT,0,2,13,23,1,inc_default_pattern_length,dec_default_pattern_length
-                ENDC
                 IFD OKT_AUDIO_VAMPIRE
                     GADGET  GAD_NEXT,0,2,15,23,1,inc_samples_load_mode,dec_samples_load_mode
                 ENDC
@@ -21637,7 +21659,7 @@ copper_fmode:
                     dc.w    BPLCON3,$C20
                     dc.w    $2B09,-2
                     ; mouse pointer colors
-                    dc.w    COLOR17,$926,COLOR18,$C37,COLOR19,$F49
+                    dc.w    COLOR17,$F49,COLOR18,$C37,COLOR19,$926
 vampire_shift:
                     dc.w    BPLCON1,0
                     dc.w    BPLCON2,%111111
@@ -21724,15 +21746,21 @@ pattern_copper_back_jump:
                     cnop    0,8
 mouse_pointer:
                     dc.b    0,0,0,0
-                    dc.w    %1100001110000000,%1111110000000000
-                    dc.w    %1000011100000000,%1111100000000000
-                    dc.w    %0000111000000000,%1111000000000000
-                    dc.w    %0001110000000000,%1110000000000000
-                    dc.w    %0011100000000000,%1100000000000000
-                    dc.w    %0111000000000000,%1000000000000000
-                    dc.w    %1110000000000000,%0000000000000000
-                    dc.w    %1100000000000000,%0000000000000000
-                    dc.w    %1000000000000000,%0000000000000000
+mouse_pointer_gfx:
+                    dc.w    %1111111111111000,%1111111111111000
+                    dc.w    %1000000000010000,%1111111111110000
+                    dc.w    %1011111110100000,%1100000001100000
+                    dc.w    %1011111101000000,%1100000011000000
+                    dc.w    %1011111101000000,%1100000011000000
+                    dc.w    %1011111110100000,%1100000001100000
+                    dc.w    %1011111111010000,%1100000000110000
+                    dc.w    %1011111111101000,%1100000000011000
+                    dc.w    %1011011111010000,%1100100000110000
+                    dc.w    %1010101110100000,%1101110001100000
+                    dc.w    %1010010101000000,%1110011011000000
+                    dc.w    %1100001010000000,%1100001110000000
+                    dc.w    %1000000100000000,%1000000100000000
+emouse_pointer_gfx:
                     dc.w    0,0
                     cnop    0,8
 bottom_credits_picture:
@@ -21752,7 +21780,7 @@ main_screen:
 dummy_sprite:
                     ds.b    4
 OKT_empty_waveform:
-                    ds.w    2
+                    ds.w    4
 requesters_save_buffer:
                     ds.b    (24*20)
 
