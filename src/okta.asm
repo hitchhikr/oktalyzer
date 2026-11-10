@@ -433,7 +433,11 @@ install_vbi_int:
                     moveq   #INTB_VERTB,d0
                     EXEC    AddIntServer
                     EXEC    Enable
+            IFND OKT_AUDIO_VAMPIRE
                     bra     install_midi_ints
+            ELSE
+                    rts
+            ENDC
 
 ; ===========================================================================
 remove_vbi_int:
@@ -684,13 +688,17 @@ get_mouse_buttons:
 
 ; ===========================================================================
 remove_ints:
+                IFND OKT_AUDIO_VAMPIRE
                     bsr     remove_midi_ints
+                ENDC
                     bra     remove_vbi_int
 
 ; ===========================================================================
 reinstall_midi_ints:
                     EXEC    Disable
+                IFND OKT_AUDIO_VAMPIRE
                     bsr     install_midi_ints
+                ENDC
                     clr.w   (mouse_repeat_delay_left)
                     clr.w   (mouse_repeat_delay_right)
                     clr.w   (mouse_buttons_status)
@@ -754,7 +762,9 @@ our_sys_requesters_function:
                     addq.w  #1,(a0)
                     cmp.w   #1,(a0)
                     bne     .already_done
+                IFND OKT_AUDIO_VAMPIRE
                     jsr     (remove_midi_ints)
+                ENDC
                     jsr     (restore_screen)
 .already_done:
                     EXEC    Enable
@@ -1067,6 +1077,7 @@ lbC01EA32:
                     moveq   #ERROR,d0
                     rts
 lbC01EA3E:
+                IFND OKT_AUDIO_VAMPIRE
                     cmp.b   #MIDI_IN,(midi_mode)
                     bne     lbC01EA6C
                     move.w  d1,d0
@@ -1086,6 +1097,7 @@ lbC01EA66:
                     st      d1
                     bsr     lbC01EA70
 lbC01EA6C:
+                ENDC
                     moveq   #ERROR,d0
                     rts
 lbC01EA70:
@@ -2480,9 +2492,9 @@ NewInstrument_MSG:
 change_block_effect:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
-                    bne     lbC01F8F6
+                    bne     .no_error
                     jmp     (error_what_block)
-lbC01F8F6:
+.no_error:
                     lea     (OldEffect_MSG,pc),a0
                     lea     (NewEffect_MSG,pc),a1
                     bsr     lbC0247B8
@@ -2522,6 +2534,7 @@ switch_edit_mode:
                     bra     draw_edit_mode_status
 
 ; ===========================================================================
+                IFND OKT_AUDIO_VAMPIRE
 draw_midi_mode_status:
                     move.b  (midi_mode),d0
                     lea     (.in_text,pc),a0
@@ -2560,6 +2573,7 @@ cycle_midi_modes_and_draw:
 .cycle_mode:
                     move.b  d1,(midi_mode)
                     bra     draw_midi_mode_status
+                ENDC
 
 ; ===========================================================================
 draw_copy_blocks_mode:
@@ -2815,7 +2829,9 @@ display_main_menu:
                     bsr     draw_edit_mode_status
                     bsr     draw_polyphony_status
                     bsr     draw_quantize_amount
+                IFND OKT_AUDIO_VAMPIRE
                     bsr     draw_midi_mode_status
+                ENDC
                     bsr     draw_copy_blocks_mode
                     bsr     draw_current_sample_infos
                     bsr     do_draw_available_memory_and_song_metrics
@@ -6626,13 +6642,17 @@ play_pattern:
 go_play:
                     bsr     free_work_sample
                     bsr     clear_vumeters
-                    bsr     lbC022A2C
+                IFND OKT_AUDIO_VAMPIRE
+                    bsr     mute_all_midi_channels
+                ENDC
                     bsr     OKT_init
                     ; wait loop
                     lea     (lbW022318,pc),a0
                     bsr     process_event
                     bsr     OKT_stop
-                    bsr     lbC022A2C
+                IFND OKT_AUDIO_VAMPIRE
+                    bsr     mute_all_midi_channels
+                ENDC
                     bsr     stop_audio_channels
                     bsr     clear_vumeters
                     move.w  #-1,(OKT_last_pattern_row)
@@ -6658,8 +6678,10 @@ lbC02230C:
 lbW022318:
                     dc.w    EVT_KEY_PRESSED
                     dc.l    lbC0225F6
+                IFND OKT_AUDIO_VAMPIRE
                     dc.w    EVT_BYTE_FROM_SER
                     dc.l    lbC02262A
+                ENDC
                     dc.w    EVT_LEFT_PRESSED
                     dc.l    lbC022612
                     dc.w    EVT_RIGHT_PRESSED
@@ -6684,6 +6706,7 @@ lbC02261E:
                     move.b  #2,(lbB01BC6B)
                     moveq   #OK,d0
                     rts
+                IFND OKT_AUDIO_VAMPIRE
 lbC02262A:
                     tst.w   d2
                     beq     lbC022634
@@ -6691,6 +6714,7 @@ lbC02262A:
 lbC022634:
                     moveq   #ERROR,d0
                     rts
+                ENDC
 lbW022638:
                     dc.w    0
 lbW02263A:
@@ -6708,6 +6732,7 @@ do_display_play_help:
                     bra     wait_any_key_and_mouse_press
 
 ; ===========================================================================
+            IFND OKT_AUDIO_VAMPIRE
 install_midi_ints:
                     movem.l d0/d1/a0/a1,-(a7)
                     EXEC    Disable
@@ -6956,16 +6981,20 @@ lbW022A22:
 lbB022A24:
                     dc.b    0
                     even
-lbC022A2C:
-                    lea     (lbL022A76,pc),a0
+
+; ===========================================================================
+mute_all_midi_channels:
+                    lea     (midi_channels_status,pc),a0
                     moveq   #8-1,d0
 lbC022A32:
                     clr.w   (4,a0)
                     lea     (6,a0),a0
                     dbra    d0,lbC022A32
-lbC022A44:
+
+; ===========================================================================
+midi_release_all_pending_notes:
                     movem.l d2/a2,-(a7)
-                    lea     (lbL022A76,pc),a2
+                    lea     (midi_channels_status,pc),a2
                     moveq   #8-1,d2
 lbC022A4E:
                     tst.b   (2,a2)
@@ -6981,7 +7010,7 @@ lbC022A68:
                     dbra    d2,lbC022A4E
                     movem.l (a7)+,d2/a2
                     rts
-lbL022A76:
+midi_channels_status:
                     dcb.l   12,0
 
 ; ===========================================================================
@@ -6991,7 +7020,7 @@ send_midi_out:
                     movem.l d2-d6/a2,-(a7)
                     move.b  d0,d5
                     move.b  d1,d6
-                    lea     (lbL022A76,pc),a2
+                    lea     (midi_channels_status,pc),a2
                     ext.w   d4
                     mulu.w  #6,d4
                     adda.l  d4,a2
@@ -7012,8 +7041,10 @@ lbC022AD2:
                     movem.l (a7)+,d2-d6/a2
 lbC022AEE:
                     rts
+
+; ===========================================================================
 ; update while playing
-lbC022AF0:
+receive_midi_events_while_playing:
                     tst.w   (lbW01B2B6)
                     bmi     lbC022AFE
                     bsr     lbC022B00
@@ -7052,9 +7083,7 @@ lbC022B46:
                     bsr     lbC022D06
                     bsr     lbC01FB24
                     ; ????
-                IFND OKT_AUDIO_VAMPIRE
                     bsr     OKT_fill_double_channels
-                ENDC
                     bsr     lbC0231DC
                     bra     lbC022C6A
 lbC022B5E:
@@ -7083,8 +7112,10 @@ lbC022B92:
                     bne     lbC022C3A
                     btst    #$B,d0
                     beq     lbC022BB8
+                IFND OKT_AUDIO_VAMPIRE
                     cmp.b   #$37,d0
                     beq     cycle_midi_modes_and_draw
+                ENDC
 lbC022BB8:
                     cmp.b   #$F,d0
                     beq     lbC022CD6
@@ -7125,9 +7156,7 @@ lbC022C28:
                     bsr     lbC022D06
                     bsr     lbC01FB24
                     ; ????
-                IFND OKT_AUDIO_VAMPIRE
                     bsr     OKT_fill_double_channels
-                ENDC
                     bsr     lbC0231DC
                     bra     lbC022C6A
 lbC022C3A:
@@ -7147,6 +7176,7 @@ lbC022C6A:
                     move.l  (a0)+,(a1)+
                 ENDR
                     rts
+            ENDC
 
 
 ; ===========================================================================
@@ -7481,8 +7511,10 @@ OKT_replay_handler:
 .not_drawn_yet:
                     move.w  (OKT_pattern_row,pc),(OKT_last_pattern_row)
 .not_new_bar_yet:
-                    bsr     lbC022A44
-                    bra     lbC022AF0
+                IFND OKT_AUDIO_VAMPIRE
+                    bsr     midi_release_all_pending_notes
+                    bra     receive_midi_events_while_playing
+                ENDC
 
 ; ===========================================================================
 OKT_new_row:
@@ -9275,6 +9307,9 @@ OKT_generate_scaling_code:
                     moveq   #36-1,d7
                     ; line 0
                     clr.w   (a6)+
+                    move.l  a0,$70000
+                    move.l  a3,$70004
+                    move.l  a6,$70008
 .OKT_loop_freqs:
                     ; code pointers
                     move.l  a0,(a2)+
@@ -9392,6 +9427,9 @@ OKT_generate_scaling_code:
                     move.l  a6,d1
                     addq.l  #4,a5
                     dbra    d7,.OKT_loop_freqs
+                    move.l  a0,$7000C
+                    move.l  a3,$70010
+                    move.l  a6,$70014
                     rts
 
 ; ===========================================================================
@@ -9598,7 +9636,9 @@ go_to_cli_workbench:
 do_go_to_cli_workbench:
                     EXEC    Disable
                     jsr     (restore_sys_requesters_function,pc)
+                IFND OKT_AUDIO_VAMPIRE
                     jsr     (remove_midi_ints)
+                ENDC
                     jsr     restore_screen
                     EXEC    Enable
                     jsr     (open_workbench)
@@ -14069,8 +14109,10 @@ sample_editor_events:
                     dc.l    lbC0282B8
                     dc.w    EVT_KEY_PRESSED
                     dc.l    lbC02814E
+                IFND OKT_AUDIO_VAMPIRE
                     dc.w    EVT_BYTE_FROM_SER
                     dc.l    receive_midi_events
+                ENDC
                     dc.w    EVT_KEY_RELEASED
                     dc.l    lbC029E1A
                     dc.w    EVT_LIST_END
@@ -14120,6 +14162,7 @@ lbW0281AC:
                     dc.w    0
 
 ; ===========================================================================
+                IFND OKT_AUDIO_VAMPIRE
 receive_midi_events:
                     cmp.b   #MIDI_IN,(midi_mode)
                     bne     lbC0281F2
@@ -14146,6 +14189,7 @@ lbC0281D2:
 lbC0281F2:
                     moveq   #ERROR,d0
                     rts
+                ENDC
 
 ; ===========================================================================
 sample_editor_exit:
@@ -14307,7 +14351,7 @@ sample_editor_display_sample:
                     move.l  (work_sample_size),d1
                     lsl.l   #8,d1
                     divu.w  #(SCREEN_BYTES*8),d1
-                    move.w  d1,(lbW029ED2)
+                    move.w  d1,(sample_editor_work_sample_screen_scaling)
                     movem.l d2-d7/a2,-(a7)
                     ;move.b  (lbB029EE6,pc),d2
                     move.l  (work_sample_address_ptr),a2
@@ -14321,7 +14365,7 @@ sample_editor_display_sample:
 lbC0283E2:
                     swap    d4
                     moveq   #0,d5
-                    move.w  (lbW029ED2),d5
+                    move.w  (sample_editor_work_sample_screen_scaling),d5
                     moveq   #0,d6
                     moveq   #0,d7
                     bra     lbC028446
@@ -14414,7 +14458,7 @@ lbC0284D4:
                     jsr     (release_after_line_drawing)
 lbC0284DE:
                     movem.l (a7)+,d2-d4/a2
-                    move.w  #256,(lbW029ED2)
+                    move.w  #256,(sample_editor_work_sample_screen_scaling)
                     bsr     normalize_work_sample_repeat
                     bsr     sample_editor_draw_repeat_bars
                     tst.l   (work_sample_address_ptr)
@@ -14784,7 +14828,7 @@ sample_editor_clear_repeat:
                     bra     sample_editor_renew_repeat_bars
 
 ; ===========================================================================
-lbC0289EE:
+sample_editor_find_next_zero_for_repstart:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
                     lea     (OKT_samples_infos),a0
@@ -14815,7 +14859,9 @@ lbC028A2A:
                     add.w   d0,(SMP_REP_START,a0)
                     sub.w   d0,(SMP_REP_LEN,a0)
                     bra     sample_editor_renew_repeat_bars
-lbC028A58:
+
+; ===========================================================================
+sample_editor_find_previous_zero_for_replen:
                     tst.l   (work_sample_address_ptr)
                     beq     _error_what_sample
                     lea     (OKT_samples_infos),a0
@@ -14847,68 +14893,110 @@ lbC028A92:
                     add.w   d0,a0
                     move.w  d1,(SMP_REP_LEN,a0)
                     bra     sample_editor_renew_repeat_bars
-lbC028ABC:
+
+; ===========================================================================
+sample_editor_dec_repstart_scale_256:
                     moveq   #0,d0
-                    bra     lbC028AC6
-lbC028AC0:
+                    bra     sample_editor_dec_repstart
+
+; ===========================================================================
+sample_editor_dec_repstart_scale_32:
                     moveq   #1,d0
-                    bra     lbC028AC6
-lbC028AC4:
+                    bra     sample_editor_dec_repstart
+
+; ===========================================================================
+sample_editor_dec_repstart_no_scale:
                     moveq   #2,d0
-lbC028AC6:
+
+; ===========================================================================
+sample_editor_dec_repstart:
+                    tst.l   (work_sample_address_ptr)
+                    beq     .error
                     bsr     lbC028B1E
-                    bmi     lbC028AD6
+                    bmi     .error
                     sub.w   d0,(SMP_REP_START,a0)
                     add.w   d0,(SMP_REP_LEN,a0)
                     bra     sample_editor_renew_repeat_bars
-lbC028AD6:
+.error:
                     rts
-lbC028AD8:
+
+; ===========================================================================
+sample_editor_inc_repstart_scale_256:
                     moveq   #0,d0
-                    bra     lbC028AE2
-lbC028ADC:
+                    bra     sample_editor_inc_repstart
+
+; ===========================================================================
+sample_editor_inc_repstart_scale_32:
                     moveq   #1,d0
-                    bra     lbC028AE2
-lbC028AE0:
+                    bra     sample_editor_inc_repstart
+
+; ===========================================================================
+sample_editor_inc_repstart_no_scale:
                     moveq   #2,d0
-lbC028AE2:
+
+; ===========================================================================
+sample_editor_inc_repstart:
+                    tst.l   (work_sample_address_ptr)
+                    beq     .error
                     bsr     lbC028B1E
-                    bmi     lbC028AF0
+                    bmi     .error
                     add.w   d0,(SMP_REP_START,a0)
                     sub.w   d0,(SMP_REP_LEN,a0)
                     bra     sample_editor_renew_repeat_bars
-lbC028AF0:
+.error:
                     rts
-lbC028AF2:
+
+; ===========================================================================
+sample_editor_dec_replen_scale_256:
                     moveq   #0,d0
-                    bra     lbC028AFC
-lbC028AF6:
+                    bra     sample_editor_dec_replen
+
+; ===========================================================================
+sample_editor_dec_replen_scale_32:
                     moveq   #1,d0
-                    bra     lbC028AFC
-lbC028AFA:
+                    bra     sample_editor_dec_replen
+
+; ===========================================================================
+sample_editor_dec_replen_no_scale:
                     moveq   #2,d0
-lbC028AFC:
+
+; ===========================================================================
+sample_editor_dec_replen:
+                    tst.l   (work_sample_address_ptr)
+                    beq     .error
                     bsr     lbC028B1E
-                    bmi     lbC028B06
+                    bmi     .error
                     sub.w   d0,(SMP_REP_LEN,a0)
                     bra     sample_editor_renew_repeat_bars
-lbC028B06:
+.error:
                     rts
-lbC028B08:
+
+; ===========================================================================
+sample_editor_inc_replen_scale_256:
                     moveq   #0,d0
-                    bra     lbC028B12
-lbC028B0C:
+                    bra     sample_editor_inc_replen
+
+; ===========================================================================
+sample_editor_inc_replen_scale_32:
                     moveq   #1,d0
-                    bra     lbC028B12
-lbC028B10:
+                    bra     sample_editor_inc_replen
+
+; ===========================================================================
+sample_editor_inc_replen_no_scale:
                     moveq   #2,d0
-lbC028B12:
+
+; ===========================================================================
+sample_editor_inc_replen:
+                    tst.l   (work_sample_address_ptr)
+                    beq     .error
                     bsr     lbC028B1E
-                    bmi     lbC028B1C
+                    bmi     .error
                     add.w   d0,(SMP_REP_LEN,a0)
                     bra     sample_editor_renew_repeat_bars
-lbC028B1C:
+.error:
                     rts
+
+; ===========================================================================
 lbC028B1E:
                     lea     (OKT_samples_infos),a0
                     move.w  (current_sample_index),d1
@@ -14924,19 +15012,25 @@ lbC028B1E:
                     moveq   #1,d0
                     bra     lbC028B54
 lbC028B42:
-                    move.w  (lbW029ED2),d0
+                    move.w  (sample_editor_work_sample_screen_scaling),d0
                     lsr.w   #8,d0
                     bra     lbC028B54
 lbC028B4C:
-                    move.w  (lbW029ED2),d0
+                    move.w  (sample_editor_work_sample_screen_scaling),d0
                     lsr.w   #5,d0
 lbC028B54:
                     tst.w   d0
                     rts
+
+; ===========================================================================
 sample_editor_renew_repeat_bars:
                     bsr     sample_editor_remove_repeat_bars
+
+; ===========================================================================
 sample_editor_draw_repeat_bars:
                     bsr     normalize_current_sample_repeat
+
+; ===========================================================================
 sample_editor_redraw_repeat_bars:
                     lea     (OKT_samples_infos),a0
                     move.w  (current_sample_index),d0
@@ -14948,7 +15042,7 @@ sample_editor_redraw_repeat_bars:
                     move.w  (SMP_REP_START,a0),d0
                     add.l   d0,d0
                     lsl.l   #8,d0
-                    divu.w  (lbW029ED2),d0
+                    divu.w  (sample_editor_work_sample_screen_scaling),d0
                     move.w  d0,(sample_editor_loop_bar_start)
                     move.l  a0,-(a7)
                     moveq   #0,d1
@@ -14962,7 +15056,7 @@ sample_editor_redraw_repeat_bars:
                     add.l   d1,d1
                     add.l   d1,d0
                     lsl.l   #8,d0
-                    divu.w  (lbW029ED2),d0
+                    divu.w  (sample_editor_work_sample_screen_scaling),d0
                     move.w  d0,(sample_editor_loop_bar_end)
                     moveq   #1,d1
                     bsr     sample_editor_draw_repeat_bar
@@ -15106,7 +15200,7 @@ lbC028D38:
                     cmp.w   #SCREEN_WIDTH-1,d6
                     beq     .bstart_screen_max
                     move.w  d6,d2
-                    mulu.w  (lbW029ED2),d2
+                    mulu.w  (sample_editor_work_sample_screen_scaling),d2
                     lsr.l   #8,d2
                     cmp.l   (work_sample_size),d2
                     ble     .bstart_sample_size_max
@@ -15130,7 +15224,7 @@ lbC028D82:
                     cmp.w   #SCREEN_WIDTH-1,d7
                     beq     .bend_screen_max
                     move.w  d7,d2
-                    mulu.w  (lbW029ED2),d2
+                    mulu.w  (sample_editor_work_sample_screen_scaling),d2
                     lsr.l   #8,d2
                     cmp.l   (work_sample_size),d2
                     ble     .bend_sample_size_max
@@ -15314,8 +15408,10 @@ sample_editor_change_volume_linear_events:
                     dc.l    process_events
                     dc.w    EVT_KEY_PRESSED
                     dc.l    lbC02814E
+                IFND OKT_AUDIO_VAMPIRE
                     dc.w    EVT_BYTE_FROM_SER
                     dc.l    receive_midi_events
+                ENDC
                     dc.w    EVT_KEY_RELEASED
                     dc.l    lbC029E1A
                     dc.w    EVT_LIST_END
@@ -15450,8 +15546,10 @@ sample_editor_change_volume_curve_events:
                     dc.l    lbC0297AC
                     dc.w    EVT_KEY_PRESSED
                     dc.l    lbC02814E
+                IFND OKT_AUDIO_VAMPIRE
                     dc.w    EVT_BYTE_FROM_SER
                     dc.l    receive_midi_events
+                ENDC
                     dc.w    EVT_KEY_RELEASED
                     dc.l    lbC029E1A
                     dc.w    EVT_LIST_END
@@ -15597,7 +15695,7 @@ lbC02930C:
                     addq.w  #1,d0
                     tst.w   (a1)+
                     bmi     lbC02930C
-                    mulu.w  (lbW029ED2),d0
+                    mulu.w  (sample_editor_work_sample_screen_scaling),d0
                     lsr.l   #8,d0
                     adda.l  d0,a0
                     moveq   #32,d0
@@ -15634,8 +15732,10 @@ sample_editor_change_period_events:
                     dc.l    process_events
                     dc.w    EVT_KEY_PRESSED
                     dc.l    lbC02814E
+                IFND OKT_AUDIO_VAMPIRE
                     dc.w    EVT_BYTE_FROM_SER
                     dc.l    receive_midi_events
+                ENDC
                     dc.w    EVT_KEY_RELEASED
                     dc.l    lbC029E1A
                     dc.w    EVT_LIST_END
@@ -16153,8 +16253,10 @@ sample_editor_sample_op_events:
                     dc.l    process_events
                     dc.w    EVT_KEY_PRESSED
                     dc.l    lbC02814E
+                IFND OKT_AUDIO_VAMPIRE
                     dc.w    EVT_BYTE_FROM_SER
                     dc.l    receive_midi_events
+                ENDC
                     dc.w    EVT_KEY_RELEASED
                     dc.l    lbC029E1A
                     dc.w    EVT_LIST_END
@@ -16666,12 +16768,14 @@ clear_currently_playing_channels_flags:
 
 ; ===========================================================================
 stop_currently_played_sample:
+                IFND OKT_AUDIO_VAMPIRE
                     cmp.b   #MIDI_OUT,(midi_mode)
                     bne     .no_midi_out
                     move.b  d0,d1
                     move.w  (current_sample_index),d0
                     jmp     (send_midi_note_off)
 .no_midi_out:
+                ENDC
                     lea     (currently_playing_channels_flags,pc),a0
                     lea     (_CUSTOM|OKT_AUDIO_BASE),a1
                     moveq   #OKT_AUDIO_HW_CHANS-1,d1
@@ -16714,7 +16818,7 @@ _error_zero_not_found:
 ; ===========================================================================
 lbL029ECE:
                     dc.l    0
-lbW029ED2:
+sample_editor_work_sample_screen_scaling:
                     dc.w    0
 sample_block_start:
                     dc.l    0
@@ -20815,8 +20919,10 @@ err_vampire_msg:
 main_screen_events:
                     dc.w    EVT_MORE_EVENTS
                     dc.l    process_events
+                IFND OKT_AUDIO_VAMPIRE
                     dc.w    EVT_BYTE_FROM_SER
                     dc.l    lbC01EA3E
+                ENDC
                     dc.w    EVT_KEY_PRESSED
                     dc.l    lbC01EA32
                     dc.w    EVT_KEY_RELEASED
@@ -20841,7 +20947,11 @@ main_menu_layout:
                     dc.b    CMD_SUB_COMMAND,0
                     dc.l    wb_cli_text_ptr
                     dc.b    CMD_TEXT,15,0,'Editor:',0
+                IFND OKT_AUDIO_VAMPIRE
+                    dc.b    CMD_TEXT,15,1,'Play Song',0
+                ELSE
                     dc.b    CMD_TEXT,15,1,'Play Song MidiMode:',0
+                ENDC
                     dc.b    CMD_TEXT,15,2,'Play Patt Copy Cut',0
                     dc.b    CMD_TEXT,15,3,'Edit.:    Replc. Mix It',0
                     dc.b    CMD_TEXT,15,4,'Poly.:    NoteUp NoDown',0
@@ -20979,7 +21089,9 @@ main_screen_gadgets:
                     GADGET  GAD_NEXT,0,15,4,9,1,inc_polyphony_channels_count,dec_polyphony_channels_count
                     GADGET  GAD_NEXT,0,15,5,9,1,inc_quantize_amount,dec_quantize_amount
                     GADGET  GAD_NEXT,0,15,6,9,1,inc_current_pattern_rows,dec_current_pattern_rows
+                IFND OKT_AUDIO_VAMPIRE
                     GADGET  GAD_NEXT,GADGET_NO_REPEAT,25,1,13,1,cycle_midi_modes_stop_audio_and_draw,0
+                ENDC
                     GADGET  GAD_NEXT,GADGET_NO_REPEAT,25,2,4,1,copy_pattern_block,0
                     GADGET  GAD_NEXT,GADGET_NO_REPEAT,30,2,3,1,cut_pattern_block,0
                     GADGET  GAD_NEXT,GADGET_NO_REPEAT,34,2,4,1,switch_copy_blocks_mode,0
@@ -21091,8 +21203,8 @@ main_screen_keys_alt:
                     KEY     KEY_RANGE_NO_REPEAT,'a','z',10,set_current_sample_number
                     KL_DONE
 main_screen_keys_ctrl:
-                    KEY     KEY_REPEAT,KEY_UP,dec_sample_number
-                    KEY     KEY_REPEAT,KEY_DOWN,inc_sample_number
+                    KEY     KEY_REPEAT,KEY_DOWN,dec_sample_number
+                    KEY     KEY_REPEAT,KEY_UP,inc_sample_number
                     KEY     KEY_REPEAT,KEY_LEFT,lbC01F122
                     KEY     KEY_REPEAT,KEY_RIGHT,lbC01F160
                     KL_DONE
@@ -21191,7 +21303,9 @@ sample_editor_help_layout:
                     dc.b    CMD_DONE
                     even
 sample_editor_gadgets:
+                IFND OKT_AUDIO_VAMPIRE
                     GADGET  GAD_NEXT,GADGET_NO_REPEAT,25,1,13,1,cycle_midi_modes_stop_audio_and_draw,0
+                ENDC
                     GADGET  GAD_NEXT,GADGET_NO_REPEAT,39,1,26,1,sample_editor_inc_sample_number,sample_editor_dec_sample_number
 ;                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,40,6,7,1,sample_editor_inc_sample_type,sample_editor_dec_sample_type
                     GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,2,4,1,sample_editor_load_sample,0
@@ -21227,18 +21341,23 @@ sample_editor_keys_list:
                     KL_HEAD KEY_MOD_NUMPAD,sample_editor_keys_numpad
                     KL_HEAD KEY_MOD_SHIFT,sample_editor_keys_shift
                     KL_HEAD KEY_MOD_ALT,sample_editor_keys_alt
+                    KL_HEAD KEY_MOD_CTRL,sample_editor_keys_ctrl
                     KL_DONE
 sample_editor_keys:
                     KEY     KEY_NO_REPEAT,KEY_ESC,sample_editor_exit
                     KEY     KEY_NO_REPEAT,KEY_DEL,sample_editor_clear_repeat
-                    KEY     KEY_REPEAT,KEY_LEFT,lbC028ABC
-                    KEY     KEY_REPEAT,KEY_RIGHT,lbC028AD8
-                    KEY     KEY_REPEAT,KEY_UP,lbC028AF2
-                    KEY     KEY_REPEAT,KEY_DOWN,lbC028B08
+                    KEY     KEY_REPEAT,KEY_LEFT,sample_editor_dec_repstart_scale_256
+                    KEY     KEY_REPEAT,KEY_RIGHT,sample_editor_inc_repstart_scale_256
+                    KEY     KEY_REPEAT,KEY_DOWN,sample_editor_dec_replen_scale_256
+                    KEY     KEY_REPEAT,KEY_UP,sample_editor_inc_replen_scale_256
                     KL_DONE
 sample_editor_keys_numpad:
-                    KEY     KEY_REPEAT,'0',lbC0289EE
-                    KEY     KEY_REPEAT,'.',lbC028A58
+                    KEY     KEY_REPEAT,'0',sample_editor_find_next_zero_for_repstart
+                    KEY     KEY_REPEAT,'.',sample_editor_find_previous_zero_for_replen
+                    KL_DONE
+sample_editor_keys_ctrl:
+                    KEY     KEY_REPEAT,KEY_DOWN,sample_editor_dec_sample_number
+                    KEY     KEY_REPEAT,KEY_UP,sample_editor_inc_sample_number
                     KL_DONE
 sample_editor_keys_shift:
                     KEY     KEY_NO_REPEAT,'L',sample_editor_load_sample
@@ -21247,17 +21366,17 @@ sample_editor_keys_shift:
                     KEY     KEY_NO_REPEAT,'X',sample_editor_swap_samples
                     KEY     KEY_NO_REPEAT,'M',sample_editor_mix_samples
                     KEY     KEY_NO_REPEAT,'F',sample_editor_free_sample_copy_buffer
-                    KEY     KEY_REPEAT,KEY_LEFT,lbC028AC0
-                    KEY     KEY_REPEAT,KEY_RIGHT,lbC028ADC
-                    KEY     KEY_REPEAT,KEY_UP,lbC028AF6
-                    KEY     KEY_REPEAT,KEY_DOWN,lbC028B0C
+                    KEY     KEY_REPEAT,KEY_LEFT,sample_editor_dec_repstart_scale_32
+                    KEY     KEY_REPEAT,KEY_RIGHT,sample_editor_inc_repstart_scale_32
+                    KEY     KEY_REPEAT,KEY_DOWN,sample_editor_dec_replen_scale_32
+                    KEY     KEY_REPEAT,KEY_UP,sample_editor_inc_replen_scale_32
                     KEY     KEY_NO_REPEAT,KEY_HELP,display_sample_editor_help
                     KL_DONE
 sample_editor_keys_alt:
-                    KEY     KEY_REPEAT,KEY_LEFT,lbC028AC4
-                    KEY     KEY_REPEAT,KEY_RIGHT,lbC028AE0
-                    KEY     KEY_REPEAT,KEY_UP,lbC028AFA
-                    KEY     KEY_REPEAT,KEY_DOWN,lbC028B10
+                    KEY     KEY_REPEAT,KEY_LEFT,sample_editor_dec_repstart_no_scale
+                    KEY     KEY_REPEAT,KEY_RIGHT,sample_editor_inc_repstart_no_scale
+                    KEY     KEY_REPEAT,KEY_DOWN,sample_editor_dec_replen_no_scale
+                    KEY     KEY_REPEAT,KEY_UP,sample_editor_inc_replen_no_scale
                     KEY     KEY_RANGE_NO_REPEAT,'0','9',0,sample_editor_set_current_sample_number
                     KEY     KEY_RANGE_NO_REPEAT,'a','z',10,sample_editor_set_current_sample_number
                     KL_DONE
@@ -21630,8 +21749,10 @@ phony_blitter_block:
                     dc.l    0
 save_sample_mode:
                     dc.w    0
+                IFND OKT_AUDIO_VAMPIRE
 midi_mode:
                     dc.b    0
+                ENDC
 lbB01BC6B:
                     dcb.b   3,0
 number_of_patterns:
