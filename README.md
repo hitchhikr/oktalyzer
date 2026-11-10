@@ -17,7 +17,7 @@ To do:
 - Better handling of line editing when quantization is turned off.
 - And maybe more...
 
-Done:
+Done so far:
 
 - Fixed the tracker for AGA and RTG.
 - Made a screen refresh frequency independant new replay with improved software mixer<br>
