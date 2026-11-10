@@ -60,11 +60,12 @@ Done so far:
 - Available memory and song metrics are now displayed with 9 digits.
 - Patterns rows can now be displayed in either decimal or hexadecimal (default).
 - Waveforms were displayed upside down in samples editor.
-- Removed the 15 samples/8 tracks modules loading, 4 tracks to 8 tracks are now loaded.
+- Removed the 15 samples/8 tracks modules loading, 4 tracks to 8 tracks modules are now recognized & loaded.
 - Removed the (annoying) 'No More Samples !!' message.
 - Inverted Ctrl+Up/Down (now up is for next sample/down for previous one).
 - Also these two shortcuts are now available in sample editor.
 - Likewise, up/down, shift+up/down, alt+up/down mapping have been inverted in sample editor<br>
   to increase (up)/decrease (down) edited sample repeat length.
+- Changed the mouse pointer sprite.
 
 A work in progress...
