@@ -296,6 +296,7 @@ OKT_get_pattern_address_and_length:
 
 ; ===========================================================================
 OKT_set_hw_regs:
+                    bsr     OKT_turn_dma_on
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
                     bne     .OKT_no_new_row
                     ; final DMA value
@@ -309,7 +310,6 @@ OKT_set_hw_regs:
                     OKT_SET_AUDIO_DMA d4
                     or.w    d4,(OKT_dmacon-OKT_vars,a6)
 .OKT_no_new_row:
-                    bsr     OKT_turn_dma_on
                 IFND OKT_AUDIO_VAMPIRE
                     bsr     OKT_handle_effects_double_channels
                 ENDC
