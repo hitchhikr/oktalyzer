@@ -4519,7 +4519,7 @@ load_song:
 do_load_song:
                     lea     (LoadSong_MSG,pc),a0
                     moveq   #DIR_SONGS,d0
-                    jsr     (display_file_requester)
+                    jsr     (files_selector_single_selection)
                     bgt     .confirmed
                     rts
 .confirmed:
@@ -5339,7 +5339,7 @@ save_song:
 do_save_song:
                     lea     (SaveSong_MSG),a0
                     moveq   #DIR_SONGS,d0
-                    jsr     (display_file_requester)
+                    jsr     (files_selector_single_selection)
                     bmi     .done
                     bsr     overwrite_file_requester
                     bne     .done
@@ -5752,7 +5752,7 @@ load_sample:
 do_load_sample:
                     lea     (LoadSamples_MSG,pc),a0
                     moveq   #DIR_SAMPLES,d0
-                    jsr     (lbC026ACC)
+                    jsr     (files_selector_multi_selection)
                     bgt     lbC02193C
                     moveq   #ERROR,d0
                     rts
@@ -6049,7 +6049,7 @@ do_save_sample:
                     jsr     (lbC026E36)
                     lea     (SaveSample_MSG,pc),a0
                     moveq   #DIR_SAMPLES,d0
-                    jsr     (display_file_requester)
+                    jsr     (files_selector_single_selection)
                     bmi     .done
                     bsr     overwrite_file_requester
                     bne     .done
@@ -12239,13 +12239,15 @@ free_mem_block_from_struct:
                     rts
 
 ; ===========================================================================
-display_file_requester:
+files_selector_single_selection:
                     sf      d1
-                    bra     lbC026ACE
-lbC026ACC:
+                    bra     do_files_selector
+
+; ===========================================================================
+files_selector_multi_selection:
                     st      d1
-lbC026ACE:
-                    move.b  d1,(lbB028008)
+do_files_selector:
+                    move.b  d1,(multi_files_selection_flag)
                     move.l  a0,-(a7)
                     bsr     set_current_directory_name
                     lea     (files_selector_sequence,pc),a0
@@ -12314,7 +12316,7 @@ file_selector_cancel:
 ; ===========================================================================
 file_selector_ok:
                     bsr     get_current_directory_name
-                    tst.b   (lbB028008)
+                    tst.b   (multi_files_selection_flag)
                     beq     lbC026BDA
                     bsr     lbC026C1A
                     move.l  d0,(lbL027FDC)
@@ -13077,7 +13079,7 @@ lbC02748C:
                     add.l   d1,d1
                     add.l   d1,d1
                     move.l  (a0,d1.l),a0
-                    tst.b   (lbB028008)
+                    tst.b   (multi_files_selection_flag)
                     beq     lbC0274B8
                     moveq   #7,d1
                     and.w   d2,d1
@@ -13094,7 +13096,7 @@ lbC0274B8:
                     bne     lbC02750E
 lbC0274D4:
                     movem.l d0/a0,-(a7)
-                    bsr     lbC02753A
+                    bsr     file_selector_do_deselect_files
                     movem.l (a7)+,d0/a0
                     st      (5,a0)
                     bra     lbC027518
@@ -13125,10 +13127,14 @@ lbC027518:
                     jsr     (lbC025DB2)
                     bsr     lbC027738
                     bra     lbC027350
-lbC027532:
-                    bsr     lbC02753A
+
+; ===========================================================================
+file_selector_deselect_files:
+                    bsr     file_selector_do_deselect_files
                     bra     lbC027350
-lbC02753A:
+
+; ===========================================================================
+file_selector_do_deselect_files:
                     move.l  (lbL027FFC,pc),a0
                     move.w  (lbW028004,pc),d0
 lbC027546:
@@ -13145,14 +13151,18 @@ lbC027564:
                     dbra    d0,lbC027548
 lbC027568:
                     rts
-lbC02756A:
-                    tst.b   (lbB028008)
+
+; ===========================================================================
+file_selector_select_all_files:
+                    tst.b   (multi_files_selection_flag)
                     beq     lbC02757A
-                    bsr     lbC02757C
+                    bsr     file_selector_do_select_all_files
                     bra     lbC027350
 lbC02757A:
                     rts
-lbC02757C:
+
+; ===========================================================================
+file_selector_do_select_all_files:
                     move.l  (lbL027FFC,pc),a0
                     move.w  (lbW028004,pc),d0
                     bra     lbC0275A6
@@ -14069,7 +14079,7 @@ lbW028004:
                     dc.w    0
 lbW028006:
                     dc.w    0
-lbB028008:
+multi_files_selection_flag:
                     dc.b    0
                     even
 
@@ -14078,15 +14088,15 @@ do_sample_editor:
                     sf      (lbB028218)
                     moveq   #-1,d0
                     move.l  d0,(sample_editor_mouse_block_start)
-lbC02801A:
+.loop:
                     lea     (sample_editor_sequence,pc),a0
                     jsr     (process_commands_sequence)
                     move.w  #161,d0
-                    bsr     lbC02823A
+                    bsr     sample_editor_draw_filled_box
                     move.w  #190,d0
-                    bsr     lbC02823A
+                    bsr     sample_editor_draw_filled_box
                     move.w  #226,d0
-                    bsr     lbC02823A
+                    bsr     sample_editor_draw_filled_box
                     st      (lbB029EE7)
                     ; loop
                     bsr     lbC028284
@@ -14094,13 +14104,13 @@ lbC02801A:
                     jsr     (stop_audio_and_process_event)
                     bsr     lbC028292
                     move.l  (current_cmd_ptr),d0
-                    beq     lbC028066
+                    beq     .idle
                     move.l  d0,a0
                     jsr     (a0)
-                    bra     lbC02801A
-lbC028066:
+                    bra     .loop
+.idle:
                     tst.b   (quit_flag)
-                    beq     lbC02801A
+                    beq     .loop
                     rts
 sample_editor_events:
                     dc.w    EVT_MORE_EVENTS
@@ -14206,7 +14216,9 @@ lbB028218:
                     even
 sample_editor_sequence:
                     SCREEN  sample_editor_layout,sample_editor_keys_list,sample_editor_gadgets
-lbC02823A:
+
+; ===========================================================================
+sample_editor_draw_filled_box:
                     movem.l d2-d7/a2-a6,-(a7)
                     tst.b   (ntsc_flag)
                     beq     lbC02824A
@@ -16981,7 +16993,7 @@ do_load_prefs:
                     jsr     (get_prefs_file_name)
                     lea     (load_prefs_layout,pc),a0
                     moveq   #DIR_PREFS,d0
-                    jsr     (display_file_requester)
+                    jsr     (files_selector_single_selection)
                     ble     .cancelled
                     lea     (current_file_name),a0
                     bsr     load_prefs_file
@@ -17004,7 +17016,7 @@ do_save_prefs:
                     jsr     (get_prefs_file_name)
                     lea     (save_prefs_layout,pc),a0
                     moveq   #DIR_PREFS,d0
-                    jsr     (display_file_requester)
+                    jsr     (files_selector_single_selection)
                     bmi     .cancelled
                     lea     (current_file_name),a0
                     lea     (prefs_data,pc),a1
@@ -18906,7 +18918,7 @@ lbC02BB16:
 lbC02BB22:
                     lea     (LoadEffectTab_MSG,pc),a0
                     moveq   #DIR_EFFECTS,d0
-                    jsr     (display_file_requester)
+                    jsr     (files_selector_single_selection)
                     bgt     lbC02BB32
                     rts
 lbC02BB32:
@@ -18986,7 +18998,7 @@ lbC02BC2E:
 lbC02BC3A:
                     lea     (SaveEffectTab_MSG,pc),a0
                     moveq   #DIR_EFFECTS,d0
-                    jsr     (display_file_requester)
+                    jsr     (files_selector_single_selection)
                     bpl     lbC02BC4A
                     rts
 lbC02BC4A:
@@ -20948,9 +20960,9 @@ main_menu_layout:
                     dc.l    wb_cli_text_ptr
                     dc.b    CMD_TEXT,15,0,'Editor:',0
                 IFND OKT_AUDIO_VAMPIRE
-                    dc.b    CMD_TEXT,15,1,'Play Song',0
-                ELSE
                     dc.b    CMD_TEXT,15,1,'Play Song MidiMode:',0
+                ELSE
+                    dc.b    CMD_TEXT,15,1,'Play Song',0
                 ENDC
                     dc.b    CMD_TEXT,15,2,'Play Patt Copy Cut',0
                     dc.b    CMD_TEXT,15,3,'Edit.:    Replc. Mix It',0
@@ -20984,11 +20996,11 @@ patterns_editor_help_1_layout:
                     dc.b    CMD_TEXT,0,8,  '- Pattern Editor Help Page 1 --------------------------------------------------',0
                     dc.b    CMD_TEXT,0,10, '- Block Movement -------- - Block Operations ------ - Pattern Movement --------',0
                     dc.b    CMD_TEXT,0,12, '___SPACE  Remove Block    ___F3  Copy Block         ___CURSOR Move Cursor',0
-                    dc.b    CMD_TEXT,0,13, 'SH_SPACE  Block Track     ___F4  Replace Block      ___F6-F10 Go to Predefined',0
-                    dc.b    CMD_TEXT,0,14, 'AL_SPACE  Block Pattern   ___F5  Mix Block          ___HELP   Go to PolyPos',0
+                    dc.b    CMD_TEXT,0,13, 'SH_SPACE  Block Track     ___F4  Replace Block      ___F6-F10 Go To Predefined',0
+                    dc.b    CMD_TEXT,0,14, 'AL_SPACE  Block Pattern   ___F5  Mix Block          ___HELP   Go To PolyPos',0
                     dc.b    CMD_TEXT,0,15, 'SH_CURSOR Size Block      SH_F3  Cut Block          AL_CURSOR Prv/Nxt/Size Patt',0
-                    dc.b    CMD_TEXT,0,16, 'AM_CURSOR Move Block      SH_F4  Flip Block         CT_CURSLR Go to Track',0
-                    dc.b    CMD_TEXT,0,17, 'SH_B      Block Mode      SH_F5  Delete Sample      BK_0-9    Move to Pattern',0
+                    dc.b    CMD_TEXT,0,16, 'AM_CURSOR Move Block      SH_F4  Flip Block         CT_CURSLR Go To Track',0
+                    dc.b    CMD_TEXT,0,17, 'SH_B      Block Mode      SH_F5  Delete Sample      BK_0-9    Move To Pattern',0
                     dc.b    CMD_TEXT,0,18, '                          AL_F5  Delete Sample Inst',0
                     dc.b    CMD_TEXT,0,19, '- Octave Settings ------- SH_F6  Note Down          - Misc --------------------',0
                     dc.b    CMD_TEXT,0,20, '                          AL_F6  Note Down Inst',0
@@ -21048,11 +21060,11 @@ play_help_layout:
                     dc.b    CMD_TEXT,9,10, '- Play Song, Play Pattern Help Page -------------------------',0
                     dc.b    CMD_TEXT,9,12, '- Misc --------------------------- - Octave Settings --------',0
                     dc.b    CMD_TEXT,9,14, '___ESC       Stop                  ___F1 Set Octave 1+2',0
-                    dc.b    CMD_TEXT,9,15, '___`         Stop to Act Pos       ___F2 Set Octave 2+3',0
+                    dc.b    CMD_TEXT,9,15, '___`         Stop To Act Pos       ___F2 Set Octave 2+3',0
                     dc.b    CMD_TEXT,9,17, '___TAB       Change Edit Mode      - Track Movement ---------',0
                     dc.b    CMD_TEXT,9,18, '___CURSOR UD Change Sample',0
                     dc.b    CMD_TEXT,9,19, '___F3-F10    Change Channel States ___CURSOR LR Change Track',0
-                    dc.b    CMD_TEXT,44,20,'___HELP      Go to PolyPos',0
+                    dc.b    CMD_TEXT,44,20,'___HELP      Go To PolyPos',0
                     dc.b    CMD_TEXT,9,21, 'NB_1         Sub Quant',0
                     dc.b    CMD_TEXT,9,22, 'NB_2         Add Quant',0
                     dc.b    CMD_TEXT,9,24, 'NB_4         Sub Poly',0
@@ -21267,8 +21279,8 @@ file_selector_keys_list:
 file_selector_keys:
                     KEY     KEY_NO_REPEAT,KEY_ESC,file_selector_cancel
                     KEY     KEY_NO_REPEAT,KEY_RETURN,file_selector_ok
-                    KEY     KEY_NO_REPEAT,'a',lbC02756A
-                    KEY     KEY_NO_REPEAT,'c',lbC027532
+                    KEY     KEY_NO_REPEAT,'a',file_selector_select_all_files
+                    KEY     KEY_NO_REPEAT,'c',file_selector_deselect_files
                     KL_DONE
 
 ; ===========================================================================
@@ -21296,10 +21308,10 @@ sample_editor_help_layout:
                     dc.b    CMD_TEXT,2,15,'- Samples ------------- - Repeats --------------------- - Misc -------------',0
                     dc.b    CMD_TEXT,2,17,'SH_L       Load Sample  ___DEL    Clear  Repeats        ___ESC  Exit',0
                     dc.b    CMD_TEXT,2,18,'SH_S       Save Sample  ___CURSOR Set    Repeats        SH_HELP Huhu!',0
-                    dc.b    CMD_TEXT,2,19,'SH_C       Copy Sample  SH_CURSOR Set    Repeats fast   ___F1   Set Oct. 0+1',0
-                    dc.b    CMD_TEXT,2,20,'SH_X       Swap Samples AL_CURSOR Set    Repeats faster ___F2   Set Oct. 1+2',0
-                    dc.b    CMD_TEXT,2,21,'SH_M       Mix  Samples BK_0      Search 0 Left',0
-                    dc.b    CMD_TEXT,2,22,'AL_0-9/a-z Set  Sample  BK_.      Search 0 Right',0
+                    dc.b    CMD_TEXT,2,19,'SH_C       Copy Sample  SH_CURSOR Set    Repeats Fast   ___F1   Set Oct. 0+1',0
+                    dc.b    CMD_TEXT,2,20,'SH_X       Swap Samples AL_CURSOR Set    Repeats Faster ___F2   Set Oct. 1+2',0
+                    dc.b    CMD_TEXT,2,21,'SH_M       Mix  Samples BK_0      Set Repeat start To Next 0',0
+                    dc.b    CMD_TEXT,2,22,'AL_0-9/a-z Set  Sample  BK_.      Set Repeat Length To Previous 0',0
                     dc.b    CMD_DONE
                     even
 sample_editor_gadgets:
@@ -21436,7 +21448,7 @@ prefs_help_layout:
                     dc.b    CMD_TEXT,17,14,'- Preferences Help Page ---------------------',0
                     dc.b    CMD_TEXT,17,16,'- Chars ------------------ - Misc -----------',0
                     dc.b    CMD_TEXT,17,18,'___CURSOR Move  CharCursor ___ESC  Cancel',0
-                    dc.b    CMD_TEXT,17,19,'SH_CURSOR Shift Char       SH_HELP Look here!',0
+                    dc.b    CMD_TEXT,17,19,'SH_CURSOR Shift Char       SH_HELP Look Here!',0
                     dc.b    CMD_DONE
                     even
 prefs_gadgets:
@@ -21561,16 +21573,16 @@ compute_help_layout:
                     dc.b    CMD_TEXT,8,8, '- Compute Help Page --------------------------------------------',0
                     dc.b    CMD_TEXT,8,10,'- Operands - Prio -  - Variables ------------  - Signs ---------',0
                     dc.b    CMD_TEXT,8,12,'<< SHIFT LEFT     5  P  Pattern Number         ~ NOTATION',0
-                    dc.b    CMD_TEXT,8,13,'>> SHIFT RIGHT    5  H  Height of Pattern      - NEGATION',0
-                    dc.b    CMD_TEXT,8,15,'&  AND            4  S  TRUE if SingleTrack    - Value Types ---',0
-                    dc.b    CMD_TEXT,8,16,'|  OR             4  D  TRUE if DoubleTrack',0
+                    dc.b    CMD_TEXT,8,13,'>> SHIFT RIGHT    5  H  Height Of Pattern      - NEGATION',0
+                    dc.b    CMD_TEXT,8,15,'&  AND            4  S  TRUE If SingleTrack    - Value Types ---',0
+                    dc.b    CMD_TEXT,8,16,'|  OR             4  D  TRUE If DoubleTrack',0
                     dc.b    CMD_TEXT,8,17,'!  OR             4                            0-9 DECIMAL',0
                     dc.b    CMD_TEXT,8,18,'^  EOR            4  N  Note Number            %   BINARY',0
                     dc.b    CMD_TEXT,8,19,'                     I  Instrument Number      @   OCTAL',0
                     dc.b    CMD_TEXT,8,20,'*  MULTIPLICATION 3  V  Effect Value           $   HEXADECIMAL',0
                     dc.b    CMD_TEXT,8,21,'/  DIVISION       3                            ''   STRING (''''='')',0
-                    dc.b    CMD_TEXT,8,22,'                     X  XPos in Pattern (1..)  "   STRING (""=")',0
-                    dc.b    CMD_TEXT,8,23,'+  ADDITION       2  Y  YPos in Pattern (0..)',0
+                    dc.b    CMD_TEXT,8,22,'                     X  XPos In Pattern (1..)  "   STRING (""=")',0
+                    dc.b    CMD_TEXT,8,23,'+  ADDITION       2  Y  YPos In Pattern (0..)',0
                     dc.b    CMD_TEXT,8,24,'-  SUBTRACTION    2',0
                     dc.b    CMD_TEXT,8,25,'                     T  TRUE',0
                     dc.b    CMD_TEXT,8,26,'=  EQUAL          1  F  FALSE',0
