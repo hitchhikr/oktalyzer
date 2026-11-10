@@ -7,7 +7,7 @@
 
 ; ===========================================================================
 		            rsreset
-OKT_SCALING_CODE:   rs.b    70800
+OKT_SCALING_CODE:   rs.b    74800
 OKT_CODE_POINTERS:  rs.l    36
 OKT_LENGTHS:        rs.w    36*2
 OKT_CODE_LENGTH:    rs.b    0
@@ -268,7 +268,8 @@ OKT_custom_init:
                     move.w	d0,(INTENA-OKT_AUDIO_BASE,a1)
                     move.w  (OKT_audio_int_single_bit-OKT_vars,a6),d0
                     lsr.w   #7,d0
-                    or.w    #$820F,d0
+                    or.w    #$8200,d0
+                    or.w    (OKT_audio_int_bit-OKT_vars,a6),d0
                     move.w  d0,(DMACON-OKT_AUDIO_BASE,a1)
                     rts
 
@@ -473,14 +474,14 @@ OKT_create_channel_waveform_data:
                     bpl     .OKT_min
                     clr.w   (CHAN_NOTE_D,a3)
 .OKT_min:
-                    cmpi.w  #36-1,(CHAN_NOTE_D,a3)
+                    cmp.w   #36-1,(CHAN_NOTE_D,a3)
                     ble     .OKT_max
                     move.w  #36-1,(CHAN_NOTE_D,a3)
 .OKT_max:
                     move.l  a1,-(a7)
                     ; check if the sample has been processed
                     move.l  (CHAN_SMP_PROC_LEN_D,a3),d2
-                    bgt     .OKT_sample_end
+                    bgt     .OKT_process_sample
                     ; is there a repeat ?
                     tst.l   (CHAN_SMP_REP_LEN_D,a3)
                     beq     .OKT_no_repeat
@@ -489,42 +490,48 @@ OKT_create_channel_waveform_data:
                     ; new length to process
                     move.l  (CHAN_SMP_REP_LEN_D,a3),d2
                     move.l  d2,(CHAN_SMP_PROC_LEN_D,a3)
-                    bra     .OKT_sample_end
+                    bra     .OKT_process_sample
 .OKT_no_repeat:
                     ; no: discard
                     clr.l   (CHAN_SMP_PROC_D,a3)
                     clr.l   (CHAN_SMP_PROC_LEN_D,a3)
                     addq.l  #4,a7
                     bra     .OKT_no_mix
-.OKT_sample_end:
+.OKT_process_sample:
+                    ; lengths of each note
                     move.l  (OKT_lengths_ptr,pc),a0
                     move.w  (CHAN_NOTE_D,a3),d0
                     add.w   d0,d0
                     add.w   d0,d0
+                    ; length
                     move.w  (a0,d0.w),d3
                     ext.l   d3
-                    ; length left to process
+                    ; will it be smaller ?
                     cmp.l   d3,d2
-                    bgt     .OKT_no_cut_code
-                    ; less left than processed in the generated code
-                    ; can process on this note
-                    add.w   d2,d2
-                    ; get byte loading offset
+                    bge     .OKT_no_cut_code
+                    ; less left than processed in the generated code can process on this note
+                    add.l   d2,d2
+                    ; get the entry point of each byte loading
                     move.l  (OKT_scaling_code_lines,pc),a4
-                    ; base
-                    add.w   2(a0,d0.w),d2
-                    move.w  (a4,d2.w),d0
-                    ; get code address
+                    ; base for this note
+                    moveq   #0,d3
+                    move.w  2(a0,d0.w),d3
+                    add.l   d3,d2
+                    moveq   #0,d0
+                    ; offset in this chunk of code for this note
+                    move.w  (a4,d2.l),d0
+                    ; get code block address for this note
                     move.w  (CHAN_NOTE_D,a3),d3
                     add.w   d3,d3
                     add.w   d3,d3
                     move.l  (OKT_code_ptr,pc),a4
                     move.l  (a4,d3.w),a4
-                    ; offset
-                    add.w   d0,a4
+                    ; offset in this chunk
+                    add.l   d0,a4
                     ; patch it
                     move.l  a4,(OKT_patched_addr)
                     move.w  (a4),(OKT_patched_instr)
+                    ; rts (replaces a move.b (a0)+,d0)
                     move.w  #$4e75,(a4)
                     btst    #1,(OKT_processor,pc)
                     beq     .OKT_no_cut_code
@@ -533,13 +540,17 @@ OKT_create_channel_waveform_data:
                     jsr     (_LVOCacheClearU,a6)
                     movem.l (a7)+,a0/a1/a2/a3/a5/a6
 .OKT_no_cut_code:
-                    ; source waveform
+                    ; more samples to process than code
+                    ; so perform full block
+                    ; current waveform
                     move.l  (CHAN_SMP_PROC_D,a3),a0
                     move.l  (OKT_code_ptr,pc),a4
+                    ; (d0 is used inside the code)
                     moveq   #0,d0
                     move.w  (CHAN_NOTE_D,a3),d3
                     add.w   d3,d3
                     add.w   d3,d3
+                    ; chunk of code for this note
                     move.l  (a4,d3.w),a4
                     jsr     (a4)
                     ; restore the patched code if any
@@ -555,44 +566,37 @@ OKT_create_channel_waveform_data:
                     jsr     (_LVOCacheClearU,a6)
                     movem.l (a7)+,a0/a1/a2/a3/a5/a6
 .OKT_no_patch:
-                    ; new source pos
+                    ; address where it started
                     move.l  (CHAN_SMP_PROC_D,a3),d0
+                    ; new address
                     move.l  a0,(CHAN_SMP_PROC_D,a3)
-                    ; length processed
+                    ; amount of bytes processed
                     sub.l   d0,a0
                     move.l  (CHAN_SMP_PROC_LEN_D,a3),d2
-                    ; length remaining to process
+                    ; length of bytes remaining to process
                     sub.l   a0,d2
                     move.l  d2,(CHAN_SMP_PROC_LEN_D,a3)
                     ; check if the mix buffer was entirely processed
                     lea     (a1),a4
+                    ; (subtract start of the buffer)
                     sub.l   (a7),a4
-                    cmp.l   #OKT_BUFFERS_LENGTH,a4
-                    bge     .OKT_processed
                     ; still some bytes to process in mixbuffer...
                     move.l  #OKT_BUFFERS_LENGTH,d1
+                    ; how many bytes left to process
                     sub.l   a4,d1
-                    ; check if there's a loop
+                    ; mixbuffer is full
+                    ble     .OKT_processed
+                    ; mixbuffer isn't full yet..
+                    ;
+                    ; check if there's a sample loop
                     tst.l   (CHAN_SMP_REP_LEN_D,a3)
+                    ; nope: fill the rest of the buffer with 0s
                     beq     .OKT_max_fill
-                    ; mixbuffer isn't full yet...
-                    cmp.l   d1,d2
-                    bgt     .OKT_rearm
-                    ; mixbuffer to process is smaller than samples left:
-                    ; set the new length to remaining mixbuffer bytes left to process
-                    move.l  d1,d2
-                    cmp.l   (CHAN_SMP_REP_LEN_D,a3),d2
-                    bge     .OKT_rearm
-                    bra     .OKT_sample_end
-.OKT_rearm:
-                    ; mixbuffer to process is bigger than samples left:
-                    ; restart...
-                    ; set to repeat start
+                    ; continue the mmixing from the repeat start
                     move.l  (CHAN_SMP_REP_START,a3),(CHAN_SMP_PROC_D,a3)
-                    ; and repeat length to process
                     move.l  (CHAN_SMP_REP_LEN_D,a3),d2
                     move.l  d2,(CHAN_SMP_PROC_LEN_D,a3)
-                    bra     .OKT_sample_end
+                    bra     .OKT_process_sample
 .OKT_max_fill:
                     ; fill the rest of the buffer with 0s
                     btst    #0,d1

@@ -50,6 +50,12 @@ OKT_custom_init:
                     move.w  #$4000,(INTENA,a1)
                     move.w  #%1111,(DMACON,a1)
                     move.w  #%111111111111,(OKT_AUDIO_DMA,a1)
+                    lea     (OKT_AUDIO_BASE,a1),a4
+                    moveq   #OKT_AUDIO_HW_CHANS-1,d1
+.OKT_all_ctrl_to_8bit:
+                    OKT_SET_AUDIO_CTRL #0,a4
+                    lea     (OKT_AUDIO_SIZE,a4),a4
+                    dbf     d1,.OKT_all_ctrl_to_8bit
                     move.w  #$FF,(ADKCON,a1)
                     bset    #1,$BFE001
                     move.l  d0,a0

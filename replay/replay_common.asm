@@ -11,7 +11,7 @@ CIATBLO             equ     $600
 CIATBHI             equ     $700
 CIAICR              equ     $D00
 CIACRB              equ     $F00
-SMPS_NUMBER         equ     36
+MAX_SAMPLES         equ     36
 		            rsreset
 SMP_NAME:           rs.b    20
 SMP_LEN:            rs.l    1           ; 20
@@ -22,7 +22,7 @@ SMP_TYPE:           rs.w    1           ; 30
 SMP_INFOS_LEN:      rs.b    0           ; 32
 		            rsreset
 CHAN_TYPE:          rs.b    1           ; 0
-                    rs.b    1           ; 1 (pad)
+                    rs.b    1           ; 1 (padding)
 CHAN_SMP_REP_START: rs.l    1           ; 2
 CHAN_SMP_REP_LEN_S: rs.w    1           ; 6
 CHAN_NOTE_S:        rs.w    1           ; 8
@@ -32,7 +32,8 @@ CHAN_BASE_NOTE_D:   rs.w    1           ; 14
 CHAN_SMP_REP_LEN_D: rs.l    1           ; 16
 CHAN_SMP_PROC_D:    rs.l    1           ; 18
 CHAN_SMP_PROC_LEN_D:rs.l    1           ; 20
-CHAN_LEN:           rs.b    0           ; 24
+CHAN_SMP_TYPE:      rs.w    1           ; 24
+CHAN_LEN:           rs.b    0           ; 26
 
 ; ===========================================================================
 OKT_SET_AUDIO_ADR   MACRO
@@ -79,7 +80,7 @@ OKT_init:
                     move.l  #'SAMP',d0
                     bsr     .OKT_search_hunk
                     lea     (OKT_samples_infos-OKT_vars,a6),a1
-                    move.w  #(SMPS_NUMBER*SMP_INFOS_LEN)-1,d0
+                    move.w  #(MAX_SAMPLES*SMP_INFOS_LEN)-1,d0
 .OKT_get_samples_infos:
                     move.b  (a0)+,(a1)+
                     dbra    d0,.OKT_get_samples_infos
@@ -94,7 +95,7 @@ OKT_init:
                     move.w  (a0)+,(OKT_song_length-OKT_vars,a6)
                     move.l  #'PATT',d0
                     bsr     .OKT_search_hunk
-                    lea     (OKT_patterns-OKT_vars,a6),a1
+                    lea     (OKT_positions-OKT_vars,a6),a1
                     moveq   #128-1,d0
 .OKT_get_positions:
                     move.b  (a0)+,(a1)+
@@ -123,7 +124,7 @@ OKT_init:
                     addq.l  #4,a1
                     lea     (SMP_INFOS_LEN,a5),a5
                     addq.w  #1,d7
-                    cmp.w   #SMPS_NUMBER,d7
+                    cmp.w   #MAX_SAMPLES,d7
                     bne     .OKT_get_samples_ptrs
                     bsr     OKT_init_variables
                     bsr     OKT_custom_init
@@ -184,7 +185,7 @@ OKT_init_variables:
                     bne     .OKT_only_one_int_bit
                     or.w    d2,(OKT_audio_int_single_bit-OKT_vars,a6)
 .OKT_only_one_int_bit:
-                    or.w    d2,(OKT_audio_int_bit-OKT_vars,a6)
+                    or.w    d3,(OKT_audio_int_bit-OKT_vars,a6)
 .OKT_not_doubled:
                     add.w   d2,d2
                     add.w   d3,d3
@@ -270,13 +271,13 @@ OKT_new_row:
 ; ===========================================================================
 OKT_get_current_pattern:
                     move.w  (OKT_song_pos-OKT_vars,a6),d0
-                    lea     (OKT_patterns-OKT_vars,a6),a0
+                    lea     (OKT_positions-OKT_vars,a6),a0
                     move.b  (a0,d0.w),d0
                     bra     OKT_get_pattern_address_and_length
 
 ; ===========================================================================
 OKT_set_current_pattern:
-                    lea     (OKT_patterns-OKT_vars,a6),a0
+                    lea     (OKT_positions-OKT_vars,a6),a0
                     move.w  (OKT_song_pos-OKT_vars,a6),d0
                     move.b  (a0,d0.w),d0
                     bsr     OKT_get_pattern_address_and_length
@@ -295,7 +296,6 @@ OKT_get_pattern_address_and_length:
 
 ; ===========================================================================
 OKT_set_hw_regs:
-                    bsr     OKT_turn_dma_on
                     move.w  (OKT_action_cycle-OKT_vars,a6),d0
                     bne     .OKT_no_new_row
                     ; final DMA value
@@ -306,8 +306,10 @@ OKT_set_hw_regs:
                     bsr     OKT_fill_double_channels
                 ENDC
                     bsr     OKT_fill_single_channels
+                    OKT_SET_AUDIO_DMA d4
                     or.w    d4,(OKT_dmacon-OKT_vars,a6)
 .OKT_no_new_row:
+                    bsr     OKT_turn_dma_on
                 IFND OKT_AUDIO_VAMPIRE
                     bsr     OKT_handle_effects_double_channels
                 ENDC
@@ -336,6 +338,7 @@ OKT_set_hw_regs:
                     tst.b   (CHAN_TYPE,a3)
                     bne     .OKT_skip_double_channel
                 ENDC
+                    OKT_SET_AUDIO_PER (CHAN_PERIOD_S,a3),a1
                     moveq   #0,d0
                     move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d3
                     move.b  (a0,d3.w),d0
@@ -423,14 +426,14 @@ OKT_fill_double_channels:
                     dbra    d7,.OKT_loop
                     rts
 .OKT_fill_data:
-                    bsr     OKT_fill_double_channel_data
+                    bsr     .OKT_fill_double_channel_data
                     subq.w  #1,d7
-                    bsr     OKT_fill_double_channel_data
+                    bsr     .OKT_fill_double_channel_data
                     dbra    d7,.OKT_loop
                     rts
 
 ; ===========================================================================
-OKT_fill_double_channel_data:
+.OKT_fill_double_channel_data:
                     moveq   #0,d3
                     ; no note
                     move.b  (a2),d3
@@ -449,9 +452,9 @@ OKT_fill_double_channel_data:
                     move.l  d2,(CHAN_SMP_PROC_D,a3)
                     lea     (OKT_samples_infos-OKT_vars,a6),a1
                     add.w   d0,a1
-                    ; starting length
+                    ; full length
                     move.l  (SMP_LEN,a1),d0
-                    ; that was a bug
+                    ; (that was a bug)
                     bclr    #0,d0
                     ; repeat at start by default
                     move.l  d0,(CHAN_SMP_PROC_LEN_D,a3)
@@ -459,14 +462,10 @@ OKT_fill_double_channel_data:
                     moveq   #0,d1
                     move.w  (SMP_REP_LEN,a1),d0
                     add.l   d0,d0
-                    move.w  (SMP_REP_START,a1),d1
-                    add.l   d1,d1
                     ; repeat length
                     move.l  d0,(CHAN_SMP_REP_LEN_D,a3)
-                    beq     .OKT_no_repeat
-                    add.l   d1,d0
-                    move.l  d0,(CHAN_SMP_PROC_LEN_D,a3)
-.OKT_no_repeat:
+                    move.w  (SMP_REP_START,a1),d1
+                    add.l   d1,d1
                     ; repeat start address
                     add.l   d2,d1
                     move.l  d1,(CHAN_SMP_REP_START,a3)
@@ -503,7 +502,7 @@ OKT_fill_single_channels:
                     tst.b   (CHAN_TYPE,a3)
                     bne     .OKT_skip_double_channel
                 ENDC
-                    bsr     OKT_fill_single_channel_data
+                    bsr     .OKT_fill_single_channel_data
                     addq.w  #4,a2
                 IFND OKT_AUDIO_VAMPIRE
                     lea     (CHAN_LEN*2,a3),a3
@@ -528,7 +527,7 @@ OKT_fill_single_channels:
                 ENDC
 
 ; ===========================================================================
-OKT_fill_single_channel_data:
+.OKT_fill_single_channel_data:
                     moveq   #0,d3
                     move.b  (a2),d3
                     beq     .OKT_no_data
@@ -546,23 +545,16 @@ OKT_fill_single_channel_data:
                     move.l  (SMP_LEN,a1),d1
                     lsr.l   #1,d1
                     beq     .OKT_no_data
-                    OKT_SET_AUDIO_DMA d5
                     or.w    d5,d4
                     ; start sample address
                     OKT_SET_AUDIO_ADR d2,a4
-                    ; 8/16 bit
-                IFD OKT_AUDIO_VAMPIRE
-;                    OKT_SET_AUDIO_CTRL SMP_TYPE(a1),a4
-                    ; TODO: temporary
-                    OKT_SET_AUDIO_CTRL #0,a4
-                ENDC
+                    OKT_SET_AUDIO_CTRL (SMP_TYPE,a1),a4
                     ; note index
                     move.w  d3,(CHAN_NOTE_S,a3)
                     add.w   d3,d3
                     move.w  (a5,d3.w),d0
                     ; period
                     move.w  d0,(CHAN_PERIOD_S,a3)
-                    OKT_SET_AUDIO_PER d0,a4
                     move.l  a0,-(a7)
                     lea     (OKT_channels_volumes-OKT_vars,a6),a0
                     moveq   #0,d0
@@ -745,7 +737,6 @@ OKT_port_u:
                     bge     .OKT_min
                     move.w  #$71,(CHAN_PERIOD_S,a3)
 .OKT_min:
-                    OKT_SET_AUDIO_PER CHAN_PERIOD_S(a3),a4
                     rts
 
 ; ===========================================================================
@@ -755,7 +746,6 @@ OKT_port_d:
                     ble     .OKT_max
                     move.w  #$358,(CHAN_PERIOD_S,a3)
 .OKT_max:
-                    OKT_SET_AUDIO_PER CHAN_PERIOD_S(a3),a4
                     rts
 
 ; ===========================================================================
@@ -896,7 +886,6 @@ OKT_set_arp_s:
 .OKT_max:
                     add.w   d2,d2
                     move.w  (a5,d2.w),d0
-                    OKT_SET_AUDIO_PER d0,a4
                     move.w  d0,(CHAN_PERIOD_S,a3)
                     rts
 
@@ -1195,13 +1184,13 @@ OKT_song_length:
 OKT_channels_data:
                     ds.b    CHAN_LEN*8
 OKT_samples_infos:
-                    ds.b    SMPS_NUMBER*SMP_INFOS_LEN
-OKT_patterns:
-                    ds.l    32
+                    ds.b    MAX_SAMPLES*SMP_INFOS_LEN
+OKT_positions:
+                    ds.b    128
 OKT_patterns_list:
                     ds.l    64
 OKT_samples_table:
-                    ds.l    SMPS_NUMBER
+                    ds.l    MAX_SAMPLES
 
 ; ===========================================================================
                     section  OKT_chip_sample,data_c

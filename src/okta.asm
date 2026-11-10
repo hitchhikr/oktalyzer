@@ -8,13 +8,13 @@
 ; - fix the highlighting on vampire.
 
 ; ===========================================================================
-            IFD __VASM
+                IFD __VASM
                     mc68000
                     opt     o+
                     opt     a+
-            ENDC
+                ENDC
 
-;SHOW_RASTERS        equ     1
+SHOW_RASTERS        equ     1
 ; ===========================================================================
                     include "okta.i"
 
@@ -229,6 +229,10 @@ set_aga_context:
                     cmp.b   #1,(vampire_detected)
                     bne.b   .no_vampire
                     bsr     .machine_is_aga
+                    or.w    #1,main_menu_bplcon0+2
+                    or.w    #1,pattern_bplcon0+2
+                    or.w    #1,credits_bplcon0+2
+                    or.w    #1,main_bplcon0+2
                     move.w  #%10011,copper_fmode+2
                     move.w  #%10011,copper_test_fmode+2
                     move.w  #%10001000000000,vampire_shift+2
@@ -515,7 +519,7 @@ vbi_int_code:
                     moveq   #11,d0
                     moveq   #1,d1
                     jsr     (draw_3_digits_decimal_number_leading_zeroes)
-                    lea     (OKT_patterns),a0
+                    lea     (OKT_positions),a0
                     move.w  (OKT_song_pos,pc),d2
                     move.b  (a0,d2.w),d2
                     moveq   #12,d0
@@ -1587,24 +1591,24 @@ lbC01EF5A:
 .no_sample:
                     rts
 .play_sample:
-                    movem.l d5/a2,-(a7)
-                    lea     (_CUSTOM|OKT_AUDIO_BASE),a2
+                    movem.l d5/a3,-(a7)
+                    lea     (_CUSTOM|OKT_AUDIO_BASE),a3
                     moveq   #DMAB_AUD0,d5
                     bset    d4,d5
                     move.w  d5,(_CUSTOM|OKT_AUDIO_DMA)
                     ; *$10
                     lsl.w   #4,d4
-                    add.w   d4,a2
+                    add.w   d4,a3
                     ; A0
-                    move.l  a0,(OKT_AUDIO_ADR,a2)
+                    move.l  a0,(OKT_AUDIO_ADR,a3)
                 IFD OKT_AUDIO_VAMPIRE
-                    move.l  d0,(OKT_AUDIO_LEN,a2)
+                    move.l  d0,(OKT_AUDIO_LEN,a3)
                 ELSE
-                    move.w  d0,(OKT_AUDIO_LEN,a2)
+                    move.w  d0,(OKT_AUDIO_LEN,a3)
                 ENDC
-                    move.w  #$358,(OKT_AUDIO_PER,a2)
+                    move.w  #$358,(OKT_AUDIO_PER,a3)
                     bsr     wait_raster
-                    move.w  d2,(OKT_AUDIO_PER,a2)
+                    move.w  d2,(OKT_AUDIO_PER,a3)
                 IFD OKT_AUDIO_VAMPIRE
                     ; center it
                     move.w  d3,d2
@@ -1614,21 +1618,20 @@ lbC01EF5A:
                     mulu.w  #255,d3
                     lsr.w   #6,d3
                     or.w    d2,d3
-                    ; TODO: temporary
-                    OKT_SET_AUDIO_CTRL #0,a2
+                    OKT_SET_AUDIO_CTRL (SMP_TYPE,a2),a3
                 ENDC
-                    move.w  d3,(OKT_AUDIO_VOL,a2)
+                    move.w  d3,(OKT_AUDIO_VOL,a3)
                     or.w    #DMAF_SETCLR,d5
                     move.w  d5,(_CUSTOM|OKT_AUDIO_DMA)
                     bsr     wait_raster
                     ; end or repeat
-                    move.l  a1,(OKT_AUDIO_ADR,a2)
+                    move.l  a1,(OKT_AUDIO_ADR,a3)
                IFD OKT_AUDIO_VAMPIRE
-                    move.l  d1,(OKT_AUDIO_LEN,a2)
+                    move.l  d1,(OKT_AUDIO_LEN,a3)
                ELSE
-                    move.w  d1,(OKT_AUDIO_LEN,a2)
+                    move.w  d1,(OKT_AUDIO_LEN,a3)
                ENDC
-                    movem.l (a7)+,d5/a2
+                    movem.l (a7)+,d5/a3
                     rts
 
 ; ===========================================================================
@@ -2330,7 +2333,7 @@ cb_note_up_block_current_sample:
 cb_note_up_block:
                     move.b  (a0),d0
                     beq     lbC01F7B0
-                    cmp.b   #SMPS_NUMBER,d0
+                    cmp.b   #MAX_SAMPLES,d0
                     beq     lbC01F7B0
                     addq.b  #1,d0
                     move.b  d0,(a0)
@@ -2770,7 +2773,7 @@ display_main_menu:
                     moveq   #11,d0
                     moveq   #1,d1
                     jsr     (draw_3_digits_decimal_number_leading_zeroes)
-                    lea     (OKT_patterns),a0
+                    lea     (OKT_positions),a0
                     move.w  (current_song_position),d2
                     move.b  (a0,d2.w),d2
                     moveq   #12,d0
@@ -3095,7 +3098,7 @@ do_draw_available_memory_and_song_metrics:
                     jmp     (draw_9_digits_decimal_number_leading_zeroes)
 get_patterns_metrics:
                     move.l  d2,-(a7)
-                    lea     (OKT_patterns_list),a0
+                    lea     (OKT_positions_list),a0
                     moveq   #0,d0
                     moveq   #64-1,d1
 .loop:
@@ -3113,7 +3116,7 @@ get_patterns_metrics:
 get_samples_metrics:
                     lea     (OKT_samples_table),a0
                     moveq   #0,d0
-                    moveq   #SMPS_NUMBER-1,d1
+                    moveq   #MAX_SAMPLES-1,d1
 .loop:
                     tst.l   (a0)+
                     beq     .empty
@@ -3246,7 +3249,7 @@ get_current_pattern_address_and_rows:
 
 ; ===========================================================================
 get_given_pattern_address_and_rows:
-                    lea     (OKT_patterns_list),a0
+                    lea     (OKT_positions_list),a0
                     add.w   d0,d0
                     add.w   d0,d0
                     move.l  (a0,d0.w),a0
@@ -3266,7 +3269,7 @@ create_new_empty_pattern:
                     beq     .error
                     move.l  d0,a1
                     move.w  (default_pattern_length),(a1)
-                    lea     (OKT_patterns_list),a0
+                    lea     (OKT_positions_list),a0
                     move.w  (number_of_patterns),d0
                     add.w   d0,d0
                     add.w   d0,d0
@@ -3293,7 +3296,7 @@ renew_current_pattern:
                     bsr     free_current_pattern
                     move.l  a2,a1
                     move.w  d2,(a1)
-                    lea     (OKT_patterns_list),a0
+                    lea     (OKT_positions_list),a0
                     move.w  (current_viewed_pattern),d0
                     add.w   d0,d0
                     add.w   d0,d0
@@ -3321,7 +3324,7 @@ renew_current_pattern:
 free_song:
                     bsr     free_last_pattern
                     bne     free_song
-                    lea     (OKT_patterns),a0
+                    lea     (OKT_positions),a0
                     moveq   #128-1,d0
 .loop:
                     sf      (a0)+
@@ -3343,7 +3346,7 @@ free_current_pattern:
                     move.w  (current_viewed_pattern),d0
                     add.w   d0,d0
                     add.w   d0,d0
-                    lea     (OKT_patterns_list),a0
+                    lea     (OKT_positions_list),a0
                     move.l  (a0,d0.w),d1
                     beq     .empty
                     clr.l   (a0,d0.w)
@@ -3363,7 +3366,7 @@ free_last_pattern:
                     subq.w  #1,d0
                     add.w   d0,d0
                     add.w   d0,d0
-                    lea     (OKT_patterns_list),a0
+                    lea     (OKT_positions_list),a0
                     move.l  (a0,d0.w),a1
                     clr.l   (a0,d0.w)
                     moveq   #0,d0
@@ -4515,27 +4518,27 @@ do_load_song:
                     ; patterns patching on
                     st      (pattern_patch_flag)
                     cmpi.l  #'OKTA',(a0)+
-                    bne     load_st_mod
+                    bne     load_mod
                     ; Original
                     cmpi.l  #'SONG',(a0)+
-                    beq     .load_okta_mod
+                    beq     .load_okta
                     ; patterns patching off
                     sf      (pattern_patch_flag)
                     ; Newer Amiga
                     subq.l  #4,a0
                     cmpi.l  #'SNG2',(a0)+
-                    beq     .load_okta_mod
+                    beq     .load_okta
             IFD OKT_AUDIO_VAMPIRE
                     ; Only on Vampire
                     subq.l  #4,a0
                     cmpi.l  #'SNG3',(a0)+
-                    beq     .load_okta_mod
+                    beq     .load_okta
             ENDC
-                    bsr     error_ok_struct_error
+                    bsr     error_okt_struct_error
                     bra     .done
 
 ; ===========================================================================
-.load_okta_mod:
+.load_okta:
                     jsr     (backup_prefs)
                     bsr     free_all_samples_and_song
                     lea     (CMOD_MSG,pc),a0
@@ -4544,16 +4547,16 @@ do_load_song:
                     bsr     fill_chunks_default_values_from_struct
                     lea     (CMOD_MSG,pc),a0
                     bsr     read_chunks_content_from_struct
-                    bmi     lbC020EA2
+                    bmi     .error_read_display_message
                     jsr     (set_prefs_without_user_validation)
                     bsr     free_song
                     lea     (SAMP_MSG,pc),a0
                     bsr     read_chunks_content_from_struct
-                    bmi     lbC020EA6
+                    bmi     .error_read
                     ; fix samples lengths and too short repeat lengths
                     ; (bugs in original oktalyzer)
                     lea     (OKT_samples_infos),a0
-                    moveq   #SMPS_NUMBER-1,d7
+                    moveq   #MAX_SAMPLES-1,d7
 .fix_samples_length:
                     bclr    #0,(SMP_LEN+3,a0)
                     cmp.w   #1,(SMP_REP_LEN,a0)
@@ -4574,11 +4577,11 @@ do_load_song:
                     dbf     d7,.fix_samples_length
                     ; read patterns data
                     bsr     read_patterns_from_okta_song_file
-                    bmi     lbC020EA6
+                    bmi     .error_read
                     bsr     patch_older_patterns
                     ; read samples data
                     bsr     read_samples_from_okta_song_file
-                    bmi     lbC020EA6
+                    bmi     .error_read
                     jsr     (close_file)
                     bsr     change_work_sample_size
                     bra     display_main_menu
@@ -4587,9 +4590,9 @@ do_load_song:
 .done:
                     jsr     (close_file)
                     bra     change_work_sample_size
-lbC020EA2:
+.error_read_display_message:
                     bsr     display_dos_error
-lbC020EA6:
+.error_read:
                     jsr     (close_file)
                     bsr     free_all_samples_and_song
                     bsr     create_new_empty_pattern
@@ -4602,357 +4605,11 @@ pattern_patch_flag:
                     even
 
 ; ===========================================================================
-load_st_mod:
-                    jsr     (backup_prefs)
-                    bsr     free_all_samples_and_song
-                    lea     (OKT_channels_modes),a0
-                    ; single channels
-                    clr.l   (a0)
-                    clr.l   (4,a0)
-                    ; TODO: change this
-                    tst.b   (st_load_default_samples_type)
-                    beq     lbC020EF0
-                    ; double channels
-                    move.l  #(1<<16)+1,(a0)
-                    move.l  #(1<<16)+1,(4,a0)
-lbC020EF0:
-                    jsr     (set_prefs_without_user_validation)
-                    bsr     free_song
-                    bsr     lbC020F2C
-                    bmi     lbC020F18
-                    bsr     lbC02103C
-                    bmi     lbC020F18
-                    bsr     lbC0210CE
-                    bmi     lbC020F18
-                    jsr     (close_file)
-                    bsr     change_work_sample_size
-                    bra     display_main_menu
-lbC020F18:
-                    jsr     (close_file)
-                    bsr     free_all_samples_and_song
-                    bsr     create_new_empty_pattern
-                    bmi     exit
-                    rts
-lbC020F2C:
-                    moveq   #12,d0
-                    jsr     (move_in_file)
-                    bmi     lbC02102A
-                    lea     (OKT_samples_infos+SMP_INFOS_LEN),a5
-;                    moveq   #15-1,d7
-;                    tst.b   (st_load_samples_mode)
-;                    beq     .loop
-                    moveq   #31-1,d7
-.loop:
-                    move.l  a5,a0
-                    moveq   #30,d0
-                    jsr     (read_from_file)
-                    bmi     lbC02102A
-                    ; fix length to 64k
-                    and.l   #$FFFF,(20,a5)
-                    beq     .empty_sample
-                    move.l  (20,a5),d0
-                    add.l   d0,d0
-                    move.l  d0,(20,a5)
-                    move.w  (28,a5),d0
-                    move.w  (26,a5),d1
-                    cmp.w   #1,d0
-                    bne     .no_repeat
-                    clr.w   d0
-                    clr.w   d1
-.no_repeat:
-                    move.w  (24,a5),(SMP_VOL,a5)
-                    cmp.w   #64,(SMP_VOL,a5)
-                    bhi     lbC021024
-                    move.w  d1,(SMP_REP_START,a5)
-                    move.w  d0,(SMP_REP_LEN,a5)
-                    ; sample mode by default
-                    move.w  #SMP_TYPE_8_BIT,(SMP_TYPE,a5)
-                    bra     .next_sample
-.empty_sample:
-                    ; sample mode by default anyway
-                    move.w  #SMP_TYPE_8_BIT,(SMP_TYPE,a5)
-                    move.l  a5,a0
-                    bsr     lbC021032
-.next_sample:
-                    lea     (SMP_INFOS_LEN,a5),a5
-                    dbra    d7,.loop
-                    lea     (OKT_song_length,pc),a5
-                    move.l  a5,a0
-                    move.l  #130,d0
-                    jsr     (read_from_file)
-                    bmi     lbC02102A
-                    move.w  (a5),d0
-                    lsr.w   #8,d0
-                    move.w  d0,(a5)+
-                    beq     lbC021024
-                    add.w   d0,a5
-                    move.w  #$80,d1
-                    sub.w   d0,d1
-                    bmi     lbC021024
-                    bra     lbC020FCE
-lbC020FCC:
-                    sf      (a5)+
-lbC020FCE:
-                    dbra    d1,lbC020FCC
-                    move.w  #6,(OKT_default_speed)
-                    tst.b   (st_load_default_samples_type)
-                    beq     lbC020FF2
-                    lea     (OKT_patterns,pc),a0
-                    moveq   #128-1,d0
-lbC020FE8:
-                    move.b  (a0),d1
-                    lsr.b   #1,d1
-                    move.b  d1,(a0)+
-                    dbra    d0,lbC020FE8
-lbC020FF2:
-                    lea     (OKT_patterns,pc),a0
-                    moveq   #0,d1
-                    moveq   #128-1,d0
-lbC020FFA:
-                    cmp.b   (a0)+,d1
-                    bgt     lbC021002
-                    move.b  (-1,a0),d1
-lbC021002:
-                    dbra    d0,lbC020FFA
-                    addq.w  #1,d1
-                    move.w  d1,(lbW01B730)
-;                    tst.b   (st_load_samples_mode)
-;                    beq     lbC021020
-                    moveq   #4,d0
-                    jsr     (move_in_file)
-                    bmi     lbC02102A
-lbC021020:
-                    moveq   #0,d0
-                    rts
-lbC021024:
-                    bsr     error_st_struct_error
-                    bra     lbC02102E
-lbC02102A:
-                    bsr     display_dos_error
-lbC02102E:
-                    moveq   #ERROR,d0
-                    rts
-lbC021032:
-                    moveq   #SMP_INFOS_LEN-1,d0
-lbC021034:
-                    sf      (a0)+
-                    dbra    d0,lbC021034
-                    rts
-lbC02103C:
-                    move.w  (default_pattern_length),-(a7)
-                    move.l  (current_default_patterns_size),-(a7)
-lbC021048:
-                    move.w  (lbW01B730),d7
-                    cmp.w   (number_of_patterns),d7
-                    beq     lbC0210A4
-                    move.w  #$40,(default_pattern_length)
-                    move.w  (default_pattern_length),d0
-                    mulu.w  (current_channels_size),d0
-                    move.l  d0,(current_default_patterns_size)
-                    bsr     create_new_empty_pattern
-                    bmi     lbC0210BE
-                    move.w  (number_of_patterns),d0
-                    subq.w  #1,d0
-                    bsr     get_given_pattern_address_and_rows
-                    mulu.w  (current_channels_size),d0
-                    move.l  a0,(lbL01B2A8)
-                    jsr     (read_from_file)
-                    bmi     lbC0210BA
-                    move.l  (lbL01B2A8),a0
-                    bsr     lbC021144
-                    bmi     lbC0210B4
-                    bra     lbC021048
-lbC0210A4:
-                    move.l  (a7)+,(current_default_patterns_size)
-                    move.w  (a7)+,(default_pattern_length)
-                    moveq   #0,d0
-                    rts
-lbC0210B4:
-                    bsr     error_st_struct_error
-                    bra     lbC0210BE
-lbC0210BA:
-                    bsr     display_dos_error
-lbC0210BE:
-                    move.l  (a7)+,(current_default_patterns_size)
-                    move.w  (a7)+,(default_pattern_length)
-                    moveq   #ERROR,d0
-                    rts
-lbC0210CE:
-                    lea     (OKT_samples_infos),a5
-                    moveq   #0,d7
-lbC0210D6:
-                    move.l  (SMP_LEN,a5),d0
-                    beq     lbC02111E
-                    move.l  d0,(length_of_sample_to_load)
-                    move.w  d7,(current_sample_index)
-                    bsr     create_new_empty_sample
-                    bmi     lbC02113C
-                    bsr     get_current_sample_ptr_address
-                    move.l  (a0),a0
-                    move.l  a0,(address_of_sample_to_load)
-                    move.l  (length_of_sample_to_load),d0
-                    jsr     (read_from_file)
-                    bmi     lbC021138
-                    ; sample mode
-;                    cmp.w   #1,(SMP_TYPE,a5)
-;                    beq     lbC02111E
-;                    move.l  (address_of_sample_to_load,pc),a0
-;                    move.l  (length_of_sample_to_load),d0
-;                    bsr     lbC021F62
-lbC02111E:
-                    lea     (SMP_INFOS_LEN,a5),a5
-                    addq.w  #1,d7
-                    cmp.w   #SMPS_NUMBER,d7
-                    bne     lbC0210D6
-                    clr.w   (current_sample_index)
-                    bsr     display_main_menu
-                    moveq   #OK,d0
-                    rts
-lbC021138:
-                    bsr     display_dos_error
-lbC02113C:
-                    moveq   #ERROR,d0
-                    rts
-address_of_sample_to_load:
-                    dc.l    0
-lbC021144:
-                    movem.l d2/d3/a2-a5,-(a7)
-                    move.l  a0,a3
-                    move.w  #256,d3
-                    move.l  a0,a1
-                    tst.b   (st_load_default_samples_type)
-                    beq     lbC021160
-                    add.w   d3,d3
-                    lea     (lbL01A146),a1
-lbC021160:
-                    subq.w  #1,d3
-lbC021162:
-                    bsr     lbC0211B0
-                    addq.w  #4,a0
-                    addq.w  #4,a1
-                    dbra    d3,lbC021162
-                    tst.b   (st_load_default_samples_type)
-                    beq     lbC0211A4
-                    lea     (lbL01A146),a0
-                    lea     (1024,a0),a5
-                    move.l  a3,a1
-                    lea     (16,a3),a4
-                    moveq   #64-1,d0
-lbC021188:
-                    move.l  (a0)+,(a1)+
-                    move.l  (a0)+,(a1)+
-                    move.l  (a0)+,(a1)+
-                    move.l  (a0)+,(a1)+
-                    move.l  (a5)+,(a4)+
-                    move.l  (a5)+,(a4)+
-                    move.l  (a5)+,(a4)+
-                    move.l  (a5)+,(a4)+
-                    lea     (16,a1),a1
-                    lea     (16,a4),a4
-                    dbra    d0,lbC021188
-lbC0211A4:
-                    moveq   #OK,d0
-                    bra     lbC0211AA
-lbC0211A8:
-                    moveq   #ERROR,d0
-lbC0211AA:
-                    movem.l (a7)+,d2/d3/a2-a5
-                    rts
-lbC0211B0:
-                    moveq   #0,d1
-                    move.w  (a0),d0
-                    move.w  d0,d2
-                    ; sample hi-nibble
-                    lsr.w   #8,d2
-                    and.w   #$10,d2
-                    and.w   #$EFFF,d0
-                    beq     .no_period
-                    lea     (OKT_periods_table,pc),a2
-.search_period:
-                    addq.w  #1,d1
-                    tst.w   (a2)
-                    beq     lbC0211A8
-                    cmp.w   (a2)+,d0
-                    bne     .search_period
-.no_period:
-                    ; note
-                    move.b  d1,(a1)
-                    move.b  (2,a0),d0
-                    ; sample low-nibble
-                    and.b   #$F0,d0
-                    lsr.b   #4,d0
-                    or.b    d2,d0
-                    ; store it
-                    move.b  d0,(1,a1)
-                    move.b  (2,a0),d0
-                    ; fx
-                    and.w   #$F,d0
-                    add.b   d0,d0
-                    moveq   #0,d1
-                    move.b  .effect_trans_table(pc,d0.w),d1
-                    move.b  d1,(2,a1)
-                    ; fx data
-                    move.b  .effect_trans_table+1(pc,d0.w),d1
-                    moveq   #0,d0
-                    tst.b   d1
-                    beq     .store
-                    bpl     .cap_value
-                    move.b  (3,a0),d0
-                    cmp.b   #-2,d1
-                    bne     .arp
-                    tst.b   d0
-                    bne     .arp
-                    sf.b    (2,a1)
-.arp:
-                    cmp.b   #-3,d1
-                    beq     .store
-                    cmp.b   #-1,d1
-                    bne     .store
-                    ; volume fade
-                    move.b  d0,d1
-                    and.w   #$f,d1
-                    beq     .no_fade_down
-                    add.b   #$40,d1
-                    move.b  d1,d0
-                    bra     .store
-.no_fade_down:
-                    and.w   #$f0,d0
-                    lsr.w   #4,d0
-                    add.b   #$50,d0
-                    bra     .store
-.cap_value:
-                    moveq   #0,d0
-                    move.b  (3,a0),d0
-                    cmp.w   d1,d0
-                    blt     .store
-                    move.b  d1,d0
-.store:
-                    move.b  d0,(3,a1)
-                    rts
-.effect_trans_table:
-                    dc.b    $A,-2         ; 0:arpeggio
-                    dc.b    $1,-3         ; 1:port up
-                    dc.b    $2,-3         ; 2:port down
-                    dc.b    $0,0          ; 3:portamento
-                    dc.b    $0,0          ; 4:vibrato
-                    dc.b    $0,0          ; 5:vibrato+volfade
-                    dc.b    $0,0          ; 6:portamento+volfade
-                    dc.b    $0,0          ; 7:tremolo
-                    dc.b    $0,0          ; 8:unused
-                    dc.b    $0,0          ; 9:sample offset
-                    dc.b    $1F,-1        ; A:volume fade
-                    dc.b    $19,-3        ; B:pos jump
-                    dc.b    $1F,$40       ; C:volume
-                    dc.b    0,0           ; D:pattern break
-                    dc.b    0,0           ; E:extra
-                    dc.b    $1C,$1F       ; F:set speed
-
-; ===========================================================================
 read_patterns_from_okta_song_file:
                     move.w  (default_pattern_length),-(a7)
                     move.l  (current_default_patterns_size),-(a7)
 .loop:
-                    move.w  (lbW01B730),d7
+                    move.w  (max_number_of_positions),d7
                     cmp.w   (number_of_patterns),d7
                     beq     .done
                     lea     (song_chunk_header_loaded_data),a0
@@ -4987,7 +4644,7 @@ read_patterns_from_okta_song_file:
                     moveq   #OK,d0
                     rts
 .struct_error:
-                    bsr     error_ok_struct_error
+                    bsr     error_okt_struct_error
                     bra     .memory_error
 .read_error:
                     bsr     display_dos_error
@@ -5003,6 +4660,7 @@ read_samples_from_okta_song_file:
                     moveq   #0,d7
 .loop:
                     move.w  d7,(current_sample_index)
+                    ; refresh the top bar while loading
                     movem.l d7/a5,-(a7)
                     bsr     display_main_menu
                     movem.l (a7)+,d7/a5
@@ -5021,8 +4679,7 @@ read_samples_from_okta_song_file:
                     ; compare chunk length with header length
                     move.l  (length_of_sample_to_load),d0
                     cmp.l   (a0),d0
-                    blt     .struct_error
-                    
+                    blt     .struct_error                    
                     move.l  (a0),(length_of_sample_to_load)
                     bsr     get_current_sample_ptr_address
                     ; address to load to
@@ -5051,14 +4708,14 @@ read_samples_from_okta_song_file:
 .no_patch:
                     lea     (SMP_INFOS_LEN,a5),a5
                     addq.w  #1,d7
-                    cmp.w   #SMPS_NUMBER,d7
+                    cmp.w   #MAX_SAMPLES,d7
                     bne     .loop
                     clr.w   (current_sample_index)
                     bsr     display_main_menu
                     moveq   #OK,d0
                     rts
 .struct_error:
-                    bsr     error_ok_struct_error
+                    bsr     error_okt_struct_error
                     bra     .memory_error
 .read_error:
                     bsr     display_dos_error
@@ -5083,7 +4740,7 @@ patch_older_patterns:
                     moveq   #0,d2
 .main_loop:
                     ; get corresponding pattern
-                    lea     (OKT_patterns),a0
+                    lea     (OKT_positions),a0
                     moveq   #0,d0
                     move.b  (a0,d2.w),d0
                     bsr     get_given_pattern_address_and_rows
@@ -5169,6 +4826,410 @@ channels_kept_volumes:
                     dcb.b   8,0
 
 ; ===========================================================================
+load_mod:
+                    jsr     (backup_prefs)
+                    bsr     free_all_samples_and_song
+                    bsr     free_song
+                    bsr     load_mod_header
+                    bmi     .load_error
+                    bsr     get_mod_channels_config
+                    lea     (OKT_channels_modes),a1
+                    move.l  (a0)+,(a1)+
+                    move.l  (a0)+,(a1)+
+                    move.w  (a0),mod_channels
+                    jsr     (set_prefs_without_pattern_creation)
+                    bsr     load_mod_patterns
+                    bmi     .load_error
+                    bsr     load_mod_samples
+                    bmi     .load_error
+                    jsr     (close_file)
+                    bsr     change_work_sample_size
+                    bra     display_main_menu
+.load_error:
+                    jsr     (close_file)
+                    bsr     free_all_samples_and_song
+                    bsr     create_new_empty_pattern
+                    bmi     exit
+                    rts
+
+; ===========================================================================
+load_mod_header:
+                    ; skip rest of the mod title
+                    moveq   #12,d0
+                    jsr     (move_in_file)
+                    bmi     .load_error
+                    lea     (OKT_samples_infos),a5
+                    moveq   #31-1,d7
+.loop:
+                    lea     mod_sample_infos,a0
+                    ; read mod sample info
+                    moveq   #30,d0
+                    jsr     (read_from_file)
+                    bmi     .load_error
+                    lea     mod_sample_infos,a0
+                    ; copy sample name
+                    move.l  (a0)+,(SMP_NAME,a5)
+                    move.l  (a0)+,(SMP_NAME+4,a5)
+                    move.l  (a0)+,(SMP_NAME+8,a5)
+                    move.l  (a0)+,(SMP_NAME+12,a5)
+                    move.l  (a0)+,(SMP_NAME+16,a5)
+                    ; skip the rest
+                    addq.l  #2,a0
+                    moveq   #0,d0
+                    move.w  (a0)+,d0
+                    beq     .empty_sample
+                    add.l   d0,d0
+                    move.l  d0,(SMP_LEN,a5)
+                    move.w  (a0)+,d0
+                    and.w   #$ff,d0
+                    cmp.w   #64,d0
+                    blt     .max_vol
+                    moveq   #64,d0
+.max_vol:
+                    move.w  d0,(SMP_VOL,a5)
+                    move.w  (a0)+,d1
+                    move.w  (a0)+,d0
+                    cmp.w   #1,d0
+                    bgt     .no_repeat
+                    clr.w   d0
+                    clr.w   d1
+.no_repeat:
+                    move.w  d1,(SMP_REP_START,a5)
+                    move.w  d0,(SMP_REP_LEN,a5)
+                    bra     .next_sample
+.empty_sample:
+                    lea     (SMP_LEN,a5),a1
+                    moveq   #(SMP_INFOS_LEN-SMP_LEN)-1,d0
+.loop_clear_sample_infos:
+                    sf      (a1)+
+                    dbra    d0,.loop_clear_sample_infos
+.next_sample:
+                    ; 8 bit sample by default
+                    move.w  #SMP_TYPE_8_BIT,(SMP_TYPE,a5)
+                    lea     (SMP_INFOS_LEN,a5),a5
+                    dbra    d7,.loop
+                    ; read the whole song infos
+                    lea     mod_song_infos,a0
+                    move.l  #130,d0
+                    jsr     (read_from_file)
+                    bmi     .load_error
+                    lea     mod_id,a0
+                    moveq   #4,d0
+                    jsr     (read_from_file)
+                    bmi     .load_error
+                    bsr     get_mod_channels_config
+                    bmi     .an_error
+                    lea     mod_song_infos,a0
+                    lea     (OKT_song_length,pc),a5
+                    ; number of positions
+                    moveq   #0,d0
+                    move.b  (a0)+,d0
+                    beq     .struct_error
+                    move.w  d0,(a5)
+                    ; skip restart position
+                    addq.l  #1,a0
+                    ; copy the positions
+                    lea     (OKT_positions,pc),a5
+                    moveq   #128-1,d1
+.clear_positions:
+                    sf.b    (a5)+
+                    dbra    d1,.clear_positions
+                    lea     (OKT_positions,pc),a5
+                    subq.w  #1,d0
+.copy_positions:
+                    moveq   #0,d1
+                    move.b  (a0)+,d1
+                    cmp.w   #63,d1
+                    blt     .max_pattern
+                    move.w  #63,d1
+.max_pattern:
+                    move.b  d1,(a5)+
+                    dbra    d0,.copy_positions
+                    move.w  #6,(OKT_default_speed)
+                    lea     (OKT_positions,pc),a0
+                    moveq   #0,d1
+                    moveq   #128-1,d0
+.loop_count_positions:
+                    cmp.b   (a0)+,d1
+                    bgt     .higher_position
+                    move.b  (-1,a0),d1
+.higher_position:
+                    dbra    d0,.loop_count_positions
+                    addq.w  #1,d1
+                    move.w  d1,(max_number_of_positions)
+                    moveq   #0,d0
+                    rts
+.struct_error:
+                    bsr     error_mod_struct_error
+.an_error:
+                    moveq   #ERROR,d0
+                    rts
+.load_error:
+                    bsr     display_dos_error
+                    moveq   #ERROR,d0
+                    rts
+
+; ===========================================================================
+; return channels config in a0 or ERROR
+get_mod_channels_config:
+                    lea     mod_ids,a0
+                    move.w  #(emod_ids-mod_ids)/8-1,d0
+.search_loop:
+                    move.l  (a0)+,d1
+                    cmp.l   mod_id,d1
+                    beq     .found_id
+                    lea     (10,a0),a0
+                    dbf     d0,.search_loop
+                    bsr     error_unknown_mod_error
+                    moveq   #ERROR,d0
+                    rts
+.found_id:
+                    rts
+                    ; signature.l
+                    ; OKT channels config.w,number of channels to convert.w
+mod_ids:
+                    dc.b    "M.K."
+                    dc.w    0,0,0,0,4
+                    dc.b    "M&K!"
+                    dc.w    0,0,0,0,4
+                    dc.b    "FLT4"
+                    dc.w    0,0,0,0,4
+                    ; FastTracker I stuff
+                    ; (and maybe some other trackers)
+                    dc.b    "4CHN"
+                    dc.w    0,0,0,0,4
+                    dc.b    "5CHN"
+                    dc.w    1,0,0,0,5
+                    dc.b    "6CHN"
+                    dc.w    1,1,0,0,6
+                    dc.b    "7CHN"
+                    dc.w    1,1,1,0,7
+                    dc.b    "8CHN"
+                    dc.w    1,1,1,1,8
+emod_ids:
+
+; ===========================================================================
+load_mod_patterns:
+                    move.w  (default_pattern_length),-(a7)
+                    move.l  (current_default_patterns_size),-(a7)
+.loop:
+                    move.w  (max_number_of_positions),d7
+                    cmp.w   (number_of_patterns),d7
+                    beq     .done
+                    move.w  #64,(default_pattern_length)
+                    move.w  (default_pattern_length),d0
+                    mulu.w  (current_channels_size),d0
+                    move.l  d0,(current_default_patterns_size)
+                    bsr     create_new_empty_pattern
+                    bmi     .exit_with_error
+                    move.w  (number_of_patterns),d0
+                    subq.w  #1,d0
+                    bsr     get_given_pattern_address_and_rows
+                    mulu.w  (current_channels_size),d0
+                    move.l  a0,(mod_pattern_ptr)
+                    jsr     (read_from_file)
+                    bmi     .read_error
+                    move.l  (mod_pattern_ptr),a0
+                    bsr     convert_mod_pattern
+                    bra     .loop
+.done:
+                    move.l  (a7)+,(current_default_patterns_size)
+                    move.w  (a7)+,(default_pattern_length)
+                    moveq   #OK,d0
+                    rts
+.struct_error:
+                    bsr     error_mod_struct_error
+                    bra     .exit_with_error
+.read_error:
+                    bsr     display_dos_error
+.exit_with_error:
+                    move.l  (a7)+,(current_default_patterns_size)
+                    move.w  (a7)+,(default_pattern_length)
+                    moveq   #ERROR,d0
+                    rts
+mod_channels:
+                    dc.w    0
+
+; ===========================================================================
+load_mod_samples:
+                    lea     (OKT_samples_infos),a5
+                    moveq   #0,d7
+.loop:
+                    move.l  (SMP_LEN,a5),d0
+                    beq     .empty
+                    move.l  d0,(length_of_sample_to_load)
+                    move.w  d7,(current_sample_index)
+                    bsr     create_new_empty_sample
+                    bmi     .memory_error
+                    bsr     get_current_sample_ptr_address
+                    move.l  (a0),a0
+                    move.l  a0,(address_of_sample_to_load)
+                    move.l  (length_of_sample_to_load),d0
+                    jsr     (read_from_file)
+                    bmi     .read_error
+.empty:
+                    lea     (SMP_INFOS_LEN,a5),a5
+                    addq.w  #1,d7
+                    cmp.w   #MAX_SAMPLES,d7
+                    bne     .loop
+                    clr.w   (current_sample_index)
+                    bsr     display_main_menu
+                    moveq   #OK,d0
+                    rts
+.read_error:
+                    bsr     display_dos_error
+.memory_error:
+                    moveq   #ERROR,d0
+                    rts
+address_of_sample_to_load:
+                    dc.l    0
+
+; ===========================================================================
+convert_mod_pattern:
+                    movem.l d2/d3/a2-a5,-(a7)
+                    move.l  a0,a1
+                    move.w  (mod_channels,pc),d3
+                    ; * 64
+                    lsl.w   #6,d3
+                    subq.w  #1,d3
+.loop:
+                    bsr     convert_mod_channel_data
+                    addq.w  #4,a0
+                    addq.w  #4,a1
+                    dbra    d3,.loop
+                    movem.l (a7)+,d2/d3/a2-a5
+                    rts
+
+; ===========================================================================
+convert_mod_channel_data:
+                    moveq   #0,d1
+                    move.w  (a0),d0
+                    move.w  d0,d2
+                    ; sample hi-nibble
+                    lsr.w   #8,d2
+                    and.w   #$10,d2
+                    and.w   #$EFFF,d0
+                    beq     .no_period
+                    lea     (OKT_periods_table,pc),a2
+.search_period:
+                    addq.w  #1,d1
+                    tst.w   (a2)
+                    beq     .error_period
+                    cmp.w   (a2)+,d0
+                    bne     .search_period
+                    bra     .no_period
+.error_period:
+                    moveq   #0,d1
+.no_period:
+                    ; store note
+                    move.b  d1,(a1)
+                    move.b  (2,a0),d0
+                    ; sample low-nibble
+                    and.b   #$F0,d0
+                    lsr.b   #4,d0
+                    or.b    d2,d0
+                    bne     .reduce
+                    move.b  #36,d0
+.reduce:
+                    subq.b  #1,d0
+                    ; store sample number
+                    move.b  d0,(1,a1)
+                    move.b  (2,a0),d0
+                    ; fx
+                    and.w   #$F,d0
+                    add.b   d0,d0
+                    moveq   #0,d1
+                    ; translated fx number
+                    move.b  .effect_trans_table(pc,d0.w),(2,a1)
+                    ; fx data
+                    move.b  .effect_trans_table+1(pc,d0.w),d1
+                    ext.w   d1
+                    ; save the value
+                    move.w  d1,d2
+                    bmi     .no_bound
+                    ; bound function = 0
+                    moveq   #0,d1
+.no_bound:          
+                    neg.w   d1
+                    asl.w   #1,d1
+                    moveq   #0,d0
+                    ; original data value
+                    move.b  (3,a0),d0
+                    move.w  .effect_trans_functions(pc,d1.w),d1
+                    jsr     .effect_trans_functions(pc,d1.w)
+                    move.b  d0,(3,a1)
+                    rts
+                    ; Effect number translation.b
+                    ; Data command.b:
+                    ;   -1 = store 0 value
+                    ;   -2 = transform volume fading effect (A)
+                    ;   -3 = check if arp (0) effect data is 0
+                    ;   -4 = store effect data "as-is"
+                    ;   xx = max value data to store
+.effect_trans_table:
+                    dc.b    $C,-3         ; 0:arpeggio (to arp 3)
+                    dc.b    $1,-4         ; 1:port up
+                    dc.b    $2,-4         ; 2:port down
+                    dc.b    $0,-1         ; 3:portamento
+                    dc.b    $0,-1         ; 4:vibrato
+                    dc.b    $0,-1         ; 5:vibrato+volfade
+                    dc.b    $0,-1         ; 6:portamento+volfade
+                    dc.b    $0,-1         ; 7:tremolo
+                    dc.b    $0,-1         ; 8:unused
+                    dc.b    $0,-1         ; 9:sample offset
+                    dc.b    $1F,-2        ; A:volume fade
+                    dc.b    $19,-4        ; B:pos jump
+                    dc.b    $1F,64        ; C:volume
+                    dc.b    0,-1          ; D:pattern break
+                    dc.b    0,-1          ; E:extra
+                    dc.b    $1C,$1F       ; F:set speed
+
+.effect_trans_functions:
+                    dc.w    .eff_bound-.effect_trans_functions
+                    dc.w    .eff_zero-.effect_trans_functions
+                    dc.w    .eff_fade-.effect_trans_functions
+                    dc.w    .eff_nullify-.effect_trans_functions
+                    dc.w    .store-.effect_trans_functions
+.eff_bound:
+                    cmp.w   d2,d0
+                    blt     .max
+                    move.b  d2,d0
+.max:
+                    rts
+.eff_zero:
+                    moveq   #0,d0
+                    rts
+.eff_fade:
+                    move.b  d0,d1
+                    and.w   #$f,d1
+                    beq     .no_fade_down
+                    add.b   #$40,d1
+                    move.b  d1,d0
+                    rts
+.no_fade_down:
+                    and.w   #$f0,d0
+                    beq     .no_fade_up
+                    lsr.w   #4,d0
+                    add.b   #$50,d0
+                    rts
+.no_fade_up:
+                    ; discard effect
+                    sf.b    (2,a1)
+                    moveq   #0,d0
+                    rts
+
+.eff_nullify:
+                    ; data
+                    tst.b   d0
+                    bne     .no_fx
+                    ; arp 0+0 = no effect
+                    sf.b    (2,a1)
+.no_fx:
+                    rts
+.store:
+                    rts
+
+; ===========================================================================
 fill_chunks_default_values_from_struct:
                     move.l  a0,a5
 .loop_chunks:
@@ -5250,9 +5311,9 @@ CMOD_MSG:
 SAMP_MSG:
                     CHUNK   'SAMP',1152,OKT_samples_infos,0
                     CHUNK   'SPEE',2,OKT_default_speed,6
-                    CHUNK   'SLEN',2,lbW01B730,1
+                    CHUNK   'SLEN',2,max_number_of_positions,1
                     CHUNK   'PLEN',2,OKT_song_length,1
-                    CHUNK   'PATT',128,OKT_patterns,0
+                    CHUNK   'PATT',128,OKT_positions,0
                     CHUNK   0
 
 ; ===========================================================================
@@ -5324,7 +5385,7 @@ CMOD_MSG0:
                     CHUNK   'SPEE',2,OKT_default_speed
                     CHUNK   'SLEN',2,number_of_patterns
                     CHUNK   'PLEN',2,OKT_song_length
-                    CHUNK   'PATT',128,OKT_patterns
+                    CHUNK   'PATT',128,OKT_positions
                     CHUNK   0
 
 ; ===========================================================================
@@ -5362,7 +5423,7 @@ lbC0215A8:
 lbC0215AC:
                     lea     (OKT_samples_infos),a4
                     lea     (OKT_samples_table),a5
-                    moveq   #SMPS_NUMBER-1,d7
+                    moveq   #MAX_SAMPLES-1,d7
 lbC0215BA:
                     move.l  (a5),d0
                     beq     lbC021606
@@ -5421,7 +5482,7 @@ clear_all_samples:
                     bra     error_what_samples
 .search_samples:
                     lea     (OKT_samples_table),a0
-                    moveq   #SMPS_NUMBER-1,d0
+                    moveq   #MAX_SAMPLES-1,d0
 .loop:
                     tst.l   (a0)+
                     bne     .found_sample
@@ -5440,7 +5501,7 @@ do_free_all_samples_and_song:
 .loop:
                     bsr     do_free_sample_and_infos
                     addq.w  #1,(current_sample_index)
-                    cmp.w   #SMPS_NUMBER,(current_sample_index)
+                    cmp.w   #MAX_SAMPLES,(current_sample_index)
                     bne     .loop
                     clr.w   (current_sample_index)
                     bra     display_main_menu
@@ -6100,11 +6161,12 @@ set_current_sample_number:
 ; ===========================================================================
 inc_sample_number:
                     lea     (current_sample_index,pc),a0
-                    cmp.w   #SMPS_NUMBER-1,(a0)
-                    beq     error_no_more_samples
+                    cmp.w   #MAX_SAMPLES-1,(a0)
+                    beq     .max_samples
                     addq.w  #1,(a0)
                     bsr     change_work_sample_size
                     bsr     display_main_menu
+.max_samples:
                     moveq   #0,d0
                     rts
 current_sample_index:
@@ -6114,10 +6176,11 @@ current_sample_index:
 dec_sample_number:
                     lea     (current_sample_index,pc),a0
                     tst.w   (a0)
-                    beq     error_no_more_samples
+                    beq     .min_samples
                     subq.w  #1,(a0)
                     bsr     change_work_sample_size
                     bsr     display_main_menu
+.min_samples:
                     moveq   #0,d0
                     rts
 
@@ -6208,6 +6271,7 @@ dec_sample_volume:
 ;                    bsr     lbC021F62
 ;                    jsr     (lbC028324)
 ;                    bra     display_main_menu
+; a 8 to 4 bit conversion
 ;lbC021F62:
 ;                    subq.l  #1,d0
 ;                    bmi     lbC021F6E
@@ -6300,7 +6364,7 @@ dec_song_position:
 
 ; ===========================================================================
 inc_pattern:
-                    lea     (OKT_patterns),a0
+                    lea     (OKT_positions),a0
                     move.w  (current_song_position),d0
                     move.w  (number_of_patterns),d1
                     subq.w  #1,d1
@@ -6311,7 +6375,7 @@ inc_pattern:
 
 ; ===========================================================================
 dec_pattern:
-                    lea     (OKT_patterns),a0
+                    lea     (OKT_positions),a0
                     move.w  (current_song_position),d0
                     tst.b   (a0,d0.w)
                     beq     error_no_more_patterns
@@ -6324,7 +6388,7 @@ dec_song_length:
                     beq     error_no_more_positions
                     subq.w  #1,(OKT_song_length)
                     move.w  (OKT_song_length),d0
-                    lea     (OKT_patterns),a0
+                    lea     (OKT_positions),a0
                     sf      (a0,d0.w)
                     cmp.w   (current_song_position),d0
                     bne     display_main_menu
@@ -6342,9 +6406,9 @@ inc_song_length:
 insert_song_position:
                     cmp.w   #128,(OKT_song_length)
                     beq     error_no_more_positions
-                    lea     (OKT_patterns,pc),a0
+                    lea     (OKT_positions,pc),a0
                     add.w   (current_song_position),a0
-                    lea     (OKT_patterns+127,pc),a1
+                    lea     (OKT_positions+127,pc),a1
 .shift_loop:
                     cmpa.l  a0,a1
                     beq     .done_shift
@@ -6358,9 +6422,9 @@ insert_song_position:
 delete_song_position:
                     cmp.w   #1,(OKT_song_length)
                     beq     error_no_more_positions
-                    lea     (OKT_patterns,pc),a0
+                    lea     (OKT_positions,pc),a0
                     add.w   (current_song_position),a0
-                    lea     (OKT_patterns+127,pc),a1
+                    lea     (OKT_positions+127,pc),a1
 .shift_loop:
                     cmpa.l  a1,a0
                     beq     .done_shift
@@ -6374,7 +6438,7 @@ delete_song_position:
 dec_patterns:
                     move.w  (number_of_patterns),d0
                     subq.w  #1,d0
-                    lea     (OKT_patterns,pc),a0
+                    lea     (OKT_positions,pc),a0
                     moveq   #128-1,d1
 .search_pattern:
                     cmp.b   (a0)+,d0
@@ -7098,7 +7162,7 @@ dec_current_sample_number:
 ; ===========================================================================
 inc_current_sample_number:
                     lea     (current_sample_index,pc),a0
-                    cmp.w   #SMPS_NUMBER-1,(a0)
+                    cmp.w   #MAX_SAMPLES-1,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     draw_current_sample_infos
@@ -7339,7 +7403,7 @@ OKT_init_variables:
                     bne     .OKT_only_one_int_bit
                     or.w    d2,(OKT_audio_int_single_bit)
 .OKT_only_one_int_bit:
-                    or.w    d2,(OKT_audio_int_bit)
+                    or.w    d3,(OKT_audio_int_bit)
 .OKT_not_doubled:
                     add.w   d2,d2
                     add.w   d3,d3
@@ -7466,7 +7530,7 @@ OKT_get_current_pattern:
                     move.w  (OKT_song_pos,pc),d0
                     tst.b   (pattern_play_flag)
                     beq     .OKT_play_pattern
-                    lea     (OKT_patterns),a0
+                    lea     (OKT_positions),a0
                     move.b  (a0,d0.w),d0
 .OKT_play_pattern:
                     bra     OKT_get_pattern_address_and_length
@@ -7476,7 +7540,7 @@ OKT_set_current_pattern:
                     tst.b   (pattern_play_flag)
                     beq     .OKT_play_pattern
                     or.w    #(1<<VIS_DRAW_POS),refresh_visual
-                    lea     (OKT_patterns),a0
+                    lea     (OKT_positions),a0
                     move.w  (OKT_song_pos,pc),d0
                     move.b  (a0,d0.w),d0
                     bra     .OKT_play_song
@@ -7490,7 +7554,7 @@ OKT_set_current_pattern:
 
 ; ===========================================================================
 OKT_get_pattern_address_and_length:
-                    lea     (OKT_patterns_list),a0
+                    lea     (OKT_positions_list),a0
                     add.w   d0,d0
                     add.w   d0,d0
                     move.l  (a0,d0.w),a0
@@ -7499,7 +7563,6 @@ OKT_get_pattern_address_and_length:
 
 ; ===========================================================================
 OKT_set_hw_regs:
-                    bsr     OKT_turn_dma_on
                     move.w  (OKT_action_cycle,pc),d0
                     bne     OKT_no_new_row
 lbC0231DC:
@@ -7511,8 +7574,10 @@ lbC0231DC:
                     bsr     OKT_fill_double_channels
                 ENDC
                     bsr     OKT_fill_single_channels
+                    OKT_SET_AUDIO_DMA d4
                     or.w    d4,(OKT_dmacon)
 OKT_no_new_row:
+                    bsr     OKT_turn_dma_on
                 IFND OKT_AUDIO_VAMPIRE
                     cmp.b   #MIDI_OUT,(midi_mode)
                     beq     .OKT_midi_out
@@ -7542,6 +7607,7 @@ OKT_no_new_row:
                     tst.b   (CHAN_TYPE,a3)
                     bne     .OKT_skip_double_channel
                 ENDC
+                    OKT_SET_AUDIO_PER (CHAN_PERIOD_S,a3),a1
                     moveq   #0,d0
                     move.b  (OKT_channels_indexes-OKT_channels_volumes,a0,d7.w),d3
                     move.b  (a0,d3.w),d0
@@ -7598,9 +7664,9 @@ OKT_turn_dma_on:
 .OKT_set_channels_repeat_data:
                     btst    d1,d0
                     beq     .OKT_set_channel
-                    OKT_SET_AUDIO_ADR CHAN_SMP_REP_START-CHAN_SMP_REP_START(a1),a4
+                    OKT_SET_AUDIO_ADR (CHAN_SMP_REP_START-CHAN_SMP_REP_START,a1),a4
                     moveq   #0,d2
-                    move.w  CHAN_SMP_REP_LEN_S-CHAN_SMP_REP_START(a1),d2
+                    move.w  (CHAN_SMP_REP_LEN_S-CHAN_SMP_REP_START,a1),d2
                     OKT_SET_AUDIO_LEN d2,a4
 .OKT_set_channel:
                 IFND OKT_AUDIO_VAMPIRE
@@ -7631,14 +7697,14 @@ OKT_fill_double_channels:
                     dbra    d7,.OKT_loop
                     rts
 .OKT_fill_data:
-                    bsr     OKT_fill_double_channel_data
+                    bsr     .OKT_fill_double_channel_data
                     subq.w  #1,d7
-                    bsr     OKT_fill_double_channel_data
+                    bsr     .OKT_fill_double_channel_data
                     dbra    d7,.OKT_loop
                     rts
 
 ; ===========================================================================
-OKT_fill_double_channel_data:
+.OKT_fill_double_channel_data:
                     btst    d7,d6
                     beq     .OKT_no_data
                     moveq   #0,d3
@@ -7646,6 +7712,7 @@ OKT_fill_double_channel_data:
                     move.b  (a2),d3
                     beq     .OKT_no_data
                     subq.w  #1,d3
+                IFND OKT_AUDIO_VAMPIRE
                     ; === MIDI
                     cmp.b   #MIDI_OUT,(midi_mode)
                     bne     .OKT_no_midi_out
@@ -7673,6 +7740,7 @@ OKT_fill_double_channel_data:
                     movem.l (a7)+,d0-d4/a0/a1
                     bra     .OKT_done_midi_out
 .OKT_no_midi_out:
+                ENDC
                     ; ===
                     moveq   #0,d0
                     ; sample
@@ -7690,7 +7758,7 @@ OKT_fill_double_channel_data:
                     move.l  (SMP_LEN,a1),d0
                     ; that was a bug
                     bclr    #0,d0
-                    ; repeat at start by default
+                    ; full length by default
                     move.l  d0,(CHAN_SMP_PROC_LEN_D,a3)
                     moveq   #0,d0
                     moveq   #0,d1
@@ -7702,6 +7770,7 @@ OKT_fill_double_channel_data:
                     move.l  d0,(CHAN_SMP_REP_LEN_D,a3)
                     beq     .OKT_no_repeat
                     add.l   d1,d0
+                    ; only process start+repat length
                     move.l  d0,(CHAN_SMP_PROC_LEN_D,a3)
 .OKT_no_repeat:
                     ; repeat start address
@@ -7747,7 +7816,7 @@ OKT_fill_single_channels:
                     tst.b   (CHAN_TYPE,a3)
                     bne     .OKT_skip_double_channel
                 ENDC
-                    bsr     OKT_fill_single_channel_data
+                    bsr     .OKT_fill_single_channel_data
                     addq.w  #4,a2
                 IFND OKT_AUDIO_VAMPIRE
                     lea     (CHAN_LEN*2,a3),a3
@@ -7772,7 +7841,7 @@ OKT_fill_single_channels:
                 ENDC
 
 ; ===========================================================================
-OKT_fill_single_channel_data:
+.OKT_fill_single_channel_data:
                     btst    d7,d6
                     beq     .OKT_no_data
                     moveq   #0,d3
@@ -7825,21 +7894,16 @@ OKT_fill_single_channel_data:
                     move.l  (SMP_LEN,a1),d1
                     lsr.l   #1,d1
                     beq     .OKT_no_data
-                    OKT_SET_AUDIO_DMA d5
                     or.w    d5,d4
                     ; start sample address
                     OKT_SET_AUDIO_ADR d2,a4
-                    ; 8/16 bit
-;                    OKT_SET_AUDIO_CTRL SMP_TYPE(a1),a4
-                    ; TODO: temporary
-                    OKT_SET_AUDIO_CTRL #0,a4
+                    OKT_SET_AUDIO_CTRL (SMP_TYPE,a1),a4
                     ; note index
                     move.w  d3,(CHAN_NOTE_S,a3)
                     add.w   d3,d3
                     move.w  (a5,d3.w),d0
                     ; period
                     move.w  d0,(CHAN_PERIOD_S,a3)
-                    OKT_SET_AUDIO_PER d0,a4
                     move.l  a0,-(a7)
                     lea     (OKT_channels_volumes,pc),a0
                     moveq   #0,d0
@@ -8044,7 +8108,6 @@ OKT_port_u:
                     bge     .OKT_min
                     move.w  #$71,(CHAN_PERIOD_S,a3)
 .OKT_min:
-                    OKT_SET_AUDIO_PER CHAN_PERIOD_S(a3),a4
                     rts
 
 ; ===========================================================================
@@ -8054,7 +8117,6 @@ OKT_port_d:
                     ble     .OKT_max
                     move.w  #$358,(CHAN_PERIOD_S,a3)
 .OKT_max:
-                    OKT_SET_AUDIO_PER CHAN_PERIOD_S(a3),a4
                     rts
 
 ; ===========================================================================
@@ -8195,7 +8257,6 @@ OKT_set_arp_s:
 .OKT_max:
                     add.w   d2,d2
                     move.w  (a5,d2.w),d0
-                    OKT_SET_AUDIO_PER d0,a4
                     move.w  d0,(CHAN_PERIOD_S,a3)
                     rts
 
@@ -8513,14 +8574,14 @@ OKT_init_buffers:
                     moveq   #1,d3
 .OKT_make_volumes_table_inner:
                     move.l  d3,d0
-                    cmp.w   #127,d0
+                    cmp.w   #128,d0
                     bls     .OKT_wrap
                     sub.w   #256,d0
 .OKT_wrap:
                     muls.w  d2,d0
+                    neg.l   d0
                     asr.l   #8,d0
-                    neg.w   d0
-                    asr.b   #1,d0
+                    asr.l   #1,d0
                     move.b  d0,(a0)+
                     btst    #1,(OKT_processor,pc)
                     beq     .OKT_sel_020_table
@@ -8669,7 +8730,8 @@ OKT_init:
                     move.w	d0,(INTENA,a1)
                     move.w  (OKT_audio_int_single_bit,pc),d0
                     lsr.w   #7,d0
-                    or.w    #$820F,d0
+                    or.w    #$8200,d0
+                    or.w    (OKT_audio_int_bit,pc),d0
                     move.w  d0,(DMACON,a1)
                 ELSE
                     ; Vampire only
@@ -8677,6 +8739,12 @@ OKT_init:
                     move.w  #$7FFF,(INTREQ,a1)
                     move.w  #%111111111111,(OKT_AUDIO_DMA,a1)
                     move.w  #$FF,(ADKCON,a1)
+                    lea     (OKT_AUDIO_BASE,a1),a4
+                    moveq   #OKT_AUDIO_HW_CHANS-1,d1
+.OKT_all_ctrl_to_8bit:
+                    OKT_SET_AUDIO_CTRL #0,a4
+                    lea     (OKT_AUDIO_SIZE,a4),a4
+                    dbf     d1,.OKT_all_ctrl_to_8bit
                     move.l  (OKT_vbr,pc),a0
                     move.l  (a0),(OKT_old_irq)
                     lea     (OKT_cia_int,pc),a2
@@ -8939,7 +9007,7 @@ OKT_create_channel_waveform_data:
                     move.l  a1,-(a7)
                     ; check if the sample has been processed
                     move.l  (CHAN_SMP_PROC_LEN_D,a3),d2
-                    bgt     .OKT_sample_end
+                    bgt     .OKT_process_sample
                     ; is there a repeat ?
                     tst.l   (CHAN_SMP_REP_LEN_D,a3)
                     beq     .OKT_no_repeat
@@ -8948,42 +9016,48 @@ OKT_create_channel_waveform_data:
                     ; new length to process
                     move.l  (CHAN_SMP_REP_LEN_D,a3),d2
                     move.l  d2,(CHAN_SMP_PROC_LEN_D,a3)
-                    bra     .OKT_sample_end
+                    bra     .OKT_process_sample
 .OKT_no_repeat:
                     ; no: discard
                     clr.l   (CHAN_SMP_PROC_D,a3)
                     clr.l   (CHAN_SMP_PROC_LEN_D,a3)
                     addq.l  #4,a7
                     bra     .OKT_no_mix
-.OKT_sample_end:
+.OKT_process_sample:
+                    ; lengths of each note
                     move.l  (OKT_lengths_ptr,pc),a0
                     move.w  (CHAN_NOTE_D,a3),d0
                     add.w   d0,d0
                     add.w   d0,d0
+                    ; length
                     move.w  (a0,d0.w),d3
                     ext.l   d3
-                    ; length left to process
+                    ; will it be smaller ?
                     cmp.l   d3,d2
-                    bgt     .OKT_no_cut_code
-                    ; less left than processed in the generated code
-                    ; can process on this note
-                    add.w   d2,d2
-                    ; get byte loading offset
+                    bge     .OKT_no_cut_code
+                    ; less left than processed in the generated code can process on this note
+                    add.l   d2,d2
+                    ; get the entry point of each byte loading
                     move.l  (OKT_scaling_code_lines,pc),a4
-                    ; base
-                    add.w   2(a0,d0.w),d2
-                    move.w  (a4,d2.w),d0
-                    ; get code address
+                    ; base for this note
+                    moveq   #0,d3
+                    move.w  2(a0,d0.w),d3
+                    add.l   d3,d2
+                    moveq   #0,d0
+                    ; offset in this chunk of code for this note
+                    move.w  (a4,d2.l),d0
+                    ; get code block address for this note
                     move.w  (CHAN_NOTE_D,a3),d3
                     add.w   d3,d3
                     add.w   d3,d3
                     move.l  (OKT_code_ptr,pc),a4
                     move.l  (a4,d3.w),a4
-                    ; offset
-                    add.w   d0,a4
+                    ; offset in this chunk
+                    add.l   d0,a4
                     ; patch it
                     move.l  a4,(OKT_patched_addr)
                     move.w  (a4),(OKT_patched_instr)
+                    ; rts (replaces a move.b (a0)+,d0)
                     move.w  #$4e75,(a4)
                     btst    #1,(OKT_processor,pc)
                     beq     .OKT_no_cut_code
@@ -8992,13 +9066,17 @@ OKT_create_channel_waveform_data:
                     jsr     (_LVOCacheClearU,a6)
                     movem.l (a7)+,a0/a1/a2/a3/a5/a6
 .OKT_no_cut_code:
-                    ; source waveform
+                    ; more samples to process than code
+                    ; so perform full block
+                    ; current waveform
                     move.l  (CHAN_SMP_PROC_D,a3),a0
                     move.l  (OKT_code_ptr,pc),a4
+                    ; (d0 is used inside the code)
                     moveq   #0,d0
                     move.w  (CHAN_NOTE_D,a3),d3
                     add.w   d3,d3
                     add.w   d3,d3
+                    ; chunk of code for this note
                     move.l  (a4,d3.w),a4
                     jsr     (a4)
                     ; restore the patched code if any
@@ -9014,44 +9092,37 @@ OKT_create_channel_waveform_data:
                     jsr     (_LVOCacheClearU,a6)
                     movem.l (a7)+,a0/a1/a2/a3/a5/a6
 .OKT_no_patch:
-                    ; new source pos
+                    ; address where it started
                     move.l  (CHAN_SMP_PROC_D,a3),d0
+                    ; new address
                     move.l  a0,(CHAN_SMP_PROC_D,a3)
-                    ; length processed
+                    ; amount of bytes processed
                     sub.l   d0,a0
                     move.l  (CHAN_SMP_PROC_LEN_D,a3),d2
-                    ; length remaining to process
+                    ; length of bytes remaining to process
                     sub.l   a0,d2
                     move.l  d2,(CHAN_SMP_PROC_LEN_D,a3)
                     ; check if the mix buffer was entirely processed
                     lea     (a1),a4
+                    ; (subtract start of the buffer)
                     sub.l   (a7),a4
-                    cmp.l   #OKT_BUFFERS_LENGTH,a4
-                    bge     .OKT_processed
                     ; still some bytes to process in mixbuffer...
                     move.l  #OKT_BUFFERS_LENGTH,d1
+                    ; how many bytes left to process
                     sub.l   a4,d1
-                    ; check if there's a loop
+                    ; mixbuffer is full
+                    ble     .OKT_processed
+                    ; mixbuffer isn't full yet..
+                    ;
+                    ; check if there's a sample loop
                     tst.l   (CHAN_SMP_REP_LEN_D,a3)
+                    ; nope: fill the rest of the buffer with 0s
                     beq     .OKT_max_fill
-                    ; mixbuffer isn't full yet...
-                    cmp.l   d1,d2
-                    bgt     .OKT_rearm
-                    ; mixbuffer to process is smaller than samples left:
-                    ; set the new length to remaining mixbuffer bytes left to process
-                    move.l  d1,d2
-                    cmp.l   (CHAN_SMP_REP_LEN_D,a3),d2
-                    bge     .OKT_rearm
-                    bra     .OKT_sample_end
-.OKT_rearm:
-                    ; mixbuffer to process is bigger than samples left:
-                    ; restart...
-                    ; set to repeat start
+                    ; continue the mmixing from the repeat start
                     move.l  (CHAN_SMP_REP_START,a3),(CHAN_SMP_PROC_D,a3)
-                    ; and repeat length to process
                     move.l  (CHAN_SMP_REP_LEN_D,a3),d2
                     move.l  d2,(CHAN_SMP_PROC_LEN_D,a3)
-                    bra     .OKT_sample_end
+                    bra     .OKT_process_sample
 .OKT_max_fill:
                     ; fill the rest of the buffer with 0s
                     btst    #0,d1
@@ -9305,8 +9376,11 @@ OKT_generate_scaling_code:
                     ; small overrun correction
                     sub.w   #OKT_BUFFERS_LENGTH,d6
                     beq     .OKT_step_back
+                    ; (sub.w #1,a0)
+                    move.w  #$90fc,(a0)+
+                    move.w  d6,(a0)+
                     ; (subq.l #1,a0)
-                    move.w  #$5388,(a0)+
+                    ;move.w  #$5388,(a0)+
 .OKT_step_back:
                     move.w  (OKT_opcode_rts,pc),(a0)+
                     ; length
@@ -9894,8 +9968,6 @@ errors_text:
                     dc.b    'No More Positions!',0
                     dc.b    ' Pattern In Use ! ',0
                     dc.b    'Copy Buffer Free !',0
-                    dc.b    'No More Samples !!',0
-                    dc.b    'Only In Mode 4/B !',0
                     dc.b    '  Left One Bit !  ',0
                     dc.b    '  Block Copied !  ',0
                     dc.b    'Sample Shortened !',0
@@ -9904,15 +9976,16 @@ errors_text:
                     dc.b    '  Same Sample !!  ',0
                     dc.b    'Different Modes !!',0
                     dc.b    ' Zero Not Found ! ',0
-                    dc.b    ' Can''t Install !! ',0
+                    dc.b    " Can't Install !! ",0
                     dc.b    'Already Installed!',0
                     dc.b    '    No OkDir !    ',0
-                    dc.b    'Can''t Open Device!',0
+                    dc.b    "Can't Open Device!",0
                     dc.b    '  Verify Error !  ',0
                     dc.b    '  What Samples ?  ',0
-                    dc.b    'Can''t Convert Song',0
-                    dc.b    'OK Struct Error !!',0
-                    dc.b    'ST Struct Error !!',0
+                    dc.b    "Can't Convert Song",0
+                    dc.b    'OKT Struct Error !',0
+                    dc.b    'MOD Struct Error !',0
+                    dc.b    'Unknown MOD Format',0
                     dc.b    '   What File ??   ',0
                     dc.b    'Not a Directory !!',0
                     dc.b    'No More Entries !!',0
@@ -10022,12 +10095,6 @@ error_pattern_in_use:
 error_copy_buffer_free:
                     moveq   #ERROR_COPY_BUF_FREE,d0
                     bra     display_error
-error_no_more_samples:
-                    moveq   #ERROR_NO_MORE_SMP,d0
-                    bra     display_error
-error_only_in_mode_4_b:
-                    moveq   #ERROR_ONLY_4B_MODE,d0
-                    bra     display_error
 error_left_one_bit:
                     moveq   #ERROR_LEFT_ONE_BIT,d0
                     bra     display_error
@@ -10073,11 +10140,14 @@ error_what_samples:
 error_cant_convert_song:
                     moveq   #ERROR_CANT_CONVERT,d0
                     bra     display_error
-error_ok_struct_error:
-                    moveq   #ERROR_OK_STRUCT,d0
+error_okt_struct_error:
+                    moveq   #ERROR_OKT_STRUCT,d0
                     bra     display_error
-error_st_struct_error:
-                    moveq   #ERROR_ST_STRUCT,d0
+error_mod_struct_error:
+                    moveq   #ERROR_MOD_STRUCT,d0
+                    bra     display_error
+error_unknown_mod_error:
+                    moveq   #ERROR_UNKNOWN_MOD,d0
                     bra     display_error
 error_what_file:
                     moveq   #ERROR_WHAT_FILE,d0
@@ -10186,7 +10256,7 @@ OKT_default_speed:
                     dc.w    6
 OKT_song_length:
                     dc.w    1
-OKT_patterns:
+OKT_positions:
                     dcb.b   128,0
 caret_pos_x:
                     dc.w    0
@@ -10371,9 +10441,6 @@ draw_filled_box_with_minterms:
                     moveq   #0,d0
                     move.w  d6,d0
                     or.w    #BC0F_SRCA|BC0F_SRCC|BC0F_DEST,d0
-                ;IFD OKT_AUDIO_VAMPIRE
-                    ;or.w    #,d0
-                ;ENDC
                     swap    d0
                     bsr     own_blitter
                 ;IFD OKT_AUDIO_VAMPIRE
@@ -14275,6 +14342,8 @@ lbC0283F2:
 ;lbC028410:
                     eori.b  #$80,d0
                     eori.b  #$80,d1
+                    neg.b   d0
+                    neg.b   d1
                     swap    d4
                     lsr.w   d4,d0
                     lsr.w   d4,d1
@@ -14286,8 +14355,8 @@ lbC0283F2:
                     move.w  d4,d0
                     addq.w  #1,d4
                     move.w  d4,d2
-                    addi.w  #$60,d1
-                    addi.w  #$60,d3
+                    addi.w  #96,d1
+                    addi.w  #96,d3
                     jsr     (draw_line)
                     movem.l (a7)+,d2/d3
 lbC028446:
@@ -15612,7 +15681,7 @@ lbC029488:
                     bra     lbC02951A
 lbC029492:
                     lea     (lbW0294E6,pc),a0
-                    cmp.w   #SMPS_NUMBER,(a0)
+                    cmp.w   #MAX_SAMPLES,(a0)
                     beq     lbC0294A8
                     addq.w  #1,(a0)
                     st      (lbW029F12)
@@ -15645,7 +15714,7 @@ lbW0294E8:
                     dc.w    0
 lbC0294EA:
                     lea     (lbW02953E,pc),a0
-                    cmp.w   #SMPS_NUMBER,(a0)
+                    cmp.w   #MAX_SAMPLES,(a0)
                     beq     lbC029500
                     addq.w  #1,(a0)
                     st      (lbW029F12)
@@ -16551,7 +16620,7 @@ sample_editor_dec_note_rate:
 ; ===========================================================================
 sample_editor_inc_note_rate:
                     lea     (lbW029E10,pc),a0
-                    cmp.w   #SMPS_NUMBER,(a0)
+                    cmp.w   #MAX_SAMPLES,(a0)
                     beq     .max
                     addq.w  #1,(a0)
                     bra     sample_editor_draw_sample_infos
@@ -16639,8 +16708,6 @@ _error_what_position:
                     jmp     (error_what_position)
 _error_sample_too_long:
                     jmp     (error_sample_too_long)
-;lbC029EBE:
-;                    jmp     (error_only_in_mode_4_b)
 _error_zero_not_found:
                     jmp     (error_zero_not_found)
 
@@ -16714,7 +16781,7 @@ prefs_data:
 OKT_channels_modes:
                     dc.b    0,1,0,0,0,1,0,0
 default_pattern_length:
-                    dc.w    $40
+                    dc.w    64
 samples_load_mode:
                     dc.w    0
 samples_save_format:
@@ -16747,7 +16814,7 @@ text_font:
 etext_font:
 show_decimal_rows:
                     dc.b    -1
-st_load_default_samples_type:
+                    ; free to use
                     dc.b    0
 ; ---------
 
@@ -16928,8 +16995,7 @@ display_prefs_screen:
                     bsr     update_f_keys_row_jump_values
                     bsr     draw_font
                     bsr     draw_selected_char_grid
-                    bsr     display_patterns_rows_mode
-                    bra     display_st_load_mode
+                    bra     display_patterns_rows_mode
 
 ; ===========================================================================
 switch_patterns_rows_mode:
@@ -16947,33 +17013,6 @@ display_patterns_rows_mode:
                     dc.b    22,24,'Dec',0
 .raw_as_hexadecimal:
                     dc.b    22,24,'Hex',0
-
-; ===========================================================================
-switch_st_load_mode:
-                    not.b   (st_load_default_samples_type)
-
-; ===========================================================================
-display_st_load_mode:
-;                    lea     (.samples_15_text,pc),a0
-;                    tst.b   (st_load_samples_mode)
-;                    beq     .load_15_samples
-;                    lea     (.samples_31_text,pc),a0
-;.load_15_samples:
-;                    jsr     (draw_text_with_coords_struct)
-                    lea     (.channels_4_text,pc),a0
-                    tst.b   (st_load_default_samples_type)
-                    beq     .load_4_channels
-                    lea     (.channels_8_text,pc),a0
-.load_4_channels:
-                    jmp     (draw_text_with_coords_struct)
-.samples_15_text:
-                    dc.b    39,27,'15',0
-.samples_31_text:
-                    dc.b    39,27,'31',0
-.channels_4_text:
-                    dc.b    48,27,'4',0
-.channels_8_text:
-                    dc.b    48,27,'8',0
 
 ; ===========================================================================
 switch_channel_1_type:
@@ -18004,7 +18043,7 @@ go_set_prefs:
 .proceed:
                     lea     (prefs_data,pc),a0
                     bsr     calc_new_channels_and_patterns_size
-                    tst.l   (OKT_patterns_list)
+                    tst.l   (OKT_positions_list)
                     bne     .ok
                     ; create at least one pattern
                     jsr     (create_new_empty_pattern)
@@ -18016,10 +18055,32 @@ go_set_prefs:
                     bra     construct_caret_positions_and_channels_config
 
 ; ===========================================================================
+; use to resize the channels when loading a .mod
+set_prefs_without_pattern_creation:
+                    lea     (OKT_channels_modes,pc),a0
+                    lea     (OKT_channels_modes_backup),a1
+                    cmpm.l  (a0)+,(a1)+
+                    bne     .channels_mode_modified
+                    cmpm.l  (a0)+,(a1)+
+                    beq     .proceed
+.channels_mode_modified:
+                    lea     (OKT_channels_modes_backup),a0
+                    lea     (OKT_channels_modes,pc),a1
+                    bsr     change_patterns_types
+                    beq     .proceed
+.cancelled:
+                    bsr     restore_prefs
+.proceed:
+                    lea     (prefs_data,pc),a0
+                    bsr     calc_new_channels_and_patterns_size
+                    bsr     set_colors_palette
+                    bra     construct_caret_positions_and_channels_config
+
+; ===========================================================================
 change_patterns_types:
                     movem.l d2/d3/a2-a5,-(a7)
                     bsr     get_channels_configs
-                    lea     (OKT_patterns_list),a2
+                    lea     (OKT_positions_list),a2
                     lea     (pattern_list_backup),a3
                     moveq   #64-1,d3
 .loop:
@@ -18044,11 +18105,11 @@ change_patterns_types:
                     lea     (4,a2),a2
                     lea     (4,a3),a3
                     dbra    d3,.loop
-                    lea     (OKT_patterns_list),a0
+                    lea     (OKT_positions_list),a0
                     move.w  (old_channels_size),d0
                     bsr     free_patterns_list
                     lea     (pattern_list_backup),a0
-                    lea     (OKT_patterns_list),a1
+                    lea     (OKT_positions_list),a1
                     moveq   #64-1,d0
 .copy_new_patterns_pointers:
                     move.l  (a0),(a1)+
@@ -19375,7 +19436,7 @@ lbC02C344:
                     moveq   #2,d3
                     jsr     (draw_short_ascii_decimal_number)
                     movem.l (a7)+,d4-d7/a2-a5
-                    lea     (OKT_patterns_list),a0
+                    lea     (OKT_positions_list),a0
                     move.w  (lbB02C9E4+2,pc),d0
                     add.w   d0,d0
                     add.w   d0,d0
@@ -21246,10 +21307,7 @@ prefs_layout:
                     dc.b    CMD_TEXT,53,26,'Mirror X',0
                     dc.b    CMD_TEXT,53,27,'Mirror Y',0
                     dc.b    CMD_DRAW_BOX_OUTER,62,12,16,16
-                    dc.b    CMD_TEXT,2,27,'Load  Save  Use  Old  Cancel',0
-                    dc.b    CMD_TEXT,33,25,'ST Load Modes',0
-                    dc.b    CMD_DRAW_BOX,33,26,17,3
-                    dc.b    CMD_TEXT,34,27,'Smps:   Trks:',0
+                    dc.b    CMD_TEXT,2,28,'Load  Save  Use  Old  Cancel',0
                     dc.b    CMD_DONE
                     even
 ; shift+help
@@ -21317,13 +21375,12 @@ prefs_gadgets:
                     GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,26,8,1,mirror_char_x,0
                     GADGET  GAD_NEXT,GADGET_NO_REPEAT,53,27,8,1,mirror_char_y,0
                     GADGET  GAD_NEXT,GADGET_NO_HILITE,62,12,16,16,select_current_char,0
-                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,1,27,6,1,load_prefs,0
-                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,7,27,6,1,save_prefs,0
-                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,13,27,5,1,use_prefs,0
-                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,18,27,5,1,old_prefs,0
-                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,23,27,8,1,cancel_prefs,0
-                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,2,24,23,1,switch_patterns_rows_mode,0
-                    GADGET  GAD_DONE,GADGET_NO_REPEAT,42,27,7,1,switch_st_load_mode,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,1,28,6,1,load_prefs,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,7,28,6,1,save_prefs,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,13,28,5,1,use_prefs,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,18,28,5,1,old_prefs,0
+                    GADGET  GAD_NEXT,GADGET_NO_REPEAT,23,28,8,1,cancel_prefs,0
+                    GADGET  GAD_DONE,GADGET_NO_REPEAT,2,24,23,1,switch_patterns_rows_mode,0
 prefs_keys_list:
                     KL_HEAD KEY_MOD_NONE,prefs_keys
                     KL_HEAD KEY_MOD_SHIFT,prefs_keys_shift
@@ -21455,7 +21512,7 @@ OKT_pattern_line_buffer:
                     dcb.b   4*8,0
 OKT_channels_data:
                     dcb.b   CHAN_LEN*8,0
-OKT_patterns_list:
+OKT_positions_list:
                     dcb.l   64,0
 save_stack:
                     dc.l    0
@@ -21484,7 +21541,7 @@ caret_current_positions:
                     dc.b    0
                     even
 OKT_samples_table:
-                    dcb.l   SMPS_NUMBER*2,0
+                    dcb.l   MAX_SAMPLES*2,0
 pattern_bitplane_top_pos:
                     dc.w    0
 pattern_play_flag:
@@ -21503,7 +21560,7 @@ lbB01B29E:
                     dcb.b   8,0
 edit_mode_flag:
                     dcb.b   2,0
-lbL01B2A8:
+mod_pattern_ptr:
                     dc.l    0
 lbL01B2AC:
                     dc.l    0
@@ -21537,7 +21594,7 @@ lbL01B724:
                     dc.l    0
 song_chunk_header_loaded_data:
                     dcb.b   8,0
-lbW01B730:
+max_number_of_positions:
                     dc.w    0
 length_of_sample_to_load:
                     dc.l    0
@@ -21562,7 +21619,7 @@ lbW01B7DA:
 lbW01B7DC:
                     dc.w    0
 OKT_samples_infos:
-                    dcb.b   SMP_INFOS_LEN*SMPS_NUMBER,0
+                    dcb.b   SMP_INFOS_LEN*MAX_SAMPLES,0
 lbW01BC5E:
                     dc.w    0
 lbL01BC60:
@@ -21612,6 +21669,13 @@ lbL01CA58:
                     dcb.l   320,0
 pattern_list_backup:
                     dcb.l   64,0
+; ---
+mod_sample_infos:
+                    dcb.b   30,0
+mod_song_infos:
+                    dcb.b   130,0
+mod_id:
+                    dcb.b   4,0
 
 ; ===========================================================================
 prefs_backup_data:
@@ -21639,7 +21703,7 @@ BACK_COLOR          equ     COLOR00
                 ENDC
 copperlist_black:
                     dc.w    COLOR00,$000
-                    dc.w    BPLCON0,$200
+                    dc.w    BPLCON0,$201
 copper_test_fmode:
                     dc.w    FMODE,0
                     dc.l    -2,-2
@@ -21717,16 +21781,18 @@ copper_credits_front_color:
                     dc.w    COLOR01,$000
 credits_bp:
                     dc.w    BPL1PTH,0,BPL1PTL,0
+credits_bplcon0:
                     dc.w    BPLCON0,$9200
 copper_end_line:
                     dc.w    $2C09,-2
-                    dc.w    BPLCON0,$200
+                    dc.w    BPLCON0,$201
                     dc.l    -2,-2
 ; =====
 main_menu_copper_part:
                     dc.w    $2C09,-2
 main_menu_bp:
                     dc.w    BPL1PTH,0,BPL1PTL,0
+main_menu_bplcon0:
                     dc.w    BPLCON0,$9200
                     dc.w    $3309,-2
 main_menu_back_color:
@@ -21738,6 +21804,7 @@ main_menu_copper_back_jump:
 ; =====
 pattern_copper_part:
                     dc.w    $4409,-2
+pattern_bplcon0:
                     dc.w    BPLCON0,$9200
 pattern_copper_back_jump:
                     dcb.w   6,0

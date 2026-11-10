@@ -9,8 +9,6 @@ To do:
 - Increase the number of samples to 71.
 - 16 bit samples support in the Vampire version (keep the sample type word in infos).
 - RIFF samples loading (8 bit but also 16 bit for Vampire).
-- Remove the 15 samples/8 tracks modules loading and check for 4 tracks to 8 tracks modules signatures<br>
-  (and load them).
 - Decode the rest of the source.
 - Add new pattern effects.
 - Select pattern blocks with the mouse.
@@ -61,5 +59,8 @@ Done:
 - Right mouse button on sample waveform to remove current block mark.
 - Available memory and song metrics are now displayed with 9 digits.
 - Patterns rows can now be displayed in either decimal or hexadecimal (default).
+- Waveforms were displayed upside down in samples editor.
+- Removed the 15 samples/8 tracks modules loading, 4 tracks to 8 tracks are now loaded.
+- Removed the (annoying) 'No More Samples !!' message.
 
 A work in progress...
