@@ -14,7 +14,7 @@
                     opt     a+
                 ENDC
 
-SHOW_RASTERS        equ     1
+;SHOW_RASTERS        equ     1
 ; ===========================================================================
                     include "okta.i"
 
@@ -7563,6 +7563,7 @@ OKT_get_pattern_address_and_length:
 
 ; ===========================================================================
 OKT_set_hw_regs:
+                    bsr     OKT_turn_dma_on
                     move.w  (OKT_action_cycle,pc),d0
                     bne     OKT_no_new_row
 lbC0231DC:
@@ -7577,7 +7578,6 @@ lbC0231DC:
                     OKT_SET_AUDIO_DMA d4
                     or.w    d4,(OKT_dmacon)
 OKT_no_new_row:
-                    bsr     OKT_turn_dma_on
                 IFND OKT_AUDIO_VAMPIRE
                     cmp.b   #MIDI_OUT,(midi_mode)
                     beq     .OKT_midi_out
