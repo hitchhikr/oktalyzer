@@ -73,6 +73,6 @@ start:
 ; ===========================================================================
                     section music,data_c
 
-music:              incbin  "lame d-mo_a.okta"
+music:              incbin  "aaa2.okta"
                     
                     end

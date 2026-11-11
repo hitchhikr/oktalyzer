@@ -172,13 +172,12 @@ CHAN_SMP_PROC_LEN_D:rs.l    1           ; 20
 CHAN_LEN:           rs.b    0           ; 24
 
 		            rsreset
-OKT_SCALING_CODE:   rs.b    74800
-OKT_CODE_POINTERS:  rs.l    36
-OKT_LENGTHS:        rs.w    36*2
+OKT_SCALING_CODE:   rs.b    64000
+OKT_LENGTHS:        rs.l    36*2
 OKT_CODE_LENGTH:    rs.b    0
 
-OKT_SCALING_LINES   equ     19552
-OKT_BUFFERS_LENGTH  equ     312
+OKT_SCALING_LINES   equ     40000
+OKT_BUFFERS_LENGTH  equ     313
 
 OKT_SAMPLE_BOOST    equ     0
 OKT_SAMPLE_FILTER   equ     1*2

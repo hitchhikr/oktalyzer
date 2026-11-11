@@ -67,5 +67,6 @@ Done so far:
 - Likewise, up/down, shift+up/down, alt+up/down mapping have been inverted in sample editor<br>
   to increase (up)/decrease (down) edited sample repeat length.
 - Changed the mouse pointer sprite.
+- Question requesters now also accept return as a positive answer (beside 'y' or 'z').
 
 A work in progress...

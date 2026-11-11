@@ -168,7 +168,6 @@ OKT_init_variables:
                 IFND OKT_AUDIO_VAMPIRE
                     move.w  #%10000000,d2
                     moveq   #%1,d3
-                    clr.w   (OKT_audio_int_bit-OKT_vars,a6)
                     clr.w   (OKT_audio_int_single_bit-OKT_vars,a6)
                     clr.w   (OKT_double_channels-OKT_vars,a6)
                 ELSE
@@ -182,10 +181,8 @@ OKT_init_variables:
                     beq     .OKT_not_doubled
                     or.w    d3,(OKT_double_channels-OKT_vars,a6)
                     tst.w   (OKT_audio_int_single_bit-OKT_vars,a6)
-                    bne     .OKT_only_one_int_bit
+                    bne     .OKT_not_doubled
                     or.w    d2,(OKT_audio_int_single_bit-OKT_vars,a6)
-.OKT_only_one_int_bit:
-                    or.w    d3,(OKT_audio_int_bit-OKT_vars,a6)
 .OKT_not_doubled:
                     add.w   d2,d2
                     add.w   d3,d3
@@ -454,8 +451,6 @@ OKT_fill_double_channels:
                     add.w   d0,a1
                     ; full length
                     move.l  (SMP_LEN,a1),d0
-                    ; (that was a bug)
-                    bclr    #0,d0
                     ; repeat at start by default
                     move.l  d0,(CHAN_SMP_PROC_LEN_D,a3)
                     moveq   #0,d0
@@ -1136,8 +1131,6 @@ OKT_vbr:
 OKT_old_irq:
                     dc.l    0
                 IFND OKT_AUDIO_VAMPIRE
-OKT_audio_int_bit:
-                    dc.w    0
 OKT_audio_int_single_bit:
                     dc.w    0
 OKT_double_channels:

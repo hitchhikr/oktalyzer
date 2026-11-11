@@ -7416,7 +7416,6 @@ OKT_init_variables:
                 IFND OKT_AUDIO_VAMPIRE
                     move.w  #%10000000,d2
                     moveq   #%1,d3
-                    clr.w   (OKT_audio_int_bit)
                     clr.w   (OKT_audio_int_single_bit)
                     clr.w   (OKT_double_channels)
                 ELSE
@@ -7430,10 +7429,8 @@ OKT_init_variables:
                     beq     .OKT_not_doubled
                     or.w    d3,(OKT_double_channels)
                     tst.w   (OKT_audio_int_single_bit)
-                    bne     .OKT_only_one_int_bit
+                    bne     .OKT_not_doubled
                     or.w    d2,(OKT_audio_int_single_bit)
-.OKT_only_one_int_bit:
-                    or.w    d3,(OKT_audio_int_bit)
 .OKT_not_doubled:
                     add.w   d2,d2
                     add.w   d3,d3
@@ -7788,8 +7785,6 @@ OKT_fill_double_channels:
                     add.w   d0,a1
                     ; starting length
                     move.l  (SMP_LEN,a1),d0
-                    ; that was a bug
-                    bclr    #0,d0
                     ; full length by default
                     move.l  d0,(CHAN_SMP_PROC_LEN_D,a3)
                     moveq   #0,d0
@@ -8627,9 +8622,7 @@ OKT_init_buffers:
                     dbf     d6,.OKT_make_volumes_table_outer
                     move.l  (OKT_scaling_code_buffer,pc),a0
                     move.l  a0,a1
-                    add.l   #OKT_CODE_POINTERS,a1
-                    move.l  a1,(OKT_code_ptr)
-                    add.l   #OKT_LENGTHS-OKT_CODE_POINTERS,a1
+                    add.l   #OKT_LENGTHS,a1
                     move.l  a1,(OKT_lengths_ptr)
                     bsr     OKT_generate_scaling_code
                     movem.l (a7)+,d1-a6
@@ -8721,6 +8714,7 @@ OKT_init:
                     move.w  d0,(AUD1PER,a1)
                     move.w  d0,(AUD2PER,a1)
                     move.w  d0,(AUD3PER,a1)
+                    clr.l   OKT_patched_addr
                     move.l  (OKT_vbr,pc),a0
                     ; we use a level 6 interrupt if there are
                     ; no doubled channels in song
@@ -8760,10 +8754,9 @@ OKT_init:
                     move.w	d0,(INTREQ,a1)
                     or.W    #$C000,d0
                     move.w	d0,(INTENA,a1)
-                    move.w  (OKT_audio_int_single_bit,pc),d0
-                    lsr.w   #7,d0
-                    or.w    #$8200,d0
-                    or.w    (OKT_audio_int_bit,pc),d0
+                    move.w  #$8200,d0
+                    ; only switch double channels on
+                    or.w    (OKT_double_channels,pc),d0
                     move.w  d0,(DMACON,a1)
                 ELSE
                     ; Vampire only
@@ -8941,7 +8934,7 @@ OKT_cia_int:
 OKT_main:
                     bsr     OKT_replay_handler
                     cmp.b   #MIDI_OUT,(midi_mode)
-                    beq     .OKT_midi_out
+                    beq     OKT_no_mix
                     move.l  (OKT_final_mixing_buffers,pc),a5
                     lea     (512,a5),a5
                     not.b   (OKT_buffer_flip)
@@ -8959,7 +8952,6 @@ OKT_main:
                     move.w  #12,(OKT_mixing_routines_index)
 .OKT_sel_020_code:
                     movem.l d7/a5,-(a7)
-                    lea     (a5),a1
                     lea     (a2),a3
                     lea     (OKT_channels_volumes,pc),a0
                     moveq   #0,d0
@@ -8972,19 +8964,21 @@ OKT_main:
                     beq     .OKT_020_table_l
                     lsl.l   #2,d1
 .OKT_020_table_l:
+                    lea     (OKT_BUFFERS_LENGTH,a5),a1
                     move.l  (OKT_volumes_scaling_table,pc),a5
                     add.l   d1,a5
                     bsr     OKT_create_channel_waveform_data
                     add.w   d0,(OKT_mixing_routines_index)
                     move.l  (a7),d7
                     subq.w  #1,d7
+                    ; mix buffer
                     move.l  4(a7),a1
-                    move.l  (OKT_volumes_scaling_table,pc),a5
                     tst.b   d0
-                    bne     .OKT_no_buffer
-                    ; wasn't processed
+                    bne     .OKT_second_buffer
+                    ; first buffer has data: use the second buffer
                     move.l  (OKT_channels_notes_buffers,pc),a1
-.OKT_no_buffer:
+.OKT_second_buffer:
+                    ; next channel
                     lea     (CHAN_LEN,a2),a3
                     lea     (OKT_channels_volumes,pc),a0
                     moveq   #0,d0
@@ -8997,6 +8991,8 @@ OKT_main:
                     beq     .OKT_020_table_r
                     lsl.l   #2,d1
 .OKT_020_table_r:
+                    lea     (OKT_BUFFERS_LENGTH,a1),a1
+                    move.l  (OKT_volumes_scaling_table,pc),a5
                     add.l   d1,a5
                     bsr     OKT_create_channel_waveform_data
                     movem.l (a7)+,d7/a5
@@ -9014,8 +9010,6 @@ OKT_main:
                     lea     (512*2,a5),a5
                     subq.w  #1,d7
                     dbra    d7,.OKT_mix_channels_buffers
-.OKT_midi_out:
-                    rts
 OKT_no_mix:
                     rts
 OKT_mixing_routines_table:
@@ -9025,6 +9019,12 @@ OKT_mixing_routines_index:
                     dc.w    0
 
 ; ===========================================================================
+; in:
+; a1: dest buffer
+; a3: channel
+; a5: waveform volumes buffer
+; out:
+; d0: 0 = processed / 4 = not processed
 OKT_create_channel_waveform_data:
                     tst.l   (CHAN_SMP_PROC_D,a3)
                     beq     .OKT_no_mix
@@ -9036,144 +9036,146 @@ OKT_create_channel_waveform_data:
                     ble     .OKT_max
                     move.w  #36-1,(CHAN_NOTE_D,a3)
 .OKT_max:
+                    ; mixing buffer
                     move.l  a1,-(a7)
                     ; check if the sample has been processed
                     move.l  (CHAN_SMP_PROC_LEN_D,a3),d2
-                    bgt     .OKT_process_sample
+                    bgt     .OKT_process_samples
                     ; is there a repeat ?
                     tst.l   (CHAN_SMP_REP_LEN_D,a3)
                     beq     .OKT_no_repeat
                     ; yes: set restart
                     move.l  (CHAN_SMP_REP_START,a3),(CHAN_SMP_PROC_D,a3)
                     ; new length to process
-                    move.l  (CHAN_SMP_REP_LEN_D,a3),d2
-                    move.l  d2,(CHAN_SMP_PROC_LEN_D,a3)
-                    bra     .OKT_process_sample
+                    move.l  (CHAN_SMP_REP_LEN_D,a3),(CHAN_SMP_PROC_LEN_D,a3)
+                    bra     .OKT_process_samples
 .OKT_no_repeat:
                     ; no: discard
                     clr.l   (CHAN_SMP_PROC_D,a3)
                     clr.l   (CHAN_SMP_PROC_LEN_D,a3)
                     addq.l  #4,a7
                     bra     .OKT_no_mix
-.OKT_process_sample:
-                    ; lengths of each note
-                    move.l  (OKT_lengths_ptr,pc),a0
-                    move.w  (CHAN_NOTE_D,a3),d0
-                    add.w   d0,d0
-                    add.w   d0,d0
-                    ; length
-                    move.w  (a0,d0.w),d3
-                    ext.l   d3
-                    ; will it be smaller ?
-                    cmp.l   d3,d2
-                    bge     .OKT_no_cut_code
-                    ; less left than processed in the generated code can process on this note
-                    add.l   d2,d2
-                    ; get the entry point of each byte loading
-                    move.l  (OKT_scaling_code_lines,pc),a4
-                    ; base for this note
+.OKT_process_samples:
                     moveq   #0,d3
-                    move.w  2(a0,d0.w),d3
-                    add.l   d3,d2
+                    moveq   #0,d6
+.OKT_continue_process_samples:
+                    ; length still to process in source
+                    move.l  (CHAN_SMP_PROC_LEN_D,a3),d4
+                    ; we want to number of sample to read for this note
+                    move.l  (OKT_lengths_ptr,pc),a0
                     moveq   #0,d0
-                    ; offset in this chunk of code for this note
-                    move.w  (a4,d2.l),d0
-                    ; get code block address for this note
-                    move.w  (CHAN_NOTE_D,a3),d3
-                    add.w   d3,d3
-                    add.w   d3,d3
-                    move.l  (OKT_code_ptr,pc),a4
-                    move.l  (a4,d3.w),a4
-                    ; offset in this chunk
-                    add.l   d0,a4
-                    ; patch it
-                    move.l  a4,(OKT_patched_addr)
-                    move.w  (a4),(OKT_patched_instr)
-                    ; rts (replaces a move.b (a0)+,d0)
-                    move.w  #$4e75,(a4)
-                    btst    #1,(OKT_processor,pc)
-                    beq     .OKT_no_cut_code
-                    movem.l a0/a1/a2/a3/a5/a6,-(a7)
-                    move.l  4.w,a6
-                    jsr     (_LVOCacheClearU,a6)
-                    movem.l (a7)+,a0/a1/a2/a3/a5/a6
-.OKT_no_cut_code:
-                    ; more samples to process than code
-                    ; so perform full block
-                    ; current waveform
+                    move.w  (CHAN_NOTE_D,a3),d0
+                    lsl.w   #3,d0
+                    ; length of source bytes read for this note
+                    move.l  4(a0,d0.w),d1
+                    ; check if there's enough samples available to fill a complete mixbuffer
+                    cmp.l   d4,d1
+                    bge     .OKT_enough_samples
+                    ; set maximum to mixbuffer reading
+                    move.l  d1,d4
+.OKT_enough_samples:
+                    ; global amount of reading processed in d3
+                    add.l   d4,d3
+                    cmp.l   d3,d1
+                    bge     .OKT_max_reading
+                    move.l  d3,d6
+                    sub.l   d1,d6
+                    sub.l   d6,d4
+                    ; max. to read
+                    move.l  d1,d3
+.OKT_max_reading:
+                    move.l  d3,d2
+                    ; table is 2 words
+                    lsl.l   #2,d2
+                    ; start of code chunk + offset in it
+                    add.l   (a0,d0.w),d2
+                    move.l  d2,a4
+                    move.l  (a4),a4
+                    ; source + length to process
                     move.l  (CHAN_SMP_PROC_D,a3),a0
-                    move.l  (OKT_code_ptr,pc),a4
-                    ; (d0 is used inside the code)
+                    add.l   d4,a0
                     moveq   #0,d0
-                    move.w  (CHAN_NOTE_D,a3),d3
-                    add.w   d3,d3
-                    add.w   d3,d3
-                    ; chunk of code for this note
-                    move.l  (a4,d3.w),a4
+                    ; execute the code
                     jsr     (a4)
-                    ; restore the patched code if any
+                    ; de-patch the older one
                     tst.l   (OKT_patched_addr)
                     beq     .OKT_no_patch
-                    move.l  (OKT_patched_addr,pc),a4
-                    move.w  (OKT_patched_instr,pc),(a4)
+                    move.l  (OKT_patched_addr,pc),a0
+                    move.w  (OKT_patched_instruction,pc),(a0)
                     clr.l   (OKT_patched_addr)
                     btst    #1,(OKT_processor,pc)
                     beq     .OKT_no_patch
-                    movem.l a0/a1/a2/a3/a5/a6,-(a7)
+                    movem.l a1/a2/a3/a4/a5/a6,-(a7)
                     move.l  4.w,a6
                     jsr     (_LVOCacheClearU,a6)
-                    movem.l (a7)+,a0/a1/a2/a3/a5/a6
+                    movem.l (a7)+,a1/a2/a3/a4/a5/a6
 .OKT_no_patch:
-                    ; address where it started
-                    move.l  (CHAN_SMP_PROC_D,a3),d0
-                    ; new address
-                    move.l  a0,(CHAN_SMP_PROC_D,a3)
-                    ; amount of bytes processed
-                    sub.l   d0,a0
-                    move.l  (CHAN_SMP_PROC_LEN_D,a3),d2
-                    ; length of bytes remaining to process
-                    sub.l   a0,d2
-                    move.l  d2,(CHAN_SMP_PROC_LEN_D,a3)
+                    ; new patch for the next batch
+                    move.l  a4,(OKT_patched_addr)
+                    move.w  (a4),(OKT_patched_instruction)
+                    ; rts (replaces a move.b -(a0),d0 or a subq.w  #1,a0)
+                    move.w  #$4e75,(a4)
+                    btst    #1,(OKT_processor,pc)
+                    beq     .OKT_no_cut_code
+                    movem.l a0/a1/a2/a3/a4/a5/a6,-(a7)
+                    move.l  4.w,a6
+                    jsr     (_LVOCacheClearU,a6)
+                    movem.l (a7)+,a0/a1/a2/a3/a4/a5/a6
+.OKT_no_cut_code:
                     ; check if the mix buffer was entirely processed
-                    lea     (a1),a4
+                    move.l  (a7),d0
                     ; (subtract start of the buffer)
-                    sub.l   (a7),a4
-                    ; still some bytes to process in mixbuffer...
+                    sub.l   a1,d0
+                    ; add the amount of samples processed
+                    add.l   d4,(CHAN_SMP_PROC_D,a3)
+                    ; remove the amount of samples processed
+                    ; (either the complete sample length or the mixbuffer length)
+                    sub.l   d4,(CHAN_SMP_PROC_LEN_D,a3)
                     move.l  #OKT_BUFFERS_LENGTH,d1
-                    ; how many bytes left to process
-                    sub.l   a4,d1
+                    cmp.l   d1,d0
                     ; mixbuffer is full
-                    ble     .OKT_processed
-                    ; mixbuffer isn't full yet..
-                    ;
+                    bge     .OKT_processed
+                    ; mixbuffer isn't full yet
+                    move.l  (CHAN_SMP_PROC_LEN_D,a3),d2
+                    bgt     .OKT_still_samples
                     ; check if there's a sample loop
                     tst.l   (CHAN_SMP_REP_LEN_D,a3)
-                    ; nope: fill the rest of the buffer with 0s
                     beq     .OKT_max_fill
-                    ; continue the mmixing from the repeat start
                     move.l  (CHAN_SMP_REP_START,a3),(CHAN_SMP_PROC_D,a3)
-                    move.l  (CHAN_SMP_REP_LEN_D,a3),d2
-                    move.l  d2,(CHAN_SMP_PROC_LEN_D,a3)
-                    bra     .OKT_process_sample
+                    move.l  (CHAN_SMP_REP_LEN_D,a3),(CHAN_SMP_PROC_LEN_D,a3)
+.OKT_still_samples:
+                    bra     .OKT_continue_process_samples
 .OKT_max_fill:
+                    sub.l   d0,d1
                     ; fill the rest of the buffer with 0s
                     btst    #0,d1
                     beq     .OKT_odd
-                    sf      (a1)+
+                    sf      -(a1)
                     subq.l  #1,d1
 .OKT_odd:
                     lsr.l   #1,d1
                     add.l   d1,d1
                     beq     .OKT_processed
-                    lea     (.OK_clear_buffer,pc),a4
+                    lea     (.OKT_processed,pc),a4
                     sub.l   d1,a4
                     moveq   #0,d0
                     jmp     (a4)
                 REPT OKT_BUFFERS_LENGTH/2
-                    move.w  d0,(a1)+
+                    move.w  d0,-(a1)
                 ENDR
-.OK_clear_buffer:
 .OKT_processed:
+                    tst.l   (OKT_patched_addr)
+                    beq     .OKT_exit_patch
+                    move.l  (OKT_patched_addr,pc),a0
+                    move.w  (OKT_patched_instruction,pc),(a0)
+                    clr.l   (OKT_patched_addr)
+                    btst    #1,(OKT_processor,pc)
+                    beq     .OKT_exit_patch
+                    movem.l a1/a2/a3/a4/a5/a6,-(a7)
+                    move.l  4.w,a6
+                    jsr     (_LVOCacheClearU,a6)
+                    movem.l (a7)+,a1/a2/a3/a4/a5/a6
+.OKT_exit_patch:
                     addq.l  #4,a7
                     moveq   #0,d0
                     rts
@@ -9294,8 +9296,8 @@ OKT_mix_020_empty:
 ; ===========================================================================
 ; generate the scaling frequencies code
 OKT_generate_scaling_code:
-                    move.l  (OKT_code_ptr,pc),a2
                     move.l  (OKT_scaling_code_buffer,pc),a0
+                    add.l   #OKT_LENGTHS,a0
                     lea     (OKT_scaling_freqs_table,pc),a5
                     move.l  (OKT_lengths_ptr,pc),a3
                     lea     (OKT_store_bytes_table,pc),a4
@@ -9305,57 +9307,67 @@ OKT_generate_scaling_code:
 .OKT_sel_020_code:
                     move.l  (OKT_scaling_code_lines,pc),a6
                     moveq   #36-1,d7
-                    ; line 0
-                    clr.w   (a6)+
-                    move.l  a0,$70000
-                    move.l  a3,$70004
-                    move.l  a6,$70008
 .OKT_loop_freqs:
-                    ; code pointers
-                    move.l  a0,(a2)+
-                    move.l  a6,d1
+                    swap    d7
+                    ; start offset of this lines chunk/freq
+                    move.l  a6,(a3)+
+                    subq.l  #2,a0
+                    move.l  a0,(a6)+
+                    move.w  (OKT_opcode_rts,pc),(a0)
                     moveq   #0,d2
                     moveq   #0,d3
+                    ; source buffer position
+                    moveq   #0,d5
                     moveq   #-1,d4
                     ; dest buffer position
                     moveq   #0,d6
 .OKT_loop_freq:
-                    move.w  (a4),d5
-                    lea     (a4,d5.w),a1
+                    move.w  d3,d4
+                    swap    d3
+                    add.l   (a5),d3
+                    swap    d3
+                    move.w  (a4),d0
+                    lea     (a4,d0.w),a1
                     cmp.w   d4,d3
                     beq.w   .OKT_wait_freq_nibble
                     move.w  d3,d0
                     sub.w   d4,d0
-                    cmp.w   #1,d0
+                    cmpi.w  #1,d0
                     beq     .OKT_no_load_store_skip
-                    cmp.w   #2,d0
+                    cmpi.w  #2,d0
                     beq     .OKT_no_skip_load_store
-                    move.l  a0,d0
-                    sub.l   (-4,a2),d0
-                    move.w  d0,(a6)+
-                    move.w  (OKT_opcode_skip,pc),(a0)+
-                    move.l  a0,d0
-                    sub.l   (-4,a2),d0
-                    move.w  d0,(a6)+
-                    move.l  (a1)+,(a0)+
-                    move.w  (a1),(a0)+
+                    move.w  d6,d7
+                    addq.w  #1,d7
+                    ; will it be too big ? we're done
+                    cmp.w   #OKT_BUFFERS_LENGTH,d7
+                    bgt     .OKT_done_freq
+                    ; position of the read
+                    ; number of bytes written
+                    subq.l  #2,a0
+                    move.l  a0,(a6)+
+                    move.w  (OKT_opcode_skip,pc),(a0)
+                    subq.l  #6,a0
+                    move.l  a0,(a6)+
+                    move.l  (a1)+,(a0)
+                    move.w  (a1),(4,a0)
+                    addq.w  #2,d5
                     addq.w  #1,d6
-                    cmp.w   #OKT_BUFFERS_LENGTH,d6
-                    bge     .OKT_done_freq
                     bra     .OKT_freq_nibble
 .OKT_no_skip_load_store:
-                    move.l  a0,d0
-                    sub.l   (-4,a2),d0
-                    move.w  d0,(a6)+
-                    move.l  (a1)+,(a0)+
-                    move.w  (a1),(a0)+
-                    move.l  a0,d0
-                    sub.l   (-4,a2),d0
-                    move.w  d0,(a6)+
-                    move.w  (OKT_opcode_skip,pc),(a0)+
+                    move.w  d6,d7
+                    addq.w  #1,d7
+                    ; will it be too big ? we're done
+                    cmp.w   #OKT_BUFFERS_LENGTH,d7
+                    bgt     .OKT_done_freq
+                    subq.l  #6,a0
+                    move.l  a0,(a6)+
+                    move.l  (a1)+,(a0)
+                    move.w  (a1),(4,a0)
+                    subq.l  #2,a0
+                    move.l  a0,(a6)+
+                    move.w  (OKT_opcode_skip,pc),(a0)
+                    addq.w  #2,d5
                     addq.w  #1,d6
-                    cmp.w   #OKT_BUFFERS_LENGTH,d6
-                    bge     .OKT_done_freq
                     bra     .OKT_freq_nibble
 .OKT_no_load_store_skip:
                     tst.w   d2
@@ -9365,71 +9377,108 @@ OKT_generate_scaling_code:
                     subq.w  #1,d2
                     beq     .OKT_store_3_bytes
                     subq.w  #1,d2
+                    ; store 4 bytes
                     move.w  (12,a4),d0
-                    bra     .OKT_do_store
+                    lea     (a4,d0.w),a1
+                    ; bytes in dest buffer
+                    move.w  d6,d7
+                    add.w   (2,a1),d7
+                    ; will it be too big ? try less
+                    cmp.w   #OKT_BUFFERS_LENGTH,d7
+                    bgt     .OKT_store_3_bytes
+                    add.w   (2,a1),d6
+                    ; length to copy
+                    moveq   #0,d0
+                    move.w  (a1),d0
+                    sub.l   d0,a0
+                    move.l  a0,(a6)+
+                    sub.l   d0,a1
+                    lsr.w   #1,d0
+                    subq.w  #1,d0
+                    pea     (a0)
+.OKT_copy_4_bytes:
+                    move.w  (a1)+,(a0)+
+                    dbra    d0,.OKT_copy_4_bytes
+                    move.l  (a7)+,a0
+                    addq.w  #1,d5
+                    bra     .OKT_freq_nibble
 .OKT_store_3_bytes:
                     move.w  (8,a4),d0
-                    bra     .OKT_do_store
+                    lea     (a4,d0.w),a1
+                    ; bytes in dest buffer
+                    move.w  d6,d7
+                    add.w   (2,a1),d7
+                    ; will it be too big ? try less
+                    cmp.w   #OKT_BUFFERS_LENGTH,d7
+                    bgt     .OKT_store_2_bytes
+                    add.w   (2,a1),d6
+                    ; length to copy
+                    moveq   #0,d0
+                    move.w  (a1),d0
+                    sub.l   d0,a0
+                    move.l  a0,(a6)+
+                    sub.l   d0,a1
+                    lsr.w   #1,d0
+                    subq.w  #1,d0
+                    pea     (a0)
+.OKT_copy_3_bytes:
+                    move.w  (a1)+,(a0)+
+                    dbra    d0,.OKT_copy_3_bytes
+                    move.l  (a7)+,a0
+                    addq.w  #1,d5
+                    bra     .OKT_freq_nibble
 .OKT_store_2_bytes:
                     move.w  (4,a4),d0
-.OKT_do_store:
                     lea     (a4,d0.w),a1
-                    move.l  a0,d0
-                    sub.l   (-4,a2),d0
-                    move.w  d0,(a6)+
-                    ; length to copy
-                    move.w  (a1),d0
-                    ; bytes added in dest buffer
+                    ; bytes in dest buffer
+                    move.w  d6,d7
+                    add.w   (2,a1),d7
+                    ; will it be too big ? try less
+                    cmp.w   #OKT_BUFFERS_LENGTH,d7
+                    bgt     .OKT_store_1_byte
                     add.w   (2,a1),d6
-                    suba.w  d0,a1
+                    ; length to copy
+                    moveq   #0,d0
+                    move.w  (a1),d0
+                    sub.l   d0,a0
+                    move.l  a0,(a6)+
+                    sub.l   d0,a1
+                    lsr.w   #1,d0
                     subq.w  #1,d0
-.OKT_copy_code:
-                    move.b  (a1)+,(a0)+
-                    dbra    d0,.OKT_copy_code
-                    cmp.w   #OKT_BUFFERS_LENGTH,d6
-                    bge     .OKT_done_freq
+                    pea     (a0)
+.OKT_copy_2_bytes:
+                    move.w  (a1)+,(a0)+
+                    dbra    d0,.OKT_copy_2_bytes
+                    move.l  (a7)+,a0
+                    addq.w  #1,d5
                     bra     .OKT_freq_nibble
 .OKT_store_1_byte:
-                    move.l  a0,d0
-                    sub.l   (-4,a2),d0
-                    move.w  d0,(a6)+
-                    move.l  (a1)+,(a0)+
-                    move.w  (a1),(a0)+
+                    move.w  (a4),d0
+                    lea     (a4,d0.w),a1
+                    move.w  d6,d7
+                    addq.w  #1,d7
+                    ; will it be too big ? we're done
+                    cmp.w   #OKT_BUFFERS_LENGTH,d7
+                    bgt     .OKT_done_freq
+                    subq.l  #6,a0
+                    move.l  a0,(a6)+
+                    move.l  (a1)+,(a0)
+                    move.w  (a1),(4,a0)
+                    addq.w  #1,d5
                     addq.w  #1,d6
-                    cmp.w   #OKT_BUFFERS_LENGTH,d6
-                    bge     .OKT_done_freq
                     bra     .OKT_freq_nibble
 .OKT_wait_freq_nibble:
                     addq.w  #1,d2
 .OKT_freq_nibble:
-                    move.w  d3,d4
-                    swap    d3
-                    add.l   (a5),d3
-                    swap    d3
+                    cmp.w   #OKT_BUFFERS_LENGTH,d6
+                    bgt     .OKT_done_freq
                     bra     .OKT_loop_freq
 .OKT_done_freq:
-                    ; small overrun correction
-                    sub.w   #OKT_BUFFERS_LENGTH,d6
-                    beq     .OKT_step_back
-                    ; (sub.w #1,a0)
-                    move.w  #$90fc,(a0)+
-                    move.w  d6,(a0)+
-                    ; (subq.l #1,a0)
-                    ;move.w  #$5388,(a0)+
-.OKT_step_back:
-                    move.w  (OKT_opcode_rts,pc),(a0)+
-                    ; length
-                    move.w  d3,(a3)+
-                    ; offset in code lines
-                    move.l  d1,d0
-                    sub.l   (OKT_scaling_code_lines,pc),d0
-                    move.w  d0,(a3)+
-                    move.l  a6,d1
+                    ; bytes processed in source for this chunk/freq
+                    move.l  d5,(a3)+
                     addq.l  #4,a5
+                    swap    d7
                     dbra    d7,.OKT_loop_freqs
-                    move.l  a0,$7000C
-                    move.l  a3,$70010
-                    move.l  a6,$70014
                     rts
 
 ; ===========================================================================
@@ -9441,7 +9490,7 @@ OKT_store_bytes_table:
 ; ==================
 ; 2 bytes
 OKT_opcode_skip:
-                    addq.w  #1,a0
+                    subq.w  #1,a0
 ; ==================
 ; 2 bytes
 OKT_opcode_rts:
@@ -9449,33 +9498,33 @@ OKT_opcode_rts:
 ; ==================
 ; 6 bytes
 OKT_opcodes_store_1_byte_000:
-                    move.b  (a0)+,d0
-                    move.b  (a5,d0.w),(a1)+
+                    move.b  -(a0),d0
+                    move.b  (a5,d0.w),-(a1)
 ; ===
 OKT_opcodes_store_2_bytes_000_e:
-                    move.b  (a0)+,d0
+                    move.b  -(a0),d0
                     move.b  (a5,d0.w),d0
-                    move.b  d0,(a1)+
-                    move.b  d0,(a1)+
+                    move.b  d0,-(a1)
+                    move.b  d0,-(a1)
 OKT_opcodes_store_2_bytes_000:
                     dc.w    OKT_opcodes_store_2_bytes_000-OKT_opcodes_store_2_bytes_000_e,2
 ; ===
 OKT_opcodes_store_3_bytes_000_e:
-                    move.b  (a0)+,d0
+                    move.b  -(a0),d0
                     move.b  (a5,d0.w),d0
-                    move.b  d0,(a1)+
-                    move.b  d0,(a1)+
-                    move.b  d0,(a1)+
+                    move.b  d0,-(a1)
+                    move.b  d0,-(a1)
+                    move.b  d0,-(a1)
 OKT_opcodes_store_3_bytes_000:
                     dc.w    OKT_opcodes_store_3_bytes_000-OKT_opcodes_store_3_bytes_000_e,3
 ; ===
 OKT_opcodes_store_4_bytes_000_e:
-                    move.b  (a0)+,d0
+                    move.b  -(a0),d0
                     move.b  (a5,d0.w),d0
-                    move.b  d0,(a1)+
-                    move.b  d0,(a1)+
-                    move.b  d0,(a1)+
-                    move.b  d0,(a1)+
+                    move.b  d0,-(a1)
+                    move.b  d0,-(a1)
+                    move.b  d0,-(a1)
+                    move.b  d0,-(a1)
 OKT_opcodes_store_4_bytes_000:
                     dc.w    OKT_opcodes_store_4_bytes_000-OKT_opcodes_store_4_bytes_000_e,4
                 IFD __VASM
@@ -9484,25 +9533,25 @@ OKT_opcodes_store_4_bytes_000:
 ; ==================
 ; 6 bytes
 OKT_opcodes_store_1_byte_020:
-                    move.b  (a0)+,d0
-                    move.b  (a5,d0.w*4),(a1)+
+                    move.b  -(a0),d0
+                    move.b  (a5,d0.w*4),-(a1)
 ; ===
 OKT_opcodes_store_2_bytes_020_e:
-                    move.b  (a0)+,d0
-                    move.w  (a5,d0.w*4),(a1)+
+                    move.b  -(a0),d0
+                    move.w  (a5,d0.w*4),-(a1)
 OKT_opcodes_store_2_bytes_020:
                     dc.w    OKT_opcodes_store_2_bytes_020-OKT_opcodes_store_2_bytes_020_e,2
 ; ===
 OKT_opcodes_store_3_bytes_020_e:
-                    move.b  (a0)+,d0
-                    move.l  (a5,d0.w*4),(a1)+
+                    move.b  -(a0),d0
+                    move.l  (a5,d0.w*4),-(a1)
                     subq.l  #1,a1
 OKT_opcodes_store_3_bytes_020:
                     dc.w    OKT_opcodes_store_3_bytes_020-OKT_opcodes_store_3_bytes_020_e,3
 ; ===
 OKT_opcodes_store_4_bytes_020_e:
-                    move.b  (a0)+,d0
-                    move.l  (a5,d0.w*4),(a1)+
+                    move.b  -(a0),d0
+                    move.l  (a5,d0.w*4),-(a1)
 OKT_opcodes_store_4_bytes_020:
                     dc.w    OKT_opcodes_store_4_bytes_020-OKT_opcodes_store_4_bytes_020_e,4
             IFD __VASM
@@ -9527,14 +9576,10 @@ OKT_vbr:
 OKT_old_irq:
                     dc.l    0
                 IFND OKT_AUDIO_VAMPIRE
-OKT_audio_int_bit:
-                    dc.w    0
 OKT_audio_int_single_bit:
                     dc.w    0
 OKT_double_channels:
                     dc.w    0
-OKT_code_ptr:
-                    dc.l    0
 OKT_lengths_ptr:
                     dc.l    0
 OKT_buffer_flip:
@@ -9543,9 +9588,11 @@ OKT_processor:
                     dc.b    0
 OKT_patched_addr:
                     dc.l    0
-OKT_patched_instr:
+OKT_patched_instruction:
                     dc.w    0
 OKT_scaling_code_buffer:
+                    dc.l    0
+OKT_escaling_code_buffer:
                     dc.l    0
 OKT_scaling_code_lines:
                     dc.l    0
@@ -9820,6 +9867,8 @@ ask_yes_no_requester:
                     dc.w    EVT_LIST_END
 .key_pressed:
                     moveq   #OK,d0
+                    cmp.b   #KEY_RETURN,d1
+                    beq     .y_z_key_pressed
                     cmp.b   #'y',d1
                     beq     .y_z_key_pressed
                     ; german keyboard
