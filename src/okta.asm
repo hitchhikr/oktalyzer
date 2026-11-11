@@ -1064,7 +1064,7 @@ lbC01EA0C:
                     move.w  d0,(caret_pos_x)
                     bra     lbC01EA28
 lbC01EA1E:
-                    move.w  (lbW01B294),(caret_pos_x)
+                    move.w  (max_caret_columns),(caret_pos_x)
 lbC01EA28:
                     bsr     draw_pattern_caret
 lbC01EA2C:
@@ -1472,7 +1472,7 @@ lbC01EE6E:
                     move.l  a5,a0
                     clr.l   (a0)
                     bsr     erase_pattern_caret
-                    bsr     lbC01F508
+                    bsr     remove_select_marquee
                     move.w  d5,d0
                     move.w  (viewed_pattern_row,pc),d1
                     move.w  (lbW01EC44,pc),d2
@@ -1481,7 +1481,7 @@ lbC01EE6E:
                     move.w  d5,d0
                     move.w  d6,d1
                     jsr     (draw_text)
-                    bsr     draw_selection_marquee
+                    bsr     draw_selected_block
                     bsr     draw_pattern_caret
                     movem.l (a7)+,d2
                     rts
@@ -1505,7 +1505,7 @@ lbC01EED2:
                     dbra    d1,lbC01EECC
                     clr.l   (a0)
                     bsr     erase_pattern_caret
-                    bsr     lbC01F508
+                    bsr     remove_select_marquee
                     move.w  d5,d0
                     move.w  (viewed_pattern_row,pc),d1
                     subq.w  #1,d1
@@ -1517,7 +1517,7 @@ lbC01EED2:
                     move.w  (lbW01EC42,pc),d1
                     addq.w  #6,d1
                     jsr     (draw_text)
-                    bsr     draw_selection_marquee
+                    bsr     draw_selected_block
                     bsr     previous_pattern_row
 lbC01EF0E:
                     movem.l (a7)+,d2
@@ -1726,33 +1726,41 @@ lbC01F0F2:
 ABCDEF_MSG:
                     dc.b    '0123456789ABCDEF',0
                     even
-lbC01F10A:
+
+; ===========================================================================
+go_to_previous_column:
                     subq.w  #1,(caret_pos_x)
                     bpl     draw_pattern_caret
-                    move.w  (lbW01B294),(caret_pos_x)
+                    move.w  (max_caret_columns),(caret_pos_x)
                     bra     draw_pattern_caret
-lbC01F122:
+
+; ===========================================================================
+go_to_previous_track:
                     subq.w  #5,(caret_pos_x)
                     bpl     draw_pattern_caret
                     move.w  (caret_pos_x,pc),d0
-                    add.w   (lbW01B294),d0
+                    add.w   (max_caret_columns),d0
                     addq.w  #1,d0
                     move.w  d0,(caret_pos_x)
                     bra     draw_pattern_caret
-lbC01F142:
+
+; ===========================================================================
+go_to_next_column:
                     addq.w  #1,(caret_pos_x)
-                    move.w  (lbW01B294),d0
+                    move.w  (max_caret_columns),d0
                     cmp.w   (caret_pos_x,pc),d0
                     bge     draw_pattern_caret
                     clr.w   (caret_pos_x)
                     bra     draw_pattern_caret
-lbC01F160:
+
+; ===========================================================================
+go_to_next_track:
                     addq.w  #5,(caret_pos_x)
-                    move.w  (lbW01B294),d0
+                    move.w  (max_caret_columns),d0
                     cmp.w   (caret_pos_x,pc),d0
                     bge     draw_pattern_caret
                     move.w  (caret_pos_x,pc),d0
-                    sub.w   (lbW01B294),d0
+                    sub.w   (max_caret_columns),d0
                     subq.w  #1,d0
                     move.w  d0,(caret_pos_x)
                     bra     draw_pattern_caret
@@ -1852,31 +1860,39 @@ ascii_MSG6:
                     dc.b    0
                     dc.b    0
                     dc.b    0
-lbC01F262:
+
+; ===========================================================================
+go_to_previous_pattern:
                     tst.w   (current_viewed_pattern)
-                    beq     lbC01F274
+                    beq     .first_pattern
                     subq.w  #1,(current_viewed_pattern)
                     bra     draw_pattern
-lbC01F274:
+.first_pattern:
                     rts
-lbC01F276:
+
+; ===========================================================================
+go_to_next_pattern:
                     move.w  (current_viewed_pattern),d0
                     addq.w  #1,d0
                     cmp.w   (number_of_patterns),d0
-                    bne     lbC01F28E
+                    bne     .no_new_pattern
                     bsr     create_new_empty_pattern
-                    beq     lbC01F28E
+                    beq     .no_new_pattern
                     rts
-lbC01F28E:
+.no_new_pattern:
                     addq.w  #1,(current_viewed_pattern)
                     bra     draw_pattern
-lbC01F298:
+
+; ===========================================================================
+set_lo_octave:
                     bsr     stop_audio_channels
 lbC01F29C:
                     move.l  #note_table_1,(current_note_table)
                     move.l  #period_table_1,(current_period_table)
                     rts
-lbC01F2B2:
+
+; ===========================================================================
+set_hi_octave:
                     bsr     stop_audio_channels
 lbC01F2B6:
                     move.l  #note_table_2,(current_note_table)
@@ -1886,60 +1902,72 @@ current_note_table:
                     dc.l    note_table_1
 current_period_table:
                     dc.l    period_table_1
-lbC01F2D4:
+
+; ===========================================================================
+move_block_selection_right:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
-                    beq     lbC01F2FA
-                    move.w  (lbW01B294),d0
+                    beq     .no_move
+                    move.w  (max_caret_columns),d0
                     cmp.w   (lbW01F504),d0
-                    beq     lbC01F2FA
+                    beq     .no_move
                     addq.w  #5,(lbW01F500)
                     addq.w  #5,(lbW01F504)
                     bra     lbC01F46E
-lbC01F2FA:
+.no_move:
                     rts
-lbC01F2FC:
+
+; ===========================================================================
+move_block_selection_left:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
-                    beq     lbC01F31C
+                    beq     .no_move
                     tst.w   (lbW01F500)
-                    beq     lbC01F31C
+                    beq     .no_move
                     subq.w  #5,(lbW01F500)
                     subq.w  #5,(lbW01F504)
                     bra     lbC01F46E
-lbC01F31C:
+.no_move:
                     rts
-lbC01F31E:
+
+; ===========================================================================
+move_block_selection_down:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
-                    beq     lbC01F342
+                    beq     .no_move
                     bsr     get_current_pattern_address_and_rows
                     subq.w  #1,d0
                     cmp.w   (lbW01F506,pc),d0
-                    beq     lbC01F342
+                    beq     .no_move
                     addq.w  #1,(lbW01F502)
                     addq.w  #1,(lbW01F506)
                     bra     lbC01F46E
-lbC01F342:
+.no_move:
                     rts
-lbC01F344:
+
+; ===========================================================================
+move_block_selection_up:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
-                    beq     lbC01F364
+                    beq     .no_move
                     tst.w   (lbW01F502)
-                    beq     lbC01F364
+                    beq     .no_move
                     subq.w  #1,(lbW01F502)
                     subq.w  #1,(lbW01F506)
                     bra     lbC01F46E
-lbC01F364:
+.no_move:
                     rts
-lbC01F366:
+
+; ===========================================================================
+inc_block_selection_horizontally:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
                     beq     lbC01F3B2
                     addq.w  #5,(lbW01F504)
                     bra     lbC01F46E
-lbC01F378:
+
+; ===========================================================================
+dec_block_selection_horizontally:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
                     beq     lbC01F38A
@@ -1947,13 +1975,17 @@ lbC01F378:
                     bra     lbC01F46E
 lbC01F38A:
                     rts
-lbC01F38C:
+
+; ===========================================================================
+inc_block_selection_vertically:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
                     beq     lbC01F3B2
                     addq.w  #1,(lbW01F506)
                     bra     lbC01F46E
-lbC01F39E:
+
+; ===========================================================================
+dec_block_selection_vertically:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
                     beq     lbC01F3B0
@@ -1961,6 +1993,8 @@ lbC01F39E:
                     bra     lbC01F46E
 lbC01F3B0:
                     rts
+
+; ===========================================================================
 lbC01F3B2:
                     moveq   #0,d0
                     move.w  (caret_pos_x,pc),d0
@@ -1971,8 +2005,10 @@ lbC01F3B2:
                     addq.w  #4,d0
                     movem.w d0/d1,(lbW01F504)
                     bra     lbC01F472
-lbC01F3DA:
-                    bsr     lbC01F42C
+
+; ===========================================================================
+select_track:
+                    bsr     unselect_pattern_block
                     moveq   #0,d0
                     move.w  (caret_pos_x,pc),d0
                     divu.w  #5,d0
@@ -1987,22 +2023,30 @@ lbC01F3DA:
                     move.w  (a7)+,d0
                     movem.w d0/d1,(lbW01F504)
                     bra     lbC01F472
-lbC01F40C:
-                    bsr     lbC01F42C
+
+; ===========================================================================
+select_pattern:
+                    bsr     unselect_pattern_block
                     clr.l   (lbW01F500)
-                    move.w  (lbW01B294),(lbW01F504)
+                    move.w  (max_caret_columns),(lbW01F504)
                     bsr     get_current_pattern_address_and_rows
                     subq.w  #1,d0
                     move.w  d0,(lbW01F506)
                     bra     lbC01F472
-lbC01F42C:
-                    bsr     lbC01F508
-lbC01F430:
+
+; ===========================================================================
+unselect_pattern_block:
+                    bsr     remove_select_marquee
+
+; ===========================================================================
+clear_pattern_block_data:
                     moveq   #-1,d0
                     move.l  d0,(lbW01F500)
                     move.l  d0,(lbW01F46A)
                     rts
-draw_selection_marquee:
+
+; ===========================================================================
+draw_selected_block:
                     moveq   #-1,d0
                     cmp.l   (lbW01F46A,pc),d0
                     beq     lbC01F472
@@ -2017,7 +2061,7 @@ lbW01F46A:
 lbW01F46C:
                     dc.w    -1
 lbC01F46E:
-                    bsr     lbC01F508
+                    bsr     remove_select_marquee
 lbC01F472:
                     moveq   #-1,d0
                     move.l  d0,(lbW01F46A)
@@ -2028,16 +2072,16 @@ lbC01F472:
                     subq.w  #1,d4
                     movem.w (lbW01F500,pc),d0/d1
                     movem.w (lbW01F504,pc),d2/d3
-                    cmp.w   (lbW01B294),d2
+                    cmp.w   (max_caret_columns),d2
                     ble     lbC01F4A2
-                    move.w  (lbW01B294),d2
+                    move.w  (max_caret_columns),d2
 lbC01F4A2:
                     cmp.w   d0,d2
                     bgt     lbC01F4AE
                     move.w  d0,d2
                     addq.w  #4,d2
                     cmp.w   d1,d3
-                    beq     lbC01F430
+                    beq     clear_pattern_block_data
 lbC01F4AE:
                     cmp.w   d4,d1
                     ble     lbC01F4B4
@@ -2053,7 +2097,7 @@ lbC01F4BA:
                     move.w  d0,d4
                     addq.w  #4,d4
                     cmp.w   d4,d2
-                    beq     lbC01F430
+                    beq     clear_pattern_block_data
 lbC01F4CA:
                     movem.w d0/d1,(lbW01F500)
                     movem.w d2/d3,(lbW01F504)
@@ -2063,7 +2107,7 @@ lbC01F4CA:
                     move.b  (a0,d0.w),d0
                     move.b  (a0,d2.w),d2
                     movem.w d0-d3,(lbB01B29E)
-                    bra     lbC01F508
+                    bra     remove_select_marquee
 lbC01F4FE:
                     rts
 lbW01F500:
@@ -2074,12 +2118,14 @@ lbW01F504:
                     dc.w    0
 lbW01F506:
                     dc.w    0
-lbC01F508:
+
+; ===========================================================================
+remove_select_marquee:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
                     beq     lbC01F51A
                     lea     (lbB01B29E),a0
-                    bra     lbC020C9A
+                    bra     draw_selection_marquee
 lbC01F51A:
                     rts
 
@@ -2201,7 +2247,7 @@ lbC01F62A:
                     move.w  d4,d6
                     add.w   (lbW01F5C4,pc),d6
                     moveq   #0,d2
-                    move.w  (lbW01B294),d0
+                    move.w  (max_caret_columns),d0
                     ext.l   d0
                     divu.w  #5,d0
                     add.w   d0,d0
@@ -2271,14 +2317,18 @@ lbC01F6D6:
                     cmp.w   d5,d7
                     bge     lbC01F6C8
                     bra     draw_pattern
-lbC01F6F2:
-                    lea     (lbC01F6FA,pc),a0
+
+; ===========================================================================
+flip_pattern_block:
+                    lea     (do_flip_pattern_block,pc),a0
                     bra     lbC01F702
-lbC01F6FA:
+do_flip_pattern_block:
                     move.l  (a0),d0
                     move.l  (a1),(a0)
                     move.l  d0,(a1)
                     rts
+
+; ===========================================================================
 lbC01F702:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
@@ -2423,40 +2473,42 @@ lbC01F82A:
                     rts
 
 ; ===========================================================================
-lbC01F82C:
-                    lea     (lbC01F834,pc),a0
+clear_block_from_current_sample_with_note:
+                    lea     (do_clear_block_from_current_sample_with_note,pc),a0
                     bra     perform_block_operation
-lbC01F834:
+do_clear_block_from_current_sample_with_note:
                     tst.b   (a0)
-                    beq     lbC01F844
+                    beq     .no_clear
                     move.b  (1,a0),d0
                     cmp.b   (current_sample_index+1,pc),d0
-                    bne     lbC01F844
+                    bne     .no_clear
                     clr.l   (a0)
-lbC01F844:
+.no_clear:
                     rts
-lbC01F846:
+
+; ===========================================================================
+clear_block_from_asked_sample_with_note:
                     moveq   #-1,d0
                     cmp.l   (lbW01F500,pc),d0
                     beq     error_what_block
                     lea     (DeleteSample_MSG,pc),a0
-                    bsr     lbC024876
-                    bmi     lbC01F868
-                    move.b  d0,(lbB01F87C)
-                    lea     (lbC01F86A,pc),a0
+                    bsr     ask_sample_index_requester
+                    bmi     .do_nothing
+                    move.b  d0,(.sample_index)
+                    lea     (.do_clear_block_from_asked_sample_with_note,pc),a0
                     bra     perform_block_operation
-lbC01F868:
+.do_nothing:
                     rts
-lbC01F86A:
+.do_clear_block_from_asked_sample_with_note:
                     tst.b   (a0)
-                    beq     lbC01F87A
-                    move.b  (lbB01F87C,pc),d0
+                    beq     .no_clear
+                    move.b  (.sample_index,pc),d0
                     cmp.b   (1,a0),d0
-                    bne     lbC01F87A
+                    bne     .no_clear
                     clr.l   (a0)
-lbC01F87A:
+.no_clear:
                     rts
-lbB01F87C:
+.sample_index:
                     dc.b    0
 DeleteSample_MSG:
                     dc.b    'Delete Sample..:',0
@@ -2642,16 +2694,16 @@ set_polyphony_channels_count:
                     bra     draw_polyphony_status
 
 ; ===========================================================================
-lbC01FA6C:
+go_to_first_polyphony_track:
                     clr.w   (lbW01B298)
                     move.b  (polyphony),d0
                     ext.w   d0
                     mulu.w  #5,d0
-                    cmp.w   (lbW01B294),d0
-                    ble     lbC01FA8E
-                    move.w  (lbW01B294),d0
+                    cmp.w   (max_caret_columns),d0
+                    ble     .max_caret_pos
+                    move.w  (max_caret_columns),d0
                     subq.w  #4,d0
-lbC01FA8E:
+.max_caret_pos:
                     move.w  d0,(caret_pos_x)
                     bra     draw_pattern_caret
 
@@ -2676,9 +2728,9 @@ lbC01FACE:
                     moveq   #0,d0
                     move.b  (a0),d0
                     mulu.w  #5,d0
-                    cmp.w   (lbW01B294),d0
+                    cmp.w   (max_caret_columns),d0
                     ble     lbC01FAF2
-                    move.w  (lbW01B294),d0
+                    move.w  (max_caret_columns),d0
                     subq.w  #4,d0
 lbC01FAF2:
                     move.w  d0,(caret_pos_x)
@@ -3355,7 +3407,7 @@ free_song:
                     clr.w   (viewed_pattern_row)
                     moveq   #-1,d0
                     move.l  d0,(lbW01F5C4)
-                    bra     lbC01F430
+                    bra     clear_pattern_block_data
 
 ; ===========================================================================
 free_current_pattern:
@@ -3420,7 +3472,7 @@ draw_pattern:
                     bne     .loop
                     bsr     set_caret_to_max_row
                     bsr     set_pattern_row
-                    bsr     draw_selection_marquee
+                    bsr     draw_selected_block
                 IFND OKT_AUDIO_VAMPIRE
                     move.w  #$9200,(main_bplcon0+2)
                 ENDC
@@ -3544,17 +3596,17 @@ draw_row_data:
 ; ===========================================================================
 draw_one_pattern_row:
                     move.w  d0,-(a7)
-                    bsr     lbC01F508
+                    bsr     remove_select_marquee
                     move.w  (a7)+,d7
                     bsr     get_current_pattern_ascii_number
                     bsr     draw_row_data
-                    bra     draw_selection_marquee
+                    bra     draw_selected_block
 
 ; ===========================================================================
 erase_one_pattern_row:
                     move.w  d0,-(a7)
                     bsr     erase_pattern_caret
-                    bsr     lbC01F508
+                    bsr     remove_select_marquee
                     bsr     own_blitter
                     ; clear 1 char line
                     move.l  #(BC0F_DEST<<16),(BLTCON0,a6)
@@ -3566,7 +3618,7 @@ erase_one_pattern_row:
                     move.l  a0,(BLTDPTH,a6)
                     move.w  #(8*64)+(SCREEN_BYTES/2),(BLTSIZE,a6)
                     bsr     disown_blitter
-                    bsr     draw_selection_marquee
+                    bsr     draw_selected_block
                     bra     draw_pattern_caret
 
 ; ===========================================================================
@@ -4374,22 +4426,8 @@ make_gadget_invisible:
                     rts
 
 ; ===========================================================================
-lbC020C9A:
+draw_selection_marquee:
                     lea     (main_screen+(56*SCREEN_BYTES)),a1
-                    bra     lbC020CBC
-lbC020CA2:
-                    tst.w   (a0)
-                    bmi     lbC020CB4
-                    move.l  a0,-(a7)
-                    jsr     (lbC020CB6)
-                    move.l  (a7)+,a0
-                    addq.w  #8,a0
-                    bra     lbC020CA2
-lbC020CB4:
-                    rts
-lbC020CB6:
-                    lea     (main_screen),a1
-lbC020CBC:
                     move.l  a0,d0
                     ble     lbC020D34
                     move.l  a1,(lbL020D36)
@@ -5564,7 +5602,7 @@ copy_sample:
                     tst.l   (a0)+
                     beq     error_what_sample
                     lea     (CopyToSample_MSG,pc),a0
-                    bsr     lbC024876
+                    bsr     ask_sample_index_requester
                     bmi     lbC021762
                     cmp.w   (current_sample_index,pc),d0
                     beq     error_same_sample
@@ -5628,7 +5666,7 @@ mix_samples:
                     move.l  (work_sample_address_ptr),d0
                     beq     error_what_sample
                     lea     (MixWithSample_MSG,pc),a0
-                    bsr     lbC024876
+                    bsr     ask_sample_index_requester
                     bmi     lbC021888
                     cmp.w   (current_sample_index,pc),d0
                     beq     error_same_sample
@@ -5702,7 +5740,7 @@ MixWithSample_MSG:
 ; ===========================================================================
 swap_samples:
                     lea     (SwapWith_MSG,pc),a0
-                    bsr     lbC024876
+                    bsr     ask_sample_index_requester
                     bmi     lbC021908
                     move.w  d0,(lbW02190A)
                     cmp.w   (current_sample_index,pc),d0
@@ -9968,7 +10006,7 @@ lbC024866:
                     rts
 lbW024874:
                     dc.w    0
-lbC024876:
+ask_sample_index_requester:
                     jsr     (display_messagebox)
 lbC02487C:
                     moveq   #47,d0
@@ -14190,12 +14228,12 @@ lbC02814E:
                     bne     lbC0281A8
                     cmp.b   #16,d1
                     bne     lbC028164
-                    jsr     (lbC01F298)
+                    jsr     (set_lo_octave)
                     bra     lbC0281A8
 lbC028164:
                     cmp.b   #17,d1
                     bne     lbC028172
-                    jsr     (lbC01F2B2)
+                    jsr     (set_hi_octave)
                     bra     lbC0281A8
 lbC028172:
                     move.w  d1,d0
@@ -18517,10 +18555,10 @@ construct_caret_positions_and_channels_config:
                     sf      (a6)
                     subq.w  #1,d4
                     clr.w   (caret_pos_x)
-                    move.w  d4,(lbW01B294)
+                    move.w  d4,(max_caret_columns)
                     moveq   #-1,d0
                     move.l  d0,(lbW01F5C4)
-                    jmp     (lbC01F430)
+                    jmp     (clear_pattern_block_data)
 lbL02B61E:
                     dc.l    0
 copy_caret_position:
@@ -21231,8 +21269,8 @@ main_screen_keys_list:
                     KL_HEAD KEY_MOD_ALT|KEY_MOD_NUMPAD,main_screen_keys_alt_numpad
                     KL_DONE
 main_screen_keys:
-                    KEY     KEY_NO_REPEAT,KEY_F1,lbC01F298
-                    KEY     KEY_NO_REPEAT,KEY_F2,lbC01F2B2
+                    KEY     KEY_NO_REPEAT,KEY_F1,set_lo_octave
+                    KEY     KEY_NO_REPEAT,KEY_F2,set_hi_octave
                     KEY     KEY_NO_REPEAT,KEY_F3,copy_pattern_block
                     KEY     KEY_NO_REPEAT,KEY_F4,replace_block
                     KEY     KEY_NO_REPEAT,KEY_F5,mix_block
@@ -21242,45 +21280,45 @@ main_screen_keys:
                     KEY     KEY_NO_REPEAT,KEY_F9,go_to_f9_row_jump
                     KEY     KEY_NO_REPEAT,KEY_F10,go_to_f10_row_jump
                     KEY     KEY_NO_REPEAT,KEY_TAB,switch_edit_mode
-                    KEY     KEY_NO_REPEAT,KEY_HELP,lbC01FA6C
-                    KEY     KEY_NO_REPEAT,' ',lbC01F42C
+                    KEY     KEY_NO_REPEAT,KEY_HELP,go_to_first_polyphony_track
+                    KEY     KEY_NO_REPEAT,' ',unselect_pattern_block
                     KEY     KEY_NO_REPEAT,KEY_ESC,play_pattern
                     KEY     KEY_NO_REPEAT,'`',play_pattern
-                    KEY     KEY_REPEAT,KEY_LEFT,lbC01F10A
-                    KEY     KEY_REPEAT,KEY_RIGHT,lbC01F142
+                    KEY     KEY_REPEAT,KEY_LEFT,go_to_previous_column
+                    KEY     KEY_REPEAT,KEY_RIGHT,go_to_next_column
                     KEY     KEY_REPEAT,KEY_UP,previous_pattern_row
                     KEY     KEY_REPEAT,KEY_DOWN,next_pattern_row
                     KL_DONE
 main_screen_keys_shift:
                     KEY     KEY_NO_REPEAT,KEY_F3,cut_pattern_block
-                    KEY     KEY_NO_REPEAT,KEY_F4,lbC01F6F2
-                    KEY     KEY_NO_REPEAT,KEY_F5,lbC01F846
+                    KEY     KEY_NO_REPEAT,KEY_F4,flip_pattern_block
+                    KEY     KEY_NO_REPEAT,KEY_F5,clear_block_from_asked_sample_with_note
                     KEY     KEY_NO_REPEAT,KEY_F6,note_down_block
                     KEY     KEY_NO_REPEAT,KEY_F7,note_up_block
                     KEY     KEY_NO_REPEAT,KEY_F8,octave_down_block
                     KEY     KEY_NO_REPEAT,KEY_F9,octave_up_block
                     KEY     KEY_NO_REPEAT,KEY_F10,change_block_sample
-                    KEY     KEY_NO_REPEAT,' ',lbC01F3DA
+                    KEY     KEY_NO_REPEAT,' ',select_track
                     KEY     KEY_NO_REPEAT,'B',switch_copy_blocks_mode
                     KEY     KEY_NO_REPEAT,'E',sample_editor
                     KEY     KEY_NO_REPEAT,'L',load_sample
                     KEY     KEY_NO_REPEAT,'S',save_sample
                     KEY     KEY_NO_REPEAT,KEY_HELP,display_pattern_help
-                    KEY     KEY_REPEAT,KEY_LEFT,lbC01F378
-                    KEY     KEY_REPEAT,KEY_RIGHT,lbC01F366
-                    KEY     KEY_REPEAT,KEY_UP,lbC01F39E
-                    KEY     KEY_REPEAT,KEY_DOWN,lbC01F38C
+                    KEY     KEY_REPEAT,KEY_LEFT,dec_block_selection_horizontally
+                    KEY     KEY_REPEAT,KEY_RIGHT,inc_block_selection_horizontally
+                    KEY     KEY_REPEAT,KEY_UP,dec_block_selection_vertically
+                    KEY     KEY_REPEAT,KEY_DOWN,inc_block_selection_vertically
                     KL_DONE
 main_screen_keys_alt:
-                    KEY     KEY_NO_REPEAT,' ',lbC01F40C
-                    KEY     KEY_NO_REPEAT,KEY_F5,lbC01F82C
+                    KEY     KEY_NO_REPEAT,' ',select_pattern
+                    KEY     KEY_NO_REPEAT,KEY_F5,clear_block_from_current_sample_with_note
                     KEY     KEY_NO_REPEAT,KEY_F6,note_down_block_current_sample
                     KEY     KEY_NO_REPEAT,KEY_F7,note_up_block_current_sample
                     KEY     KEY_NO_REPEAT,KEY_F8,octave_down_block_current_sample
                     KEY     KEY_NO_REPEAT,KEY_F9,octave_up_block_current_sample
                     KEY     KEY_NO_REPEAT,KEY_F10,change_block_effect
-                    KEY     KEY_NO_REPEAT,KEY_RIGHT,lbC01F276
-                    KEY     KEY_NO_REPEAT,KEY_LEFT,lbC01F262
+                    KEY     KEY_NO_REPEAT,KEY_RIGHT,go_to_next_pattern
+                    KEY     KEY_NO_REPEAT,KEY_LEFT,go_to_previous_pattern
                     KEY     KEY_NO_REPEAT,KEY_HELP,display_play_help
                     KEY     KEY_REPEAT,KEY_UP,dec_current_pattern_rows
                     KEY     KEY_REPEAT,KEY_DOWN,inc_current_pattern_rows
@@ -21290,16 +21328,16 @@ main_screen_keys_alt:
 main_screen_keys_ctrl:
                     KEY     KEY_REPEAT,KEY_DOWN,dec_sample_number
                     KEY     KEY_REPEAT,KEY_UP,inc_sample_number
-                    KEY     KEY_REPEAT,KEY_LEFT,lbC01F122
-                    KEY     KEY_REPEAT,KEY_RIGHT,lbC01F160
+                    KEY     KEY_REPEAT,KEY_LEFT,go_to_previous_track
+                    KEY     KEY_REPEAT,KEY_RIGHT,go_to_next_track
                     KL_DONE
 main_screen_keys_amiga:
                     KEY     KEY_NO_REPEAT,KEY_F10,effect_editor
                     KEY     KEY_NO_REPEAT,KEY_HELP,display_effects_help
-                    KEY     KEY_REPEAT,KEY_LEFT,lbC01F2FC
-                    KEY     KEY_REPEAT,KEY_RIGHT,lbC01F2D4
-                    KEY     KEY_REPEAT,KEY_DOWN,lbC01F31E
-                    KEY     KEY_REPEAT,KEY_UP,lbC01F344
+                    KEY     KEY_REPEAT,KEY_LEFT,move_block_selection_left
+                    KEY     KEY_REPEAT,KEY_RIGHT,move_block_selection_right
+                    KEY     KEY_REPEAT,KEY_DOWN,move_block_selection_down
+                    KEY     KEY_REPEAT,KEY_UP,move_block_selection_up
                     KL_DONE
 main_screen_keys_numpad:
                     KEY     KEY_RANGE_NO_REPEAT,'0','9',48,go_to_pattern
@@ -21752,7 +21790,7 @@ pattern_play_flag:
                     dc.b    0
 vampire_detected:
                     dc.b    0
-lbW01B294:
+max_caret_columns:
                     dc.w    0
 polyphony_channels_count:
                     dc.w    0
