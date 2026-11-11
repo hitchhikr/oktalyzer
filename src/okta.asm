@@ -14950,12 +14950,12 @@ sample_editor_find_previous_zero_for_replen:
                     add.l   d1,d1
                     add.l   d0,d1
                     move.l  (work_sample_address_ptr),a0
-lbC028A92:
+.loop:
                     subq.l  #2,d1
                     cmp.l   d0,d1
                     ble     _error_zero_not_found
                     tst.b   (-1,a0,d1.l)
-                    bne     lbC028A92
+                    bne     .loop
                     sub.l   d0,d1
                     lsr.l   #1,d1
                     lea     (OKT_samples_infos),a0
@@ -14983,7 +14983,7 @@ sample_editor_dec_repstart_no_scale:
 sample_editor_dec_repstart:
                     tst.l   (work_sample_address_ptr)
                     beq     .error
-                    bsr     lbC028B1E
+                    bsr     sample_editor_get_current_sample_scaling_step
                     bmi     .error
                     sub.w   d0,(SMP_REP_START,a0)
                     add.w   d0,(SMP_REP_LEN,a0)
@@ -15009,7 +15009,7 @@ sample_editor_inc_repstart_no_scale:
 sample_editor_inc_repstart:
                     tst.l   (work_sample_address_ptr)
                     beq     .error
-                    bsr     lbC028B1E
+                    bsr     sample_editor_get_current_sample_scaling_step
                     bmi     .error
                     add.w   d0,(SMP_REP_START,a0)
                     sub.w   d0,(SMP_REP_LEN,a0)
@@ -15035,7 +15035,7 @@ sample_editor_dec_replen_no_scale:
 sample_editor_dec_replen:
                     tst.l   (work_sample_address_ptr)
                     beq     .error
-                    bsr     lbC028B1E
+                    bsr     sample_editor_get_current_sample_scaling_step
                     bmi     .error
                     sub.w   d0,(SMP_REP_LEN,a0)
                     bra     sample_editor_renew_repeat_bars
@@ -15060,7 +15060,7 @@ sample_editor_inc_replen_no_scale:
 sample_editor_inc_replen:
                     tst.l   (work_sample_address_ptr)
                     beq     .error
-                    bsr     lbC028B1E
+                    bsr     sample_editor_get_current_sample_scaling_step
                     bmi     .error
                     add.w   d0,(SMP_REP_LEN,a0)
                     bra     sample_editor_renew_repeat_bars
@@ -15068,7 +15068,7 @@ sample_editor_inc_replen:
                     rts
 
 ; ===========================================================================
-lbC028B1E:
+sample_editor_get_current_sample_scaling_step:
                     lea     (OKT_samples_infos),a0
                     move.w  (current_sample_index),d1
                     lsl.w   #5,d1
@@ -15077,19 +15077,19 @@ lbC028B1E:
 ;                    tst.w   (SMP_TYPE,a0)
 ;                    beq     lbC029EBE
                     subq.w  #1,d0
-                    beq     lbC028B42
+                    beq     .scale_256
                     subq.w  #1,d0
-                    beq     lbC028B4C
+                    beq     .scale_32
                     moveq   #1,d0
-                    bra     lbC028B54
-lbC028B42:
+                    bra     .no_scale
+.scale_256:
                     move.w  (sample_editor_work_sample_screen_scaling),d0
                     lsr.w   #8,d0
-                    bra     lbC028B54
-lbC028B4C:
+                    bra     .no_scale
+.scale_32:
                     move.w  (sample_editor_work_sample_screen_scaling),d0
                     lsr.w   #5,d0
-lbC028B54:
+.no_scale:
                     tst.w   d0
                     rts
 
@@ -15218,7 +15218,7 @@ sample_editor_draw_sample_infos:
                     jsr     (draw_text)
 lbC028C8C:
                     tst.b   (ntsc_flag)
-                    beq     .show_sample_number
+                    beq     .show_sample_index
                     lea     (Semi_Column_MSG,pc),a0
                     moveq   #14,d0
                     moveq   #8,d1
@@ -15227,8 +15227,7 @@ lbC028C8C:
                     moveq   #16,d0
                     moveq   #8,d1
                     jsr     (draw_one_char_alpha_numeric)
- .show_sample_number:
-
+ .show_sample_index:
                     lea     (OKT_samples_infos),a0
                     move.w  (current_sample_index,pc),d0
                     lsl.w   #5,d0
