@@ -73,6 +73,6 @@ start:
 ; ===========================================================================
                     section music,data_c
 
-music:              incbin  "aaa2.okta"
+music:              incbin  "demosong 1.okt2"
                     
                     end

@@ -415,7 +415,12 @@ OKT_main:
                     lea     (OKT_BUFFERS_LENGTH,a5),a1
                     move.l  (OKT_volumes_scaling_table-OKT_vars,a6),a5
                     add.l   d1,a5
+                    pea     (a2)
+                    move.l  4.w,a6
+                    lea     (_LVOCacheClearU,a6),a6
                     bsr     OKT_create_channel_waveform_data
+                    lea     (OKT_vars,pc),a6
+                    move.l  (a7)+,a2
                     add.w   d0,(OKT_mixing_routines_index-OKT_vars,a6)
                     move.l  (a7),d7
                     subq.w  #1,d7
@@ -442,7 +447,12 @@ OKT_main:
                     lea     (OKT_BUFFERS_LENGTH,a1),a1
                     move.l  (OKT_volumes_scaling_table-OKT_vars,a6),a5
                     add.l   d1,a5
+                    pea     (a2)
+                    move.l  4.w,a6
+                    lea     (_LVOCacheClearU,a6),a6
                     bsr     OKT_create_channel_waveform_data
+                    lea     (OKT_vars,pc),a6
+                    move.l  (a7)+,a2
                     movem.l (a7)+,d7/a5
                     add.w   d0,(OKT_mixing_routines_index-OKT_vars,a6)
                     move.w  (OKT_mixing_routines_index-OKT_vars,a6),d0
@@ -474,6 +484,7 @@ OKT_mixing_routines_index:
 ; out:
 ; d0: 0 = processed / 4 = not processed
 OKT_create_channel_waveform_data:
+                    lea     (OKT_patched_addr,pc),a2
                     tst.l   (CHAN_SMP_PROC_D,a3)
                     beq     .OKT_no_mix
                     tst.w   (CHAN_NOTE_D,a3)
@@ -505,12 +516,11 @@ OKT_create_channel_waveform_data:
                     bra     .OKT_no_mix
 .OKT_process_samples:
                     moveq   #0,d3
-                    moveq   #0,d6
 .OKT_continue_process_samples:
                     ; length still to process in source
                     move.l  (CHAN_SMP_PROC_LEN_D,a3),d4
                     ; we want to number of sample to read for this note
-                    move.l  (OKT_lengths_ptr-OKT_vars,a6),a0
+                    move.l  (OKT_lengths_ptr,pc),a0
                     moveq   #0,d0
                     move.w  (CHAN_NOTE_D,a3),d0
                     lsl.w   #3,d0
@@ -546,29 +556,22 @@ OKT_create_channel_waveform_data:
                     ; execute the code
                     jsr     (a4)
                     ; de-patch the older one
-                    tst.l   (OKT_patched_addr-OKT_vars,a6)
-                    beq     .OKT_no_patch
-                    move.l  (OKT_patched_addr-OKT_vars,a6),a0
-                    move.w  (OKT_patched_instruction-OKT_vars,a6),(a0)
-                    clr.l   (OKT_patched_addr-OKT_vars,a6)
-                    btst    #1,(OKT_processor-OKT_vars,a6)
-                    beq     .OKT_no_patch
-                    movem.l a1/a2/a3/a4/a5/a6,-(a7)
-                    move.l  4.w,a6
-                    jsr     (_LVOCacheClearU,a6)
-                    movem.l (a7)+,a1/a2/a3/a4/a5/a6
-.OKT_no_patch:
+                    tst.l   (OKT_patched_addr-OKT_patched_addr,a2)
+                    beq     .OKT_no_depatch
+                    move.l  (OKT_patched_addr,pc),a0
+                    move.w  (OKT_patched_instruction,pc),(a0)
+                    clr.l   (OKT_patched_addr-OKT_patched_addr,a2)
+.OKT_no_depatch:
                     ; new patch for the next batch
-                    move.l  a4,(OKT_patched_addr-OKT_vars,a6)
-                    move.w  (a4),(OKT_patched_instruction-OKT_vars,a6)
+                    move.l  a4,(OKT_patched_addr-OKT_patched_addr,a2)
+                    move.w  (a4),(OKT_patched_instruction-OKT_patched_addr,a2)
                     ; rts (replaces a move.b -(a0),d0 or a subq.w  #1,a0)
                     move.w  #$4e75,(a4)
-                    btst    #1,(OKT_processor-OKT_vars,a6)
+                    btst    #1,(OKT_processor,pc)
                     beq     .OKT_no_cut_code
-                    movem.l a0/a1/a2/a3/a4/a5/a6,-(a7)
-                    move.l  4.w,a6
-                    jsr     (_LVOCacheClearU,a6)
-                    movem.l (a7)+,a0/a1/a2/a3/a4/a5/a6
+                    movem.l a1/a3/a5,-(a7)
+                    jsr     (a6)
+                    movem.l (a7)+,a1/a3/a5
 .OKT_no_cut_code:
                     ; check if the mix buffer was entirely processed
                     move.l  (a7),d0
@@ -604,7 +607,7 @@ OKT_create_channel_waveform_data:
                     lsr.l   #1,d1
                     add.l   d1,d1
                     beq     .OKT_processed
-                    lea     (.OKT_processed-OKT_vars,a6),a4
+                    lea     (.OKT_processed,pc),a4
                     sub.l   d1,a4
                     moveq   #0,d0
                     jmp     (a4)
@@ -612,18 +615,17 @@ OKT_create_channel_waveform_data:
                     move.w  d0,-(a1)
                 ENDR
 .OKT_processed:
-                    tst.l   (OKT_patched_addr-OKT_vars,a6)
-                    beq     .OKT_exit_patch
-                    move.l  (OKT_patched_addr-OKT_vars,a6),a0
-                    move.w  (OKT_patched_instruction-OKT_vars,a6),(a0)
-                    clr.l   (OKT_patched_addr-OKT_vars,a6)
-                    btst    #1,(OKT_processor-OKT_vars,a6)
-                    beq     .OKT_exit_patch
-                    movem.l a1/a2/a3/a4/a5/a6,-(a7)
-                    move.l  4.w,a6
-                    jsr     (_LVOCacheClearU,a6)
-                    movem.l (a7)+,a1/a2/a3/a4/a5/a6
-.OKT_exit_patch:
+                    tst.l   (OKT_patched_addr-OKT_patched_addr,a2)
+                    beq     .OKT_exit_depatch
+                    move.l  (OKT_patched_addr,pc),a0
+                    move.w  (OKT_patched_instruction,pc),(a0)
+                    clr.l   (OKT_patched_addr-OKT_patched_addr,a2)
+                    btst    #1,(OKT_processor,pc)
+                    beq     .OKT_exit_depatch
+                    movem.l a1/a3/a5,-(a7)
+                    jsr     (a6)
+                    movem.l (a7)+,a1/a3/a5
+.OKT_exit_depatch:
                     addq.l  #4,a7
                     moveq   #0,d0
                     rts
@@ -744,16 +746,16 @@ OKT_mix_020_empty:
 ; ===========================================================================
 ; generate the scaling frequencies code
 OKT_generate_scaling_code:
-                    move.l  (OKT_scaling_code_buffer-OKT_vars,a6),a0
+                    move.l  (OKT_scaling_code_buffer,pc),a0
                     add.l   #OKT_LENGTHS,a0
-                    lea     (OKT_scaling_freqs_table-OKT_vars,a6),a5
-                    move.l  (OKT_lengths_ptr-OKT_vars,a6),a3
-                    lea     (OKT_store_bytes_table-OKT_vars,a6),a4
-                    btst    #1,(OKT_processor-OKT_vars,a6)
+                    lea     (OKT_scaling_freqs_table,pc),a5
+                    move.l  (OKT_lengths_ptr,pc),a3
+                    lea     (OKT_store_bytes_table,pc),a4
+                    btst    #1,(OKT_processor,pc)
                     beq     .OKT_sel_020_code
                     addq.w  #2,a4
 .OKT_sel_020_code:
-                    move.l  (OKT_scaling_code_lines-OKT_vars,a6),a6
+                    move.l  (OKT_scaling_code_lines,pc),a6
                     moveq   #36-1,d7
 .OKT_loop_freqs:
                     swap    d7
@@ -770,10 +772,6 @@ OKT_generate_scaling_code:
                     ; dest buffer position
                     moveq   #0,d6
 .OKT_loop_freq:
-                    move.w  d3,d4
-                    swap    d3
-                    add.l   (a5),d3
-                    swap    d3
                     move.w  (a4),d0
                     lea     (a4,d0.w),a1
                     cmp.w   d4,d3
@@ -920,6 +918,10 @@ OKT_generate_scaling_code:
 .OKT_freq_nibble:
                     cmp.w   #OKT_BUFFERS_LENGTH,d6
                     bgt     .OKT_done_freq
+                    move.w  d3,d4
+                    swap    d3
+                    add.l   (a5),d3
+                    swap    d3
                     bra     .OKT_loop_freq
 .OKT_done_freq:
                     ; bytes processed in source for this chunk/freq
@@ -927,7 +929,6 @@ OKT_generate_scaling_code:
                     addq.l  #4,a5
                     swap    d7
                     dbra    d7,.OKT_loop_freqs
-                    lea     (OKT_vars,pc),a6
                     rts
 
 ; ===========================================================================
@@ -994,7 +995,7 @@ OKT_opcodes_store_2_bytes_020:
 OKT_opcodes_store_3_bytes_020_e:
                     move.b  -(a0),d0
                     move.l  (a5,d0.w*4),-(a1)
-                    subq.l  #1,a1
+                    addq.l  #1,a1
 OKT_opcodes_store_3_bytes_020:
                     dc.w    OKT_opcodes_store_3_bytes_020-OKT_opcodes_store_3_bytes_020_e,3
 ; ===
