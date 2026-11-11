@@ -68,5 +68,6 @@ Done so far:
   to increase (up)/decrease (down) edited sample repeat length.
 - Changed the mouse pointer sprite.
 - Question requesters now also accept return as a positive answer (beside 'y' or 'z').
+- Sample index is now shown in sample editor on NTSC Amigas.
 
 A work in progress...
