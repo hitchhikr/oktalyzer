@@ -21112,7 +21112,7 @@ patterns_editor_help_1_layout:
                     dc.b    CMD_TEXT,0,15, 'SH_CURSOR Size Block      SH_F3  Cut Block          AL_CURSOR Prv/Nxt/Size Patt',0
                     dc.b    CMD_TEXT,0,16, 'AM_CURSOR Move Block      SH_F4  Flip Block         CT_CURSLR Go To Track',0
                     dc.b    CMD_TEXT,0,17, 'SH_B      Block Mode      SH_F5  Delete Sample      BK_0-9    Move To Pattern',0
-                    dc.b    CMD_TEXT,0,18, '                          AL_F5  Delete Sample Inst',0
+                    dc.b    CMD_TEXT,0,18, '                          AL_F5  Delete Curr Sample',0
                     dc.b    CMD_TEXT,0,19, '- Octave Settings ------- SH_F6  Note Down          - Misc --------------------',0
                     dc.b    CMD_TEXT,0,20, '                          AL_F6  Note Down Inst',0
                     dc.b    CMD_TEXT,0,21, '___F1 Set Octave 1+2      SH_F7  Note Up            ___ESC    Play Pattern',0
